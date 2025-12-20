@@ -1,0 +1,47 @@
+{
+  "name": "Restaurant OS",
+  "short_name": "RestOS",
+  "description": "Сучасна система управління рестораном",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8F4F2",
+  "theme_color": "#4A7C4E",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "POS Офіціанта",
+      "url": "/pos/waiter",
+      "description": "Прийом замовлень"
+    },
+    {
+      "name": "POS Кухаря",
+      "url": "/pos/chef",
+      "description": "Стрічка чеків"
+    },
+    {
+      "name": "Склад",
+      "url": "/storage",
+      "description": "Інвентаризація"
+    }
+  ]
+}

@@ -1,0 +1,305 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Premium Color Palette - Navy + White + Electric Blue */
+    --background: 0 0% 100%;           /* White */
+    --foreground: 218 82% 13%;         /* Navy 950 */
+    --card: 0 0% 100%;                 /* White */
+    --card-foreground: 218 82% 13%;    /* Navy 950 */
+    --primary: 218 82% 13%;            /* Navy 950 */
+    --primary-foreground: 0 0% 100%;   /* White */
+    --accent: 217 91% 60%;             /* Electric Blue 500 */
+    --accent-foreground: 0 0% 100%;    /* White */
+    --muted: 210 40% 98%;              /* Slate 50 */
+    --muted-foreground: 215 16% 47%;   /* Slate 500 */
+    --border: 214 32% 91%;             /* Slate 200 */
+    --input: 214 32% 91%;              /* Slate 200 */
+    --ring: 217 91% 60%;               /* Electric Blue 500 */
+    --radius: 0.75rem;                 /* 12px */
+
+    /* Glassmorphism variables */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-bg-strong: rgba(255, 255, 255, 0.85);
+    --glass-bg-subtle: rgba(255, 255, 255, 0.5);
+    --glass-bg-dark: rgba(11, 27, 59, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --glass-blur: blur(12px) saturate(180%);
+    --glass-blur-strong: blur(16px) saturate(200%);
+    --glass-blur-subtle: blur(8px) saturate(150%);
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Mobile-optimized touch interactions */
+  button,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Hide scrollbars but keep functionality */
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Safe area padding for notched devices */
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  .safe-right {
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+@layer components {
+  /* ================================================
+     GLASSMORPHISM COMPONENTS
+     Premium glass effects with backdrop blur
+     ================================================ */
+
+  /* Support detection for glassmorphism */
+  @supports (backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px)) {
+    .glass-base {
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      box-shadow: 0 8px 32px rgba(11, 27, 59, 0.08), 0 1px 2px rgba(11, 27, 59, 0.04);
+    }
+
+    .glass-strong {
+      background: var(--glass-bg-strong);
+      backdrop-filter: var(--glass-blur-strong);
+      -webkit-backdrop-filter: var(--glass-blur-strong);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 8px 32px rgba(11, 27, 59, 0.1), 0 2px 4px rgba(11, 27, 59, 0.05);
+    }
+
+    .glass-subtle {
+      background: var(--glass-bg-subtle);
+      backdrop-filter: var(--glass-blur-subtle);
+      -webkit-backdrop-filter: var(--glass-blur-subtle);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 4px 16px rgba(11, 27, 59, 0.06);
+    }
+
+    .glass-dark {
+      background: var(--glass-bg-dark);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      color: white;
+    }
+  }
+
+  /* Fallback for browsers without backdrop-filter support */
+  @supports not ((backdrop-filter: blur(12px)) or (-webkit-backdrop-filter: blur(12px))) {
+    .glass-base,
+    .glass-strong,
+    .glass-subtle {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid rgba(203, 213, 225, 0.3);
+      box-shadow: 0 2px 8px rgba(11, 27, 59, 0.08);
+    }
+
+    .glass-dark {
+      background: rgba(11, 27, 59, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+  }
+
+  /* Touch-friendly button base */
+  .btn-touch {
+    @apply min-h-touch min-w-touch flex items-center justify-center;
+  }
+
+  /* Card variants */
+  .card-elevated {
+    @apply bg-card rounded-xl shadow-card;
+  }
+
+  .card-glass {
+    @apply glass-base rounded-xl;
+  }
+
+  /* Status indicator dot */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  /* Timer display - tabular numbers */
+  .timer-display {
+    @apply font-mono tabular-nums;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+  }
+
+  /* Premium skeleton loading with shimmer */
+  .skeleton {
+    @apply bg-slate-100 rounded;
+    background: linear-gradient(
+      90deg,
+      rgba(203, 213, 225, 0.2) 0%,
+      rgba(203, 213, 225, 0.5) 50%,
+      rgba(203, 213, 225, 0.2) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+  }
+
+  /* Empty state container */
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-12 text-center text-muted-foreground;
+  }
+}
+
+@layer utilities {
+  /* ================================================
+     GPU ACCELERATION UTILITIES
+     For smooth animations and transitions
+     ================================================ */
+
+  .gpu-accelerated {
+    transform: translateZ(0);
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+  }
+
+  .gpu-transform {
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  .gpu-opacity {
+    will-change: opacity;
+  }
+
+  /* ================================================
+     ACCESSIBILITY & UX UTILITIES
+     ================================================ */
+
+  /* Premium focus ring */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2;
+  }
+
+  /* Touch-friendly active state */
+  .active-scale {
+    @apply active:scale-95 transition-transform duration-fast;
+  }
+
+  /* Swipe hint animation */
+  .swipe-hint {
+    @apply animate-pulse-soft;
+  }
+
+  /* ================================================
+     GRADIENT UTILITIES
+     Premium gradients for depth
+     ================================================ */
+
+  .gradient-navy {
+    background: linear-gradient(135deg, rgba(11, 27, 59, 0.05) 0%, transparent 100%);
+  }
+
+  .gradient-accent-glow {
+    background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.15) 0%, transparent 50%);
+  }
+
+  .gradient-fade-bottom {
+    background: linear-gradient(180deg, transparent 0%, rgba(255, 255, 255, 0.9) 100%);
+  }
+
+  .gradient-fade-top {
+    background: linear-gradient(0deg, transparent 0%, rgba(255, 255, 255, 0.9) 100%);
+  }
+
+  .gradient-fade-right {
+    background: linear-gradient(270deg, transparent 0%, rgba(255, 255, 255, 0.9) 100%);
+  }
+
+  /* Hero gradient */
+  .gradient-hero {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 1) 0%, rgba(248, 250, 252, 1) 50%, rgba(239, 246, 255, 0.3) 100%);
+  }
+
+  /* ================================================
+     RESPONSIVE UTILITIES
+     ================================================ */
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .glass-base,
+    .glass-strong,
+    .glass-subtle,
+    .glass-dark {
+      transition: none !important;
+    }
+  }
+
+  /* High contrast mode fallback */
+  @media (prefers-contrast: high) {
+    .glass-base,
+    .glass-strong,
+    .glass-subtle {
+      background: white;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border: 2px solid var(--border);
+    }
+
+    .glass-dark {
+      background: var(--primary);
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+      border: 2px solid white;
+    }
+  }
+}
+
+/* ================================================
+   ANIMATIONS KEYFRAMES
+   ================================================ */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
