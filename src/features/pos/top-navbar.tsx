@@ -1,6 +1,7 @@
 'use client';
 
-import { Bell, User, LayoutGrid } from 'lucide-react';
+import * as React from 'react';
+import { Bell, User, LayoutGrid, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TopNavbarProps {
@@ -8,6 +9,59 @@ interface TopNavbarProps {
   userRole?: string;
   onMenuClick?: () => void;
   tableNumber?: number;
+  tableOccupiedAt?: Date | string; // Час зайняття столика для таймера
+}
+
+// Компонент таймера для відображення часу з моменту зайняття столика
+function TableTimer({ occupiedAt }: { occupiedAt?: Date | string }) {
+  const [elapsed, setElapsed] = React.useState<string>('');
+
+  React.useEffect(() => {
+    if (!occupiedAt) {
+      setElapsed('');
+      return;
+    }
+
+    // Конвертуємо в Date об'єкт, якщо це рядок (після серіалізації)
+    const startDate = occupiedAt instanceof Date ? occupiedAt : new Date(occupiedAt);
+
+    const updateTimer = () => {
+      const now = new Date();
+      const diff = now.getTime() - startDate.getTime();
+      
+      // Перевірка на валідність дати
+      if (isNaN(diff) || diff < 0) {
+        setElapsed('');
+        return;
+      }
+
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (hours > 0) {
+        setElapsed(`${hours}г ${minutes}х`);
+      } else if (minutes > 0) {
+        setElapsed(`${minutes}х ${seconds}с`);
+      } else {
+        setElapsed(`${seconds}с`);
+      }
+    };
+
+    updateTimer();
+    const interval = setInterval(updateTimer, 1000);
+
+    return () => clearInterval(interval);
+  }, [occupiedAt]);
+
+  if (!occupiedAt || !elapsed) return null;
+
+  return (
+    <div className="flex items-center gap-1 text-xs font-medium text-blue-600">
+      <Clock className="w-3 h-3" />
+      <span>{elapsed}</span>
+    </div>
+  );
 }
 
 export function TopNavbar({
@@ -15,6 +69,7 @@ export function TopNavbar({
   userRole = 'Cashier 1st Shift',
   onMenuClick,
   tableNumber,
+  tableOccupiedAt,
 }: TopNavbarProps) {
   return (
     <nav className="sticky top-0 z-40 bg-white border-b border-slate-200">
@@ -30,12 +85,13 @@ export function TopNavbar({
               <LayoutGrid className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
-            {/* Table Number */}
+            {/* Table Number with Timer */}
             {tableNumber && (
-              <div className="px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="px-4 py-2 bg-blue-50 rounded-lg border border-blue-200 flex items-center gap-2">
                 <span className="text-sm sm:text-base font-semibold text-blue-700">
                   Столик {tableNumber}
                 </span>
+                <TableTimer occupiedAt={tableOccupiedAt} />
               </div>
             )}
           </div>

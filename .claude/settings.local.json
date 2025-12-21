@@ -4,7 +4,11 @@
       "Bash(npm install:*)",
       "Bash(npm run dev)",
       "Bash(tree:*)",
-      "Bash(dir /s /b)"
+      "Bash(dir /s /b)",
+      "Bash(dir \"C:\\\\Users\\\\Alex\\\\Claude Test - Restaraunt OS\" /B)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 20 npm run dev)"
     ]
   }
 }

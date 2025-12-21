@@ -8,4 +8,5 @@ export interface Table {
   currentGuests?: number;
   reservedBy?: string;
   reservedAt?: Date;
+  occupiedAt?: Date; // Час, коли столик був зайнятий (для таймера)
 }

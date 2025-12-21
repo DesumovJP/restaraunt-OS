@@ -10,6 +10,8 @@ import type {
   KPI,
   Alert,
   ActionLog,
+  OutputType,
+  ServingCourse,
 } from "@/types";
 
 // ==========================================
@@ -273,6 +275,8 @@ export const mockRecipes: Recipe[] = [
     ],
     portionYield: 1,
     costPerPortion: 52.5,
+    outputType: "cold" as OutputType,
+    servingCourse: 2 as ServingCourse,
   },
   {
     id: "recipe-2",
@@ -284,6 +288,8 @@ export const mockRecipes: Recipe[] = [
     ],
     portionYield: 1,
     costPerPortion: 185,
+    outputType: "kitchen" as OutputType,
+    servingCourse: 3 as ServingCourse,
   },
   {
     id: "recipe-3",
@@ -295,6 +301,33 @@ export const mockRecipes: Recipe[] = [
     ],
     portionYield: 1,
     costPerPortion: 145,
+    outputType: "kitchen" as OutputType,
+    servingCourse: 3 as ServingCourse,
+  },
+  {
+    id: "recipe-4",
+    menuItemId: "menu-11",
+    menuItem: mockMenuItems[10],
+    ingredients: [
+      { productId: "prod-7", product: mockProducts[6], quantity: 0.018, unit: "kg" },
+      { productId: "prod-6", product: mockProducts[5], quantity: 0.15, unit: "l" },
+    ],
+    portionYield: 1,
+    costPerPortion: 18,
+    outputType: "bar" as OutputType,
+    servingCourse: 5 as ServingCourse,
+  },
+  {
+    id: "recipe-5",
+    menuItemId: "menu-12",
+    menuItem: mockMenuItems[11],
+    ingredients: [
+      { productId: "prod-6", product: mockProducts[5], quantity: 0.1, unit: "l" },
+    ],
+    portionYield: 1,
+    costPerPortion: 35,
+    outputType: "pastry" as OutputType,
+    servingCourse: 4 as ServingCourse,
   },
 ];
 

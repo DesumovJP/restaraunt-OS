@@ -9,6 +9,7 @@ import {
   Package,
   LayoutDashboard,
   ArrowRight,
+  ChefHat,
 } from "lucide-react";
 
 const modules = [
@@ -20,15 +21,15 @@ const modules = [
     color: "bg-primary-light text-primary",
   },
   {
-    title: "POS Кухаря",
-    description: "Стрічка чеків, статуси, таймери",
-    href: "/pos/chef",
-    icon: UtensilsCrossed,
-    color: "bg-warning-light text-warning",
+    title: "Кухня",
+    description: "Станції, рецепти, заплановані блюда",
+    href: "/kitchen",
+    icon: ChefHat,
+    color: "bg-orange-100 text-orange-600",
   },
   {
     title: "Smart Storage",
-    description: "Інвентаризація, QR-сканер, рецепти",
+    description: "Інвентаризація, QR-сканер, рецепти, обробка партій",
     href: "/storage",
     icon: Package,
     color: "bg-info-light text-info",
@@ -55,10 +56,10 @@ export default function HomePage() {
 
       {/* Main navigation */}
       <main className="flex-1 p-4 md:p-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <h2 className="text-lg font-semibold mb-4">Оберіть модуль</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {modules.map((module) => (
               <Link key={module.href} href={module.href}>
                 <Card className="h-full hover:shadow-card-hover transition-all active:scale-[0.98] cursor-pointer">
@@ -84,7 +85,7 @@ export default function HomePage() {
             <h3 className="font-semibold mb-2">Швидкий старт</h3>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• <strong>Офіціант:</strong> натисніть на страву для додавання в кошик</li>
-              <li>• <strong>Кухар:</strong> тікети оновлюються автоматично в реальному часі</li>
+              <li>• <strong>Кухня:</strong> перемикайтеся між станціями, рецептами та запланованими блюдами</li>
               <li>• <strong>Склад:</strong> скануйте QR-код для швидкого додавання товарів</li>
               <li>• <strong>Адмін:</strong> натисніть на KPI для деталізації</li>
             </ul>

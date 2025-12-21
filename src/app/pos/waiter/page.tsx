@@ -146,6 +146,7 @@ export default function WaiterPOSPage() {
           userRole="Cashier 1st Shift"
           onMenuClick={() => setIsSidebarOpen(true)}
           tableNumber={selectedTable?.number}
+          tableOccupiedAt={selectedTable?.occupiedAt}
         />
 
         {/* Content with Menu and Invoice Sidebar */}

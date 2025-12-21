@@ -66,8 +66,8 @@ export function LeftSidebar({
   };
 
   const handleNavigation = (path: string) => {
-    // For now, only menu is implemented
-    if (path === '/pos/waiter') {
+    // Navigate to available pages
+    if (path === '/pos/waiter' || path === '/pos/waiter/calendar') {
       router.push(path);
     }
     // Close drawer on mobile after navigation
@@ -81,7 +81,7 @@ export function LeftSidebar({
       <div className="flex flex-col items-center gap-6 flex-1">
         {navigationItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.path || (item.id === 'menu' && pathname?.startsWith('/pos/waiter') && !pathname.includes('/tables'));
+          const isActive = pathname === item.path || (item.id === 'menu' && pathname === '/pos/waiter');
 
           return (
             <button
@@ -142,7 +142,7 @@ export function LeftSidebar({
             <div className="flex flex-col gap-2 w-full mt-8">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.path || (item.id === 'menu' && pathname?.startsWith('/pos/waiter') && !pathname.includes('/tables'));
+                const isActive = pathname === item.path || (item.id === 'menu' && pathname === '/pos/waiter');
 
                 return (
                   <button

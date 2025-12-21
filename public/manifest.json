@@ -34,9 +34,9 @@
       "description": "Прийом замовлень"
     },
     {
-      "name": "POS Кухаря",
-      "url": "/pos/chef",
-      "description": "Стрічка чеків"
+      "name": "Кухня",
+      "url": "/kitchen",
+      "description": "Станції, рецепти, заплановані блюда"
     },
     {
       "name": "Склад",

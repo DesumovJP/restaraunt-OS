@@ -6,13 +6,15 @@ import { cn } from "@/lib/utils";
 import { Calendar } from "lucide-react";
 import { CookingPlanModal } from "./cooking-plan-modal";
 
-interface DatePlannerProps {
+export interface DatePlannerProps {
   selectedDate: Date;
+  onDateChange?: (date: Date) => void;
   className?: string;
 }
 
 export function DatePlanner({
   selectedDate,
+  onDateChange,
   className,
 }: DatePlannerProps) {
   const [isModalOpen, setIsModalOpen] = React.useState(false);

@@ -37,6 +37,10 @@ const badgeVariants = cva(
         // Priority variants
         rush: "border-transparent bg-error text-white shadow-md animate-pulse-soft",
         normal: "border-transparent bg-slate-100 text-slate-700",
+
+        // shadcn/ui compatibility variants
+        secondary: "border-transparent bg-slate-100 text-slate-900",
+        destructive: "border-transparent bg-error text-white shadow-sm",
       },
       size: {
         sm: "px-2 py-0.5 text-[10px]",

@@ -1,22 +1,45 @@
 'use client';
 
+import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTableStore } from '@/stores/table-store';
 import { TableGrid } from '@/features/tables/table-grid';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { RotateCcw, AlertTriangle } from 'lucide-react';
 import type { Table } from '@/types/table';
 
 export default function TableSelectionPage() {
   const router = useRouter();
   const selectTable = useTableStore((state) => state.selectTable);
   const updateTableStatus = useTableStore((state) => state.updateTableStatus);
+  const resetAllTables = useTableStore((state) => state.resetAllTables);
+  const [showResetDialog, setShowResetDialog] = React.useState(false);
 
   const handleTableSelect = (table: Table) => {
-    // Select the table and mark it as occupied
+    // Select the table
     selectTable(table);
-    updateTableStatus(table.id, 'occupied');
+    
+    // Якщо стіл вільний, позначаємо його як зайнятий
+    // Якщо вже зайнятий або заброньований, просто вибираємо для обслуговування
+    if (table.status === 'free') {
+      updateTableStatus(table.id, 'occupied');
+    }
 
     // Navigate to the POS screen
     router.push('/pos/waiter');
+  };
+
+  const handleResetAll = () => {
+    resetAllTables();
+    setShowResetDialog(false);
   };
 
   return (
@@ -29,9 +52,17 @@ export default function TableSelectionPage() {
               Оберіть стіл
             </h1>
             <p className="text-slate-600 mt-1">
-              Виберіть вільний стіл для обслуговування
+              Виберіть стіл для обслуговування
             </p>
           </div>
+          <Button
+            variant="outline"
+            onClick={() => setShowResetDialog(true)}
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Скинути всі столики
+          </Button>
         </div>
 
         {/* Legend */}
@@ -53,6 +84,30 @@ export default function TableSelectionPage() {
         {/* Table Grid */}
         <TableGrid onTableSelect={handleTableSelect} />
       </div>
+
+      {/* Reset Confirmation Dialog */}
+      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Скинути всі столики?
+            </DialogTitle>
+            <DialogDescription>
+              Ця дія скине всі столики до вільного стану та очистить всі таймери.
+              Продовжити?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowResetDialog(false)}>
+              Скасувати
+            </Button>
+            <Button variant="destructive" onClick={handleResetAll}>
+              Скинути
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

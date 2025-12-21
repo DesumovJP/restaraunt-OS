@@ -134,11 +134,27 @@ export interface WriteOff {
 // RECIPES
 // ==========================================
 
+export type OutputType = "kitchen" | "bar" | "pastry" | "cold";
+
+export type ServingCourse = 1 | 2 | 3 | 4 | 5;
+
 export interface RecipeIngredient {
   productId: string;
   product: Product;
   quantity: number;
   unit: string;
+}
+
+export interface IngredientReservation {
+  recipeId: string;
+  portions: number;
+  reservedAt: Date;
+  reservedBy: string;
+  expiresAt: Date;
+  ingredients: {
+    productId: string;
+    quantity: number;
+  }[];
 }
 
 export interface Recipe {
@@ -149,6 +165,9 @@ export interface Recipe {
   instructions?: string;
   portionYield: number;
   costPerPortion: number;
+  outputType: OutputType;
+  servingCourse: ServingCourse;
+  reservations?: IngredientReservation[];
 }
 
 // ==========================================

@@ -11,6 +11,7 @@ interface TableStore {
   selectTable: (table: Table) => void;
   clearSelectedTable: () => void;
   updateTableStatus: (tableId: string, status: Table['status']) => void;
+  resetAllTables: () => void; // Скинути всі столики до вільного стану
 }
 
 export const useTableStore = create<TableStore>()(
@@ -32,9 +33,44 @@ export const useTableStore = create<TableStore>()(
 
       updateTableStatus: (tableId, status) =>
         set((state) => ({
-          tables: state.tables.map((table) =>
-            table.id === tableId ? { ...table, status } : table
-          ),
+          tables: state.tables.map((table) => {
+            if (table.id === tableId) {
+              // При зайнятті або резервуванні зберігаємо час початку
+              let occupiedAt: Date | undefined;
+              if ((status === 'occupied' || status === 'reserved') && !table.occupiedAt) {
+                occupiedAt = new Date();
+              } else if (status === 'free') {
+                occupiedAt = undefined;
+              } else {
+                // Зберігаємо існуючий час, але переконуємося, що це Date об'єкт
+                occupiedAt = table.occupiedAt 
+                  ? (table.occupiedAt instanceof Date ? table.occupiedAt : new Date(table.occupiedAt))
+                  : undefined;
+              }
+              
+              return { ...table, status, occupiedAt };
+            }
+            // Для інших столиків також переконуємося, що occupiedAt - це Date
+            return {
+              ...table,
+              occupiedAt: table.occupiedAt 
+                ? (table.occupiedAt instanceof Date ? table.occupiedAt : new Date(table.occupiedAt))
+                : undefined,
+            };
+          }),
+        })),
+
+      resetAllTables: () =>
+        set((state) => ({
+          tables: state.tables.map((table) => ({
+            ...table,
+            status: 'free' as const,
+            occupiedAt: undefined,
+            reservedAt: undefined,
+            reservedBy: undefined,
+            currentGuests: undefined,
+          })),
+          selectedTable: null,
         })),
     }),
     {

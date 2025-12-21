@@ -8,8 +8,8 @@ import {
   IceCream,
   UtensilsCrossed,
   Soup,
-  FrenchFries,
-  BowlFood,
+  Pizza,
+  Salad,
   CupSoda,
   ChefHat,
 } from 'lucide-react';
@@ -21,14 +21,14 @@ const iconMap: Record<string, React.ElementType> = {
   dinner: UtensilsCrossed,
   soup: Soup,
   desserts: IceCream,
-  'side-dish': FrenchFries,
-  appetizer: BowlFood,
+  'side-dish': Pizza,
+  appetizer: Salad,
   beverages: CupSoda,
-  salad: Package,
+  salad: Salad,
   'cup-soda': CupSoda,
   cake: IceCream,
   utensils: UtensilsCrossed,
-  wheat: FrenchFries,
+  wheat: Pizza,
 };
 
 interface CategoryNavbarProps {

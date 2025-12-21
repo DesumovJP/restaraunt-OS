@@ -37,10 +37,9 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%]",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg",
         "gap-6 p-6 rounded-2xl",
         "glass-strong shadow-2xl",
-        "gpu-accelerated",
         "duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
@@ -51,6 +50,11 @@ const DialogContent = React.forwardRef<
         "sm:max-w-[500px]",
         className
       )}
+      style={{
+        transform: "translate3d(-50%, -50%, 0)",
+        willChange: "transform, opacity",
+        backfaceVisibility: "hidden",
+      }}
       {...props}
     >
       {children}

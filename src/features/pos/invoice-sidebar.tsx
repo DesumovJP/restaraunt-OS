@@ -16,6 +16,7 @@ import {
   Minus,
   ShoppingCart,
   X,
+  MessageSquare,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -24,6 +25,8 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { CommentEditor, CommentDisplay } from '@/features/orders/comment-editor';
+import type { ItemComment } from '@/types/extended';
 
 const paymentMethods = [
   { id: 'card' as const, label: 'Credit Card', icon: CreditCard },
@@ -50,6 +53,17 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
 
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
+
+  // Comment state for each item
+  const [itemComments, setItemComments] = React.useState<Record<string, ItemComment | null>>({});
+  const [editingCommentId, setEditingCommentId] = React.useState<string | null>(null);
+
+  const handleCommentSave = (comment: ItemComment | null) => {
+    if (editingCommentId) {
+      setItemComments((prev) => ({ ...prev, [editingCommentId]: comment }));
+      setEditingCommentId(null);
+    }
+  };
 
   React.useEffect(() => {
     const checkMobile = () => {
@@ -117,27 +131,79 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
             </p>
           </div>
         ) : (
-          items.map((item) => (
-            <div
-              key={item.menuItem.id}
-              className="flex justify-between items-start gap-3 py-2"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-sm font-medium text-slate-900">
-                    {item.quantity}x
-                  </span>
-                  <h3 className="font-semibold text-slate-900 text-sm">
-                    {item.menuItem.name}
-                  </h3>
+          items.map((item) => {
+            const comment = itemComments[item.menuItem.id];
+
+            return (
+              <div
+                key={item.menuItem.id}
+                className="p-3 rounded-lg border border-slate-200 bg-slate-50/50"
+              >
+                {/* Header with name and quantity controls */}
+                <div className="flex items-start justify-between gap-2 mb-2">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-slate-900 text-sm">
+                      {item.menuItem.name}
+                    </h3>
+                    <p className="text-sm text-slate-600">
+                      {formatPrice(item.menuItem.price)}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
+                      className="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100"
+                    >
+                      <Minus className="w-3 h-3" />
+                    </button>
+                    <span className="w-6 text-center text-sm font-medium">
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
+                      className="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={() => removeItem(item.menuItem.id)}
+                      className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-red-100 text-slate-400 hover:text-red-500 ml-1"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-500 mb-1">Dont Add Vegetables</p>
-                <p className="text-sm font-semibold text-slate-900">
-                  {formatPrice(item.menuItem.price)}
-                </p>
+
+                {/* Comment button */}
+                <div className="flex items-center gap-2 mb-2">
+                  <button
+                    onClick={() => setEditingCommentId(item.menuItem.id)}
+                    className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors",
+                      comment ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    )}
+                  >
+                    <MessageSquare className="w-3 h-3" />
+                    {comment ? "Коментар" : "Додати"}
+                  </button>
+                </div>
+
+                {/* Comment display */}
+                {comment && (
+                  <div className="mt-2">
+                    <CommentDisplay comment={comment} size="sm" maxPresets={2} />
+                  </div>
+                )}
+
+                {/* Item total */}
+                <div className="flex justify-end mt-2 pt-2 border-t border-slate-200">
+                  <span className="text-sm font-semibold text-slate-900">
+                    {formatPrice(item.menuItem.price * item.quantity)}
+                  </span>
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -203,9 +269,20 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
           className="w-full h-14 text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white"
           size="lg"
         >
-          Place An Order
+          Оформити замовлення
         </Button>
       </div>
+
+      {/* Comment Editor Modal */}
+      {editingCommentId && (
+        <CommentEditor
+          value={itemComments[editingCommentId] || null}
+          onChange={handleCommentSave}
+          menuItemName={items.find((i) => i.menuItem.id === editingCommentId)?.menuItem.name || ''}
+          isOpen={!!editingCommentId}
+          onClose={() => setEditingCommentId(null)}
+        />
+      )}
     </>
   );
 
