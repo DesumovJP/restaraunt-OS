@@ -1,0 +1,72 @@
+{
+  "kind": "collectionType",
+  "collectionName": "inventory_movements",
+  "info": {
+    "singularName": "inventory-movement",
+    "pluralName": "inventory-movements",
+    "displayName": "Inventory Movement"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "ingredient": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::ingredient.ingredient"
+    },
+    "stockBatch": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::stock-batch.stock-batch"
+    },
+    "kitchenTicket": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::kitchen-ticket.kitchen-ticket",
+      "inversedBy": "inventoryMovements"
+    },
+    "movementType": {
+      "type": "enumeration",
+      "enum": ["receive", "recipe_use", "process", "write_off", "transfer", "adjust", "return", "reserve", "release"]
+    },
+    "quantity": {
+      "type": "decimal",
+      "required": true
+    },
+    "unit": {
+      "type": "enumeration",
+      "enum": ["kg", "g", "l", "ml", "pcs", "portion"]
+    },
+    "grossQuantity": {
+      "type": "decimal"
+    },
+    "netQuantity": {
+      "type": "decimal"
+    },
+    "wasteFactor": {
+      "type": "decimal"
+    },
+    "unitCost": {
+      "type": "decimal"
+    },
+    "totalCost": {
+      "type": "decimal"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "reasonCode": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "operator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

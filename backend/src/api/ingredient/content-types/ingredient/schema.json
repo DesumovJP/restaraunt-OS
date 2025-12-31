@@ -1,0 +1,89 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ingredients",
+  "info": {
+    "singularName": "ingredient",
+    "pluralName": "ingredients",
+    "displayName": "Ingredient"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "nameUk": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name"
+    },
+    "sku": {
+      "type": "string",
+      "unique": true
+    },
+    "barcode": {
+      "type": "string"
+    },
+    "unit": {
+      "type": "enumeration",
+      "enum": ["kg", "g", "l", "ml", "pcs", "portion"],
+      "default": "kg"
+    },
+    "currentStock": {
+      "type": "decimal",
+      "default": 0
+    },
+    "minStock": {
+      "type": "decimal",
+      "default": 0
+    },
+    "maxStock": {
+      "type": "decimal"
+    },
+    "mainCategory": {
+      "type": "enumeration",
+      "enum": ["raw", "prep", "dry-goods", "seasonings", "oils-fats", "dairy", "beverages", "frozen", "ready-made"]
+    },
+    "subCategory": {
+      "type": "string"
+    },
+    "storageCondition": {
+      "type": "enumeration",
+      "enum": ["ambient", "refrigerated", "frozen", "dry-cool"],
+      "default": "ambient"
+    },
+    "shelfLifeDays": {
+      "type": "integer"
+    },
+    "costPerUnit": {
+      "type": "decimal",
+      "default": 0
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "yieldProfile": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::yield-profile.yield-profile"
+    },
+    "suppliers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::supplier.supplier",
+      "inversedBy": "ingredients"
+    },
+    "stockBatches": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::stock-batch.stock-batch",
+      "mappedBy": "ingredient"
+    }
+  }
+}

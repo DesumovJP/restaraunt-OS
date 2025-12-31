@@ -1,0 +1,57 @@
+{
+  "kind": "collectionType",
+  "collectionName": "table_session_events",
+  "info": {
+    "singularName": "table-session-event",
+    "pluralName": "table-session-events",
+    "displayName": "Table Session Event"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "tableNumber": {
+      "type": "integer",
+      "required": true
+    },
+    "orderDocumentId": {
+      "type": "string"
+    },
+    "sessionId": {
+      "type": "string",
+      "required": true
+    },
+    "eventType": {
+      "type": "enumeration",
+      "enum": [
+        "table_seated",
+        "order_taken",
+        "item_started",
+        "item_ready",
+        "item_served",
+        "bill_requested",
+        "bill_paid",
+        "table_cleared"
+      ],
+      "required": true
+    },
+    "timestamp": {
+      "type": "datetime",
+      "required": true
+    },
+    "actorRole": {
+      "type": "enumeration",
+      "enum": ["waiter", "chef", "cashier", "system"]
+    },
+    "actorName": {
+      "type": "string"
+    },
+    "durationFromSeatedMs": {
+      "type": "biginteger"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

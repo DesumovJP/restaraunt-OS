@@ -1,0 +1,81 @@
+{
+  "kind": "collectionType",
+  "collectionName": "menu_items",
+  "info": {
+    "singularName": "menu-item",
+    "pluralName": "menu-items",
+    "displayName": "Menu Item"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "nameUk": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name"
+    },
+    "description": {
+      "type": "text"
+    },
+    "descriptionUk": {
+      "type": "text"
+    },
+    "price": {
+      "type": "decimal",
+      "required": true
+    },
+    "weight": {
+      "type": "integer"
+    },
+    "preparationTime": {
+      "type": "integer",
+      "default": 15
+    },
+    "available": {
+      "type": "boolean",
+      "default": true
+    },
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "allowedTypes": ["images"]
+    },
+    "allergens": {
+      "type": "json"
+    },
+    "category": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::menu-category.menu-category",
+      "inversedBy": "menuItems"
+    },
+    "recipe": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::recipe.recipe"
+    },
+    "outputType": {
+      "type": "enumeration",
+      "enum": ["kitchen", "bar", "pastry", "cold"],
+      "default": "kitchen"
+    },
+    "servingCourse": {
+      "type": "enumeration",
+      "enum": ["appetizer", "starter", "soup", "main", "dessert", "drink"],
+      "default": "main"
+    },
+    "primaryStation": {
+      "type": "enumeration",
+      "enum": ["grill", "fry", "salad", "hot", "dessert", "bar", "pass", "prep"],
+      "default": "hot"
+    }
+  }
+}

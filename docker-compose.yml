@@ -1,0 +1,122 @@
+# Restaurant OS - Docker Compose
+# Production stack: Strapi + PostgreSQL + PgBouncer + Next.js
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: restaurant-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-restaurant_db}
+      POSTGRES_USER: ${DATABASE_USERNAME:-strapi}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-strapi_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-strapi} -d ${DATABASE_NAME:-restaurant_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - restaurant-network
+
+  # PgBouncer Connection Pooler
+  pgbouncer:
+    image: edoburu/pgbouncer:1.21.0
+    container_name: restaurant-pgbouncer
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://${DATABASE_USERNAME:-strapi}:${DATABASE_PASSWORD:-strapi_password}@postgres:5432/${DATABASE_NAME:-restaurant_db}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 100
+      DEFAULT_POOL_SIZE: 20
+      MIN_POOL_SIZE: 5
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - restaurant-network
+
+  # Strapi Backend
+  strapi:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: restaurant-strapi
+    restart: unless-stopped
+    environment:
+      # Database
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: pgbouncer
+      DATABASE_PORT: 6432
+      DATABASE_NAME: ${DATABASE_NAME:-restaurant_db}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-strapi}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-strapi_password}
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+      DATABASE_POOL_MIN: 2
+      DATABASE_POOL_MAX: 10
+      # Strapi secrets
+      JWT_SECRET: ${JWT_SECRET}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      APP_KEYS: ${APP_KEYS}
+      API_TOKEN_SALT: ${API_TOKEN_SALT}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
+      # Node
+      NODE_ENV: production
+    ports:
+      - "1337:1337"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_started
+    volumes:
+      - strapi_uploads:/app/public/uploads
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:1337/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - restaurant-network
+
+  # Next.js Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL:-http://strapi:1337}
+        NEXT_PUBLIC_STRAPI_WS_URL: ${NEXT_PUBLIC_STRAPI_WS_URL:-ws://strapi:1337/graphql}
+    container_name: restaurant-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    depends_on:
+      strapi:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - restaurant-network
+
+volumes:
+  postgres_data:
+    driver: local
+  strapi_uploads:
+    driver: local
+
+networks:
+  restaurant-network:
+    driver: bridge

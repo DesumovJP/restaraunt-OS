@@ -1,0 +1,79 @@
+{
+  "kind": "collectionType",
+  "collectionName": "order_items",
+  "info": {
+    "singularName": "order-item",
+    "pluralName": "order-items",
+    "displayName": "Order Item"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "order": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::order.order",
+      "inversedBy": "items"
+    },
+    "menuItem": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::menu-item.menu-item"
+    },
+    "quantity": {
+      "type": "integer",
+      "required": true,
+      "default": 1
+    },
+    "unitPrice": {
+      "type": "decimal",
+      "required": true
+    },
+    "totalPrice": {
+      "type": "decimal"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["draft", "queued", "pending", "in_progress", "ready", "served", "returned", "cancelled", "voided"],
+      "default": "draft"
+    },
+    "statusChangedAt": {
+      "type": "datetime"
+    },
+    "courseType": {
+      "type": "enumeration",
+      "enum": ["appetizer", "starter", "soup", "main", "dessert", "drink"],
+      "default": "main"
+    },
+    "courseIndex": {
+      "type": "integer",
+      "default": 0
+    },
+    "notes": {
+      "type": "text"
+    },
+    "comment": {
+      "type": "json"
+    },
+    "commentHistory": {
+      "type": "json",
+      "default": []
+    },
+    "prepStartAt": {
+      "type": "datetime"
+    },
+    "prepElapsedMs": {
+      "type": "biginteger",
+      "default": 0
+    },
+    "servedAt": {
+      "type": "datetime"
+    },
+    "modifiers": {
+      "type": "json",
+      "default": []
+    }
+  }
+}

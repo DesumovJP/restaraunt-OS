@@ -1,0 +1,75 @@
+{
+  "kind": "collectionType",
+  "collectionName": "orders",
+  "info": {
+    "singularName": "order",
+    "pluralName": "orders",
+    "displayName": "Order"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "orderNumber": {
+      "type": "string",
+      "unique": true
+    },
+    "table": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::table.table"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["new", "confirmed", "in_kitchen", "ready", "served", "cancelled", "paid"],
+      "default": "new"
+    },
+    "totalAmount": {
+      "type": "decimal",
+      "default": 0
+    },
+    "taxAmount": {
+      "type": "decimal",
+      "default": 0
+    },
+    "tipAmount": {
+      "type": "decimal",
+      "default": 0
+    },
+    "waiter": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "guestCount": {
+      "type": "integer",
+      "default": 1
+    },
+    "notes": {
+      "type": "text"
+    },
+    "items": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::order-item.order-item",
+      "mappedBy": "order"
+    },
+    "tickets": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::kitchen-ticket.kitchen-ticket",
+      "mappedBy": "order"
+    },
+    "tableStartAt": {
+      "type": "datetime"
+    },
+    "paidAt": {
+      "type": "datetime"
+    },
+    "paymentMethod": {
+      "type": "enumeration",
+      "enum": ["cash", "card", "paylater"]
+    }
+  }
+}

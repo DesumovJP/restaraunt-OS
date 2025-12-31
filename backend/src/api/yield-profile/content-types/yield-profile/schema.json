@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "yield_profiles",
+  "info": {
+    "singularName": "yield-profile",
+    "pluralName": "yield-profiles",
+    "displayName": "Yield Profile"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name"
+    },
+    "baseYieldRatio": {
+      "type": "decimal",
+      "required": true,
+      "default": 1
+    },
+    "processYields": {
+      "type": "json",
+      "default": []
+    },
+    "wasteBreakdown": {
+      "type": "json",
+      "default": []
+    }
+  }
+}

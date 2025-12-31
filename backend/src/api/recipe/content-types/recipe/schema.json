@@ -1,0 +1,62 @@
+{
+  "kind": "collectionType",
+  "collectionName": "recipes",
+  "info": {
+    "singularName": "recipe",
+    "pluralName": "recipes",
+    "displayName": "Recipe"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "nameUk": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name"
+    },
+    "portionYield": {
+      "type": "integer",
+      "default": 1
+    },
+    "costPerPortion": {
+      "type": "decimal",
+      "default": 0
+    },
+    "instructions": {
+      "type": "richtext"
+    },
+    "ingredients": {
+      "type": "component",
+      "repeatable": true,
+      "component": "recipe.recipe-ingredient"
+    },
+    "steps": {
+      "type": "component",
+      "repeatable": true,
+      "component": "recipe.recipe-step"
+    },
+    "prepTimeMinutes": {
+      "type": "integer"
+    },
+    "cookTimeMinutes": {
+      "type": "integer"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "outputType": {
+      "type": "enumeration",
+      "enum": ["kitchen", "bar", "pastry", "cold"],
+      "default": "kitchen"
+    }
+  }
+}

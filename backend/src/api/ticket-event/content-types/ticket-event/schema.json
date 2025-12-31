@@ -1,0 +1,42 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ticket_events",
+  "info": {
+    "singularName": "ticket-event",
+    "pluralName": "ticket-events",
+    "displayName": "Ticket Event"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "kitchenTicket": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::kitchen-ticket.kitchen-ticket",
+      "inversedBy": "events"
+    },
+    "eventType": {
+      "type": "enumeration",
+      "enum": ["created", "started", "paused", "resumed", "completed", "failed", "cancelled", "inventory_locked", "inventory_released"]
+    },
+    "previousStatus": {
+      "type": "string"
+    },
+    "newStatus": {
+      "type": "string"
+    },
+    "actor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "reason": {
+      "type": "text"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

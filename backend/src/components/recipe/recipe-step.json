@@ -1,0 +1,28 @@
+{
+  "collectionName": "components_recipe_steps",
+  "info": {
+    "displayName": "Recipe Step",
+    "icon": "list-ordered"
+  },
+  "attributes": {
+    "stepNumber": {
+      "type": "integer",
+      "required": true
+    },
+    "description": {
+      "type": "text",
+      "required": true
+    },
+    "station": {
+      "type": "enumeration",
+      "enum": ["grill", "fry", "salad", "hot", "dessert", "bar", "pass", "prep"]
+    },
+    "estimatedTimeMinutes": {
+      "type": "integer"
+    },
+    "processType": {
+      "type": "enumeration",
+      "enum": ["cleaning", "boiling", "frying", "rendering", "baking", "grilling", "portioning"]
+    }
+  }
+}

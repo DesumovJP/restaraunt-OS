@@ -1,0 +1,34 @@
+{
+  "collectionName": "components_recipe_ingredients",
+  "info": {
+    "displayName": "Recipe Ingredient",
+    "icon": "leaf"
+  },
+  "attributes": {
+    "ingredient": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::ingredient.ingredient"
+    },
+    "quantity": {
+      "type": "decimal",
+      "required": true
+    },
+    "unit": {
+      "type": "enumeration",
+      "enum": ["kg", "g", "l", "ml", "pcs", "portion"]
+    },
+    "processChain": {
+      "type": "json",
+      "default": ["cleaning"]
+    },
+    "isOptional": {
+      "type": "boolean",
+      "default": false
+    },
+    "wasteAllowancePercent": {
+      "type": "decimal",
+      "default": 5
+    }
+  }
+}

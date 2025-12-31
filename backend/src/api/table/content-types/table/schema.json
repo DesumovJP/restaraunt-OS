@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "tables",
+  "info": {
+    "singularName": "table",
+    "pluralName": "tables",
+    "displayName": "Table"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "number": {
+      "type": "integer",
+      "required": true,
+      "unique": true
+    },
+    "capacity": {
+      "type": "integer",
+      "default": 4
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["free", "occupied", "reserved"],
+      "default": "free"
+    },
+    "currentGuests": {
+      "type": "integer"
+    },
+    "reservedBy": {
+      "type": "string"
+    },
+    "reservedAt": {
+      "type": "datetime"
+    },
+    "occupiedAt": {
+      "type": "datetime"
+    },
+    "zone": {
+      "type": "string"
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    }
+  }
+}

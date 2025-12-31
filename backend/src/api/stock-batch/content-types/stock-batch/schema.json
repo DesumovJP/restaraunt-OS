@@ -1,0 +1,84 @@
+{
+  "kind": "collectionType",
+  "collectionName": "stock_batches",
+  "info": {
+    "singularName": "stock-batch",
+    "pluralName": "stock-batches",
+    "displayName": "Stock Batch"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "batchNumber": {
+      "type": "string"
+    },
+    "barcode": {
+      "type": "string"
+    },
+    "ingredient": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::ingredient.ingredient",
+      "inversedBy": "stockBatches"
+    },
+    "grossIn": {
+      "type": "decimal",
+      "required": true
+    },
+    "netAvailable": {
+      "type": "decimal",
+      "required": true
+    },
+    "usedAmount": {
+      "type": "decimal",
+      "default": 0
+    },
+    "wastedAmount": {
+      "type": "decimal",
+      "default": 0
+    },
+    "unitCost": {
+      "type": "decimal",
+      "required": true
+    },
+    "totalCost": {
+      "type": "decimal"
+    },
+    "receivedAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "expiryDate": {
+      "type": "date"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["received", "inspecting", "processing", "available", "reserved", "depleted", "expired", "quarantine", "written_off"],
+      "default": "received"
+    },
+    "isLocked": {
+      "type": "boolean",
+      "default": false
+    },
+    "lockedBy": {
+      "type": "string"
+    },
+    "lockedAt": {
+      "type": "datetime"
+    },
+    "supplier": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::supplier.supplier"
+    },
+    "invoiceNumber": {
+      "type": "string"
+    },
+    "processes": {
+      "type": "json",
+      "default": []
+    }
+  }
+}

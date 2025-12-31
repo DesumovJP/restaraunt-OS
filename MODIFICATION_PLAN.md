@@ -2643,7 +2643,7 @@ export const uk = {
     portioning: 'Порціонування'
   },
   split: {
-    even: 'Порівну',
+    even: 'Порівну'," 
     by_items: 'За стравами',
     mixed: 'Змішаний'
   },

@@ -1,0 +1,78 @@
+{
+  "kind": "collectionType",
+  "collectionName": "kitchen_tickets",
+  "info": {
+    "singularName": "kitchen-ticket",
+    "pluralName": "kitchen-tickets",
+    "displayName": "Kitchen Ticket"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "ticketNumber": {
+      "type": "string"
+    },
+    "order": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::order.order",
+      "inversedBy": "tickets"
+    },
+    "orderItem": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::order-item.order-item"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["queued", "started", "paused", "resumed", "ready", "failed", "cancelled"],
+      "default": "queued"
+    },
+    "station": {
+      "type": "enumeration",
+      "enum": ["grill", "fry", "salad", "hot", "dessert", "bar", "pass", "prep"]
+    },
+    "priority": {
+      "type": "enumeration",
+      "enum": ["normal", "rush", "vip"],
+      "default": "normal"
+    },
+    "priorityScore": {
+      "type": "integer",
+      "default": 0
+    },
+    "assignedChef": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "startedAt": {
+      "type": "datetime"
+    },
+    "completedAt": {
+      "type": "datetime"
+    },
+    "elapsedSeconds": {
+      "type": "integer",
+      "default": 0
+    },
+    "inventoryLocked": {
+      "type": "boolean",
+      "default": false
+    },
+    "inventoryMovements": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::inventory-movement.inventory-movement",
+      "mappedBy": "kitchenTicket"
+    },
+    "events": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::ticket-event.ticket-event",
+      "mappedBy": "kitchenTicket"
+    }
+  }
+}
