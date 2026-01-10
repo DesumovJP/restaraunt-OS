@@ -12,6 +12,48 @@
 
 import type { Core } from '@strapi/strapi';
 
+// ============================================
+// LOGGING UTILITIES
+// ============================================
+
+const LOG_PREFIX = '[Inventory]';
+
+interface InventoryLogContext {
+  ticketId?: string;
+  ingredientId?: string;
+  ingredientName?: string;
+  batchId?: string;
+  quantity?: number;
+  unit?: string;
+  cost?: number;
+  [key: string]: unknown;
+}
+
+function logInventory(
+  level: 'info' | 'success' | 'error' | 'warn' | 'debug',
+  message: string,
+  context?: InventoryLogContext
+) {
+  const timestamp = new Date().toISOString();
+  const logData = { timestamp, ...context };
+
+  switch (level) {
+    case 'error':
+      console.error(`${LOG_PREFIX} ${message}`, logData);
+      break;
+    case 'warn':
+      console.warn(`${LOG_PREFIX} ${message}`, logData);
+      break;
+    case 'debug':
+      if (process.env.NODE_ENV === 'development') {
+        console.log(`${LOG_PREFIX} [DEBUG] ${message}`, logData);
+      }
+      break;
+    default:
+      console.log(`${LOG_PREFIX} ${message}`, logData);
+  }
+}
+
 interface StartTicketResult {
   success: boolean;
   ticket?: any;
@@ -94,6 +136,12 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     ticketDocumentId: string,
     chefDocumentId: string
   ): Promise<StartTicketResult> {
+    const startTime = Date.now();
+
+    logInventory('info', '→ Starting ticket deduction process', {
+      ticketId: ticketDocumentId,
+      chefId: chefDocumentId,
+    });
 
     // Use Strapi's transaction support
     const knex = strapi.db.connection;
@@ -127,10 +175,22 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         });
 
         if (!ticket) {
+          logInventory('error', '✗ Ticket not found', { ticketId: ticketDocumentId });
           throw { code: 'TICKET_NOT_FOUND', message: 'Kitchen ticket not found' };
         }
 
+        logInventory('debug', '  Ticket loaded', {
+          ticketId: ticketDocumentId,
+          ticketNumber: ticket.ticketNumber,
+          status: ticket.status,
+          menuItem: ticket.orderItem?.menuItem?.name,
+        });
+
         if (ticket.status !== 'queued') {
+          logInventory('error', '✗ Invalid ticket status', {
+            ticketId: ticketDocumentId,
+            currentStatus: ticket.status,
+          });
           throw {
             code: 'INVALID_STATUS',
             message: `Cannot start ticket with status: ${ticket.status}`
@@ -138,6 +198,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         }
 
         if (ticket.inventoryLocked) {
+          logInventory('error', '✗ Inventory already locked', { ticketId: ticketDocumentId });
           throw { code: 'ALREADY_LOCKED', message: 'Inventory already locked for this ticket' };
         }
 
@@ -145,6 +206,10 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
         // If no recipe or no ingredients, just start the ticket without inventory deduction
         if (!recipe?.ingredients?.length) {
+          logInventory('info', '  No recipe/ingredients - starting without deduction', {
+            ticketId: ticketDocumentId,
+          });
+
           const updatedTicket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').update({
             documentId: ticketDocumentId,
             data: {
@@ -167,12 +232,24 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
             }
           });
 
+          const duration = Date.now() - startTime;
+          logInventory('success', '✓ Ticket started (no inventory)', {
+            ticketId: ticketDocumentId,
+            duration,
+          });
+
           return { success: true, ticket: updatedTicket, inventoryMovements: [], consumedBatches: [] };
         }
 
         const quantity = ticket.orderItem?.quantity || 1;
         const consumedBatches: BatchConsumption[] = [];
         const inventoryMovements: any[] = [];
+
+        logInventory('info', `  Processing ${recipe.ingredients.length} ingredients (qty: ${quantity})`, {
+          ticketId: ticketDocumentId,
+          ingredientCount: recipe.ingredients.length,
+          orderQuantity: quantity,
+        });
 
         // 2. Process each ingredient
         for (const recipeIngredient of recipe.ingredients) {
@@ -224,20 +301,39 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
             populate: ['ingredient']
           });
 
+          logInventory('debug', `    Found ${batches.length} available batches`, {
+            ingredientId: ingredient.documentId,
+            ingredientName: ingredient.name,
+            required: normalizedGross,
+            unit: ingredientUnit,
+            batchCount: batches.length,
+          });
+
           let remaining = normalizedGross;
 
           for (const batch of batches) {
             if (remaining <= 0) break;
 
             const takeAmount = Math.min(batch.netAvailable, remaining);
+            const newAvailable = batch.netAvailable - takeAmount;
+            const isDepleted = newAvailable <= 0.001;
+
+            logInventory('debug', `    Consuming from batch ${batch.batchNumber}`, {
+              batchId: batch.documentId,
+              batchNumber: batch.batchNumber,
+              takeAmount,
+              batchAvailable: batch.netAvailable,
+              newAvailable,
+              isDepleted,
+            });
 
             // Update batch in transaction
             await strapi.documents('api::stock-batch.stock-batch').update({
               documentId: batch.documentId,
               data: {
-                netAvailable: batch.netAvailable - takeAmount,
+                netAvailable: newAvailable,
                 usedAmount: (batch.usedAmount || 0) + takeAmount,
-                status: (batch.netAvailable - takeAmount) <= 0.001 ? 'depleted' : batch.status
+                status: isDepleted ? 'depleted' : batch.status
               }
             });
 
@@ -278,6 +374,16 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
           // 4. Check if sufficient stock
           if (remaining > 0.001) { // Small tolerance for floating point
+            logInventory('error', '✗ INSUFFICIENT STOCK', {
+              ticketId: ticketDocumentId,
+              ingredientId: ingredient.documentId,
+              ingredientName: ingredient.name,
+              required: normalizedGross,
+              available: normalizedGross - remaining,
+              shortfall: remaining,
+              unit: ingredientUnit,
+            });
+
             throw {
               code: 'INSUFFICIENT_STOCK',
               message: `Insufficient stock for ingredient: ${ingredient.name}`,
@@ -291,6 +397,14 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
               }
             };
           }
+
+          logInventory('info', `  ✓ ${ingredient.name}: ${normalizedGross.toFixed(3)} ${ingredientUnit}`, {
+            ingredientId: ingredient.documentId,
+            ingredientName: ingredient.name,
+            consumed: normalizedGross,
+            unit: ingredientUnit,
+            batchesUsed: consumedBatches.filter(c => c.ingredientDocumentId === ingredient.documentId).length,
+          });
 
           // Update ingredient's current stock
           const totalConsumed = consumedBatches
@@ -349,6 +463,19 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           });
         }
 
+        const duration = Date.now() - startTime;
+        const totalCost = consumedBatches.reduce((sum, c) => sum + c.cost, 0);
+
+        logInventory('success', '✓ Ticket started with inventory deduction', {
+          ticketId: ticketDocumentId,
+          ticketNumber: updatedTicket.ticketNumber,
+          duration,
+          ingredientsProcessed: recipe.ingredients.length,
+          batchesConsumed: consumedBatches.length,
+          movementsCreated: inventoryMovements.length,
+          totalCost: totalCost.toFixed(2),
+        });
+
         return {
           success: true,
           ticket: updatedTicket,
@@ -364,7 +491,15 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       });
 
     } catch (error: any) {
+      const duration = Date.now() - startTime;
       // Transaction will auto-rollback on error
+      logInventory('error', '✗ Start ticket failed (transaction rolled back)', {
+        ticketId: ticketDocumentId,
+        duration,
+        errorCode: error.code,
+        errorMessage: error.message,
+      });
+
       return {
         success: false,
         error: {
@@ -378,6 +513,13 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
 
   // Release inventory on ticket cancel/fail
   async releaseInventory(ticketDocumentId: string, reason: string, operatorId?: string): Promise<void> {
+    const startTime = Date.now();
+
+    logInventory('info', '→ Releasing inventory for ticket', {
+      ticketId: ticketDocumentId,
+      reason,
+    });
+
     const movements = await strapi.documents('api::inventory-movement.inventory-movement').findMany({
       filters: {
         kitchenTicket: { documentId: ticketDocumentId },
@@ -386,7 +528,19 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       populate: ['stockBatch', 'ingredient']
     });
 
+    logInventory('info', `  Found ${movements.length} movements to reverse`, {
+      ticketId: ticketDocumentId,
+      movementCount: movements.length,
+    });
+
+    let restoredBatches = 0;
+    let restoredIngredients = 0;
+    let totalQuantityRestored = 0;
+
     for (const movement of movements) {
+      const restoreQty = movement.grossQuantity || movement.quantity;
+      totalQuantityRestored += restoreQty;
+
       // Restore batch
       if (movement.stockBatch) {
         const batch = await strapi.documents('api::stock-batch.stock-batch').findOne({
@@ -397,10 +551,17 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           await strapi.documents('api::stock-batch.stock-batch').update({
             documentId: movement.stockBatch.documentId,
             data: {
-              netAvailable: (batch.netAvailable || 0) + (movement.grossQuantity || movement.quantity),
-              usedAmount: Math.max(0, (batch.usedAmount || 0) - (movement.grossQuantity || movement.quantity)),
+              netAvailable: (batch.netAvailable || 0) + restoreQty,
+              usedAmount: Math.max(0, (batch.usedAmount || 0) - restoreQty),
               status: 'available'
             }
+          });
+          restoredBatches++;
+
+          logInventory('debug', `    Restored batch ${batch.batchNumber}`, {
+            batchId: batch.documentId,
+            restored: restoreQty,
+            newAvailable: (batch.netAvailable || 0) + restoreQty,
           });
         }
       }
@@ -415,9 +576,10 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           await strapi.documents('api::ingredient.ingredient').update({
             documentId: movement.ingredient.documentId,
             data: {
-              currentStock: (ingredient.currentStock || 0) + (movement.grossQuantity || movement.quantity)
+              currentStock: (ingredient.currentStock || 0) + restoreQty
             }
           });
+          restoredIngredients++;
         }
       }
 
@@ -428,7 +590,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           stockBatch: movement.stockBatch?.documentId,
           kitchenTicket: ticketDocumentId,
           movementType: 'return',
-          quantity: movement.grossQuantity || movement.quantity,
+          quantity: restoreQty,
           unit: movement.unit,
           reason,
           reasonCode: 'TICKET_CANCEL',
@@ -457,6 +619,16 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           releasedMovements: movements.length
         }
       }
+    });
+
+    const duration = Date.now() - startTime;
+    logInventory('success', '✓ Inventory released', {
+      ticketId: ticketDocumentId,
+      duration,
+      movementsReversed: movements.length,
+      batchesRestored: restoredBatches,
+      ingredientsRestored: restoredIngredients,
+      reason,
     });
   }
 });

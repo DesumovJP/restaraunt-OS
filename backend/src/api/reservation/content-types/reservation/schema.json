@@ -1,0 +1,95 @@
+{
+  "kind": "collectionType",
+  "collectionName": "reservations",
+  "info": {
+    "singularName": "reservation",
+    "pluralName": "reservations",
+    "displayName": "Reservation",
+    "description": "Table reservations with time slots"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "table": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::table.table"
+    },
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "startTime": {
+      "type": "time",
+      "required": true
+    },
+    "endTime": {
+      "type": "time",
+      "required": true
+    },
+    "guestCount": {
+      "type": "integer",
+      "required": true,
+      "default": 2,
+      "min": 1
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["pending", "confirmed", "seated", "completed", "cancelled", "no_show"],
+      "default": "pending"
+    },
+    "contactName": {
+      "type": "string",
+      "required": true
+    },
+    "contactPhone": {
+      "type": "string",
+      "required": true
+    },
+    "contactEmail": {
+      "type": "email"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "specialRequests": {
+      "type": "text"
+    },
+    "occasion": {
+      "type": "enumeration",
+      "enum": ["none", "birthday", "anniversary", "business", "romantic", "other"]
+    },
+    "source": {
+      "type": "enumeration",
+      "enum": ["phone", "walk_in", "website", "app", "third_party"],
+      "default": "phone"
+    },
+    "confirmationCode": {
+      "type": "string"
+    },
+    "confirmedAt": {
+      "type": "datetime"
+    },
+    "reminderSentAt": {
+      "type": "datetime"
+    },
+    "seatedAt": {
+      "type": "datetime"
+    },
+    "completedAt": {
+      "type": "datetime"
+    },
+    "createdBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "scheduledOrder": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::scheduled-order.scheduled-order"
+    }
+  }
+}

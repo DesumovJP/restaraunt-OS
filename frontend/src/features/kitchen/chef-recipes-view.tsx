@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ChefRecipeCard } from "./chef-recipe-card";
+import { ChefRecipeCard, RecipeDetailModal } from "./chef-recipe-card";
 import { RecipeFormModal } from "./recipe-form-modal";
 import { useRecipes } from "@/hooks/use-menu";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,7 @@ export function ChefRecipesView() {
   const [selectedOutputType, setSelectedOutputType] = React.useState<OutputType | "all">("all");
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingRecipe, setEditingRecipe] = React.useState<Recipe | null>(null);
+  const [viewingRecipe, setViewingRecipe] = React.useState<Recipe | null>(null);
 
   // Update local recipes when fetched
   React.useEffect(() => {
@@ -121,6 +122,18 @@ export function ChefRecipesView() {
     // This would call an API to create a reservation
   };
 
+  const handleViewDetails = (recipe: Recipe) => {
+    setViewingRecipe(recipe);
+  };
+
+  const handleEditFromDetails = () => {
+    if (viewingRecipe) {
+      setEditingRecipe(viewingRecipe);
+      setViewingRecipe(null);
+      setIsFormOpen(true);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -185,11 +198,11 @@ export function ChefRecipesView() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+      <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
+          <div className="space-y-0.5 p-1">
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} className="h-5 bg-muted animate-pulse" />
             ))}
           </div>
         ) : filteredRecipes.length === 0 ? (
@@ -203,13 +216,14 @@ export function ChefRecipesView() {
             }
           />
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="divide-y">
             {filteredRecipes.map((recipe) => (
               <ChefRecipeCard
                 key={recipe.id}
                 recipe={recipe}
                 onEdit={() => handleEditRecipe(recipe)}
                 onReserve={handleReserveIngredients}
+                onViewDetails={handleViewDetails}
                 outputTypeLabel={recipe.outputType ? OUTPUT_TYPE_LABELS[recipe.outputType] : undefined}
               />
             ))}
@@ -223,6 +237,14 @@ export function ChefRecipesView() {
         onOpenChange={setIsFormOpen}
         recipe={editingRecipe}
         onSave={handleSaveRecipe}
+      />
+
+      {/* Recipe Detail Modal */}
+      <RecipeDetailModal
+        recipe={viewingRecipe}
+        open={!!viewingRecipe}
+        onOpenChange={(open) => !open && setViewingRecipe(null)}
+        onEdit={handleEditFromDetails}
       />
     </div>
   );

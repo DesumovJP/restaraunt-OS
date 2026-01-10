@@ -53,6 +53,15 @@ export default {
         policies: [],
         middlewares: []
       }
+    },
+    {
+      method: 'POST',
+      path: '/kitchen-tickets/:documentId/serve',
+      handler: 'kitchen-ticket.serve',
+      config: {
+        policies: [],
+        middlewares: []
+      }
     }
   ]
 };

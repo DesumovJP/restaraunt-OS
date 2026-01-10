@@ -5,25 +5,29 @@ import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutGrid,
-  Calendar,
-  List,
-  MessageCircle,
-  HelpCircle,
   User,
   X,
   Grid3X3,
+  ListTodo,
+  CalendarCheck,
 } from 'lucide-react';
 import {
   Drawer,
   DrawerContent,
 } from '@/components/ui/drawer';
 
-const navigationItems = [
-  { id: 'tables', icon: Grid3X3, path: '/pos/waiter/tables', label: 'Столи' },
-  { id: 'menu', icon: LayoutGrid, path: '/pos/waiter', label: 'Меню' },
-  { id: 'calendar', icon: Calendar, path: '/pos/waiter/calendar', label: 'Заплановані' },
-  { id: 'messages', icon: MessageCircle, path: '/pos/waiter/messages', label: 'Чат' },
-  { id: 'help', icon: HelpCircle, path: '/pos/waiter/help', label: 'Допомога' },
+export type WaiterNavView = 'tables' | 'menu' | 'calendar' | 'dailies';
+
+// Навігаційні елементи - сторінки
+const pageNavigationItems = [
+  { id: 'tables' as const, icon: Grid3X3, path: '/pos/waiter/tables', label: 'Столи' },
+  { id: 'menu' as const, icon: LayoutGrid, path: '/pos/waiter', label: 'Меню' },
+  { id: 'calendar' as const, icon: CalendarCheck, path: '/pos/waiter/calendar', label: 'Календар' },
+];
+
+// Вкладки всередині сторінки меню
+const viewNavigationItems = [
+  { id: 'dailies' as const, icon: ListTodo, label: 'Завдання' },
 ];
 
 interface LeftSidebarProps {
@@ -31,13 +35,17 @@ interface LeftSidebarProps {
   onOpenChange?: (open: boolean) => void;
   userName?: string;
   userRole?: string;
+  activeView?: WaiterNavView;
+  onViewChange?: (view: WaiterNavView) => void;
 }
 
-export function LeftSidebar({ 
-  open, 
+export function LeftSidebar({
+  open,
   onOpenChange,
   userName = 'Courtney Henry',
   userRole = 'Cashier 1st Shift',
+  activeView,
+  onViewChange,
 }: LeftSidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -67,11 +75,17 @@ export function LeftSidebar({
   };
 
   const handleNavigation = (path: string) => {
-    // Navigate to available pages
-    if (path === '/pos/waiter' || path === '/pos/waiter/calendar' || path === '/pos/waiter/tables') {
-      router.push(path);
-    }
+    router.push(path);
     // Close drawer on mobile after navigation
+    if (isMobile) {
+      handleOpenChange(false);
+    }
+  };
+
+  const handleViewChange = (view: WaiterNavView) => {
+    if (onViewChange) {
+      onViewChange(view);
+    }
     if (isMobile) {
       handleOpenChange(false);
     }
@@ -79,21 +93,56 @@ export function LeftSidebar({
 
   const SidebarContent = () => (
     <>
-      <div className="flex flex-col items-center gap-6 flex-1">
-        {navigationItems.map((item) => {
+      <div className="flex flex-col items-center gap-3 flex-1">
+        {/* Page navigation */}
+        {pageNavigationItems.map((item) => {
           const Icon = item.icon;
-          const isActive = pathname === item.path || (item.id === 'menu' && pathname === '/pos/waiter');
+          const isActive = (pathname === item.path || (item.id === 'menu' && pathname === '/pos/waiter')) && activeView !== 'dailies';
 
           return (
             <button
               key={item.id}
-              onClick={() => handleNavigation(item.path)}
+              onClick={() => {
+                // If clicking menu while on menu page, reset to menu view
+                if (item.id === 'menu' && pathname === '/pos/waiter') {
+                  handleViewChange('menu');
+                } else {
+                  handleNavigation(item.path);
+                }
+              }}
               className={cn(
-                'w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200',
-                'hover:bg-slate-100 active:scale-95',
+                'w-12 h-12 rounded-xl flex items-center justify-center',
+                'transition-colors duration-150',
                 isActive
-                  ? 'bg-blue-600 text-white shadow-lg'
-                  : 'text-slate-600 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+              )}
+              aria-label={item.label}
+              title={item.label}
+            >
+              <Icon className="w-5 h-5" />
+            </button>
+          );
+        })}
+
+        {/* Separator */}
+        <div className="w-8 h-px bg-slate-200 my-1" />
+
+        {/* View navigation (tabs within current page) */}
+        {viewNavigationItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeView === item.id;
+
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleViewChange(item.id)}
+              className={cn(
+                'w-12 h-12 rounded-xl flex items-center justify-center',
+                'transition-colors duration-150',
+                isActive
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
               )}
               aria-label={item.label}
               title={item.label}
@@ -104,17 +153,9 @@ export function LeftSidebar({
         })}
       </div>
 
-      {/* Profile bar at bottom */}
-      <div className="w-full px-2 py-3 bg-slate-50 rounded-lg border border-slate-200">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-            <User className="w-4 h-4 text-white" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-900 truncate">{userName}</p>
-            <p className="text-[10px] text-slate-600 truncate">{userRole}</p>
-          </div>
-        </div>
+      {/* Profile - компактний */}
+      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center" title={`${userName} • ${userRole}`}>
+        <User className="w-5 h-5 text-slate-600" />
       </div>
     </>
   );
@@ -128,53 +169,85 @@ export function LeftSidebar({
 
       {/* Mobile Drawer */}
       <Drawer open={isMobileOpen} onOpenChange={handleOpenChange} side="left">
-        <DrawerContent className="flex flex-col h-full p-0 w-64 sm:w-72">
-          <div className="relative flex flex-col items-start px-4 py-6 h-full bg-white">
-            {/* Close button for mobile */}
-            <button
-              onClick={() => handleOpenChange(false)}
-              className="absolute top-4 right-4 p-2 rounded-lg hover:bg-slate-100 transition-colors"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5 text-slate-600" />
-            </button>
-            
-            {/* Navigation items - vertical layout for mobile */}
-            <div className="flex flex-col gap-2 w-full mt-8">
-              {navigationItems.map((item) => {
+        <DrawerContent className="flex flex-col h-full p-0 w-64">
+          <div className="flex flex-col px-4 py-4 h-full bg-white">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-semibold text-slate-900">Меню</span>
+              <button
+                onClick={() => handleOpenChange(false)}
+                className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100"
+                aria-label="Закрити"
+              >
+                <X className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
+
+            {/* Page Navigation */}
+            <div className="flex flex-col gap-1 flex-1">
+              {pageNavigationItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.path || (item.id === 'menu' && pathname === '/pos/waiter');
+                const isActive = (pathname === item.path || (item.id === 'menu' && pathname === '/pos/waiter')) && activeView !== 'dailies';
 
                 return (
                   <button
                     key={item.id}
-                    onClick={() => handleNavigation(item.path)}
+                    onClick={() => {
+                      if (item.id === 'menu' && pathname === '/pos/waiter') {
+                        handleViewChange('menu');
+                      } else {
+                        handleNavigation(item.path);
+                      }
+                    }}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
-                      'hover:bg-slate-100 active:scale-95',
+                      'flex items-center gap-3 px-4 h-12 rounded-lg',
+                      'transition-colors duration-150',
                       isActive
-                        ? 'bg-blue-600 text-white shadow-lg'
-                        : 'text-slate-600 hover:text-slate-900'
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
                     )}
-                    aria-label={item.label}
                   >
                     <Icon className="w-5 h-5" />
-                    <span className="font-medium text-sm">{item.label}</span>
+                    <span className="font-medium">{item.label}</span>
+                  </button>
+                );
+              })}
+
+              {/* Separator */}
+              <div className="h-px bg-slate-200 my-2" />
+
+              {/* View Navigation (tabs) */}
+              {viewNavigationItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeView === item.id;
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleViewChange(item.id)}
+                    className={cn(
+                      'flex items-center gap-3 px-4 h-12 rounded-lg',
+                      'transition-colors duration-150',
+                      isActive
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-600 hover:bg-slate-100'
+                    )}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium">{item.label}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Profile bar at bottom */}
-            <div className="mt-auto w-full px-4 py-3 bg-slate-50 rounded-lg border border-slate-200">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{userName}</p>
-                  <p className="text-xs text-slate-600 truncate">{userRole}</p>
-                </div>
+            {/* Profile */}
+            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-lg">
+              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
+                <User className="w-5 h-5 text-slate-600" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-slate-900">{userName}</p>
+                <p className="text-xs text-slate-500">{userRole}</p>
               </div>
             </div>
           </div>

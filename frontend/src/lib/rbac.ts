@@ -122,7 +122,8 @@ export type PermissionScope =
   | 'profiles'
   | 'reports'
   | 'settings'
-  | 'audit';
+  | 'audit'
+  | 'daily_tasks';
 
 export type PermissionAction =
   | 'create'

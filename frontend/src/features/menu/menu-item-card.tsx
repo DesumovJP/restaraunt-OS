@@ -32,34 +32,34 @@ export function MenuItemCard({
     <Card
       onClick={handleCardClick}
       className={cn(
-        "relative overflow-hidden transition-all duration-300",
-        "flex flex-col h-full border-slate-200/80",
-        "hover:shadow-lg hover:border-blue-300 hover:-translate-y-1",
-        "active:scale-[0.98] active:shadow-md",
-        "cursor-pointer group",
-        !item.available && "opacity-50 cursor-not-allowed hover:translate-y-0 hover:border-slate-200/80",
-        quantity > 0 && "ring-2 ring-blue-500/30 border-blue-400",
+        "relative overflow-hidden",
+        "flex flex-col h-full border-slate-200",
+        "transition-colors duration-150",
+        "active:bg-slate-50",
+        "cursor-pointer",
+        !item.available && "opacity-50 cursor-not-allowed",
+        quantity > 0 && "ring-2 ring-emerald-500 border-emerald-400 bg-emerald-50/30",
         className
       )}
     >
       {/* Unavailable overlay */}
       {!item.available && (
-        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-20 flex items-center justify-center rounded-xl">
-          <Badge variant="secondary" className="text-xs font-semibold px-3 py-1.5">
+        <div className="absolute inset-0 bg-white/80 z-20 flex items-center justify-center">
+          <Badge variant="secondary" className="text-xs font-medium">
             Недоступно
           </Badge>
         </div>
       )}
 
-      {/* Item image */}
-      <div className="relative w-full aspect-[4/3] bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+      {/* Item image - без анімацій */}
+      <div className="relative w-full aspect-[4/3] bg-slate-100 overflow-hidden">
         {item.imageUrl ? (
           <>
             <Image
               src={item.imageUrl}
               alt={item.name}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              className="object-cover"
               sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -70,58 +70,46 @@ export function MenuItemCard({
                 }
               }}
             />
-            <div className="image-fallback absolute inset-0 hidden items-center justify-center">
-              <span className="text-5xl opacity-40" aria-hidden="true">
-                {item.categoryId === "cat-5"
-                  ? "☕"
-                  : item.categoryId === "cat-6"
-                    ? "🍰"
-                    : "🍽️"}
-              </span>
+            <div className="image-fallback absolute inset-0 hidden items-center justify-center bg-slate-100">
+              <span className="text-4xl opacity-30" aria-hidden="true">🍽️</span>
             </div>
           </>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="text-5xl opacity-40" aria-hidden="true">
-              {item.categoryId === "cat-5"
-                ? "☕"
-                : item.categoryId === "cat-6"
-                  ? "🍰"
-                  : "🍽️"}
-            </span>
+            <span className="text-4xl opacity-30" aria-hidden="true">🍽️</span>
           </div>
         )}
-        
-        {/* Quantity badge overlay */}
+
+        {/* Quantity badge */}
         {quantity > 0 && (
           <div className="absolute top-2 right-2 z-10">
-            <Badge className="bg-blue-600 text-white font-semibold text-xs px-2 py-1 shadow-lg">
+            <Badge className="bg-emerald-600 text-white font-bold text-sm min-w-[28px] h-7 flex items-center justify-center">
               {quantity}
             </Badge>
           </div>
         )}
       </div>
 
-      {/* Content section - Compact layout */}
-      <div className="flex flex-col flex-1 p-2.5 sm:p-3">
-        {/* Name - Compact, single line */}
-        <h3 className="font-semibold text-sm sm:text-[15px] leading-tight mb-1 text-slate-900 line-clamp-1 group-hover:text-blue-600 transition-colors">
+      {/* Content - спрощений */}
+      <div className="flex flex-col flex-1 p-3">
+        <h3 className="font-semibold text-sm text-slate-900 line-clamp-1 mb-1">
           {item.name}
         </h3>
-        
-        {/* Description - Compact, single line */}
-        <p className="text-xs text-slate-500 leading-snug mb-2 line-clamp-1">
-          {item.description || 'Delicious beef lasagna with double chilli Delicious beef'}
-        </p>
 
-        {/* Price and Weight - Compact row */}
+        {item.description && (
+          <p className="text-xs text-slate-500 line-clamp-1 mb-2">
+            {item.description}
+          </p>
+        )}
+
+        {/* Price and Weight/Volume */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
-          <span className="font-mono font-bold text-base sm:text-lg text-slate-900 tracking-tight">
+          <span className="font-bold text-base text-slate-900">
             {formatPrice(item.price)}
           </span>
           {item.weight && (
-            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
-              {item.weight}г
+            <span className="text-xs text-slate-400">
+              {item.weight}{item.outputType === 'bar' ? 'мл' : 'г'}
             </span>
           )}
         </div>

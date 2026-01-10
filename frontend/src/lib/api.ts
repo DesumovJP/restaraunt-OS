@@ -2,18 +2,16 @@
  * API Module
  *
  * Provides typed API interfaces for the restaurant management system.
- * Currently returns empty data - connect to your backend.
+ * Most endpoints now connect to real backend via GraphQL.
  *
- * TODO: Replace with real API calls:
- * - Menu: GET /api/menu/categories, GET /api/menu/items
- * - Orders: POST /api/orders, PATCH /api/orders/{id}
- * - Kitchen: GET /api/kitchen/tickets, PATCH /api/kitchen/tickets/{id}
- * - Inventory: GET /api/inventory/products
- * - Recipes: GET /api/recipes
- * - Analytics: GET /api/analytics/kpis, GET /api/analytics/alerts
+ * NOTE: For new features, prefer using GraphQL hooks from @/hooks/use-graphql-*
+ * instead of this REST-style API layer.
  */
 
 import type { ApiResponse, MenuItem, Category, Product, KitchenTicket, KPI, Alert, Recipe, Order } from "@/types";
+import { tableSessionEventsApi, type SessionKPIs } from "@/lib/api-events";
+import { getUrqlClient } from "@/lib/urql-client";
+import { GET_STOCK_ALERTS } from "@/graphql/queries";
 
 // ==========================================
 // MENU API
@@ -203,29 +201,113 @@ export const recipesApi = {
 
 export const analyticsApi = {
   /**
-   * Get KPI metrics
-   * TODO: GET /api/analytics/kpis
+   * Get KPI metrics for today
+   * Uses real data from tableSessionEventsApi
    */
   async getKPIs(): Promise<ApiResponse<KPI[]>> {
-    // TODO: Replace with real API call
-    return { data: [], success: true };
+    try {
+      // Get today's range
+      const now = new Date();
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000 - 1);
+
+      const sessionKPIs = await tableSessionEventsApi.getKPIs(
+        startOfDay.toISOString(),
+        endOfDay.toISOString()
+      );
+
+      // Transform to KPI format
+      const kpis: KPI[] = [
+        {
+          id: "avg-order-time",
+          name: "Час прийому замовлення",
+          value: tableSessionEventsApi.formatDuration(sessionKPIs.avgTimeToTakeOrderMs),
+          trend: "neutral",
+          change: 0,
+        },
+        {
+          id: "avg-first-item",
+          name: "Час до першої страви",
+          value: tableSessionEventsApi.formatDuration(sessionKPIs.avgTimeToFirstItemMs),
+          trend: "neutral",
+          change: 0,
+        },
+        {
+          id: "avg-session",
+          name: "Середня тривалість сесії",
+          value: tableSessionEventsApi.formatDuration(sessionKPIs.avgTotalSessionTimeMs),
+          trend: "neutral",
+          change: 0,
+        },
+        {
+          id: "total-orders",
+          name: "Замовлень сьогодні",
+          value: String(sessionKPIs.totalOrders),
+          trend: "up",
+          change: 0,
+        },
+        {
+          id: "total-sessions",
+          name: "Сесій сьогодні",
+          value: String(sessionKPIs.totalSessions),
+          trend: "neutral",
+          change: 0,
+        },
+      ];
+
+      return { data: kpis, success: true };
+    } catch (error) {
+      console.error("[Analytics] Failed to get KPIs:", error);
+      return { data: [], success: false, message: "Помилка отримання KPI" };
+    }
   },
 
   /**
-   * Get system alerts
-   * TODO: GET /api/analytics/alerts
+   * Get system alerts (low stock, etc.)
+   * Uses real data from GraphQL
    */
   async getAlerts(): Promise<ApiResponse<Alert[]>> {
-    // TODO: Replace with real API call
-    return { data: [], success: true };
+    try {
+      const client = getUrqlClient();
+      const result = await client.query(GET_STOCK_ALERTS, {}).toPromise();
+
+      if (result.error) {
+        throw new Error(result.error.message);
+      }
+
+      const ingredients = result.data?.ingredients || [];
+
+      // Create alerts for low stock items
+      const alerts: Alert[] = ingredients
+        .filter((ing: any) => ing.currentStock < ing.minStock)
+        .map((ing: any) => ({
+          id: `low-stock-${ing.documentId}`,
+          type: "warning" as const,
+          message: `Низький запас: ${ing.nameUk || ing.name}`,
+          description: `Поточний: ${ing.currentStock} ${ing.unit}, мінімум: ${ing.minStock} ${ing.unit}`,
+          createdAt: new Date(),
+          isRead: false,
+        }));
+
+      return { data: alerts, success: true };
+    } catch (error) {
+      console.error("[Analytics] Failed to get alerts:", error);
+      return { data: [], success: false, message: "Помилка отримання сповіщень" };
+    }
   },
 
   /**
-   * Mark alert as read
-   * TODO: PATCH /api/analytics/alerts/{id}
+   * Get extended KPIs for a date range
+   */
+  async getKPIsForPeriod(from: string, to: string): Promise<SessionKPIs> {
+    return tableSessionEventsApi.getKPIs(from, to);
+  },
+
+  /**
+   * Mark alert as read (local only for now)
    */
   async markAlertRead(alertId: string): Promise<ApiResponse<Alert>> {
-    // TODO: Replace with real API call
-    return { data: {} as Alert, success: false, message: "Not implemented" };
+    // Alerts are generated dynamically, no need to persist read status
+    return { data: { id: alertId, isRead: true } as Alert, success: true };
   },
 };

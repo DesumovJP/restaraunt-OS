@@ -1,0 +1,142 @@
+{
+  "kind": "collectionType",
+  "collectionName": "scheduled_orders",
+  "info": {
+    "singularName": "scheduled-order",
+    "pluralName": "scheduled-orders",
+    "displayName": "Scheduled Order",
+    "description": "Pre-planned orders for events, reservations, and HoReCa"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "table": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::table.table"
+    },
+    "scheduledFor": {
+      "type": "datetime",
+      "required": true
+    },
+    "prepStartAt": {
+      "type": "datetime",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["scheduled", "activating", "activated", "completed", "cancelled"],
+      "default": "scheduled"
+    },
+    "guestCount": {
+      "type": "integer",
+      "default": 1
+    },
+    "adultsCount": {
+      "type": "integer"
+    },
+    "childrenCount": {
+      "type": "integer"
+    },
+    "eventType": {
+      "type": "enumeration",
+      "enum": ["regular", "birthday", "corporate", "wedding", "anniversary", "funeral", "baptism", "graduation", "business", "romantic", "other"],
+      "default": "regular"
+    },
+    "eventName": {
+      "type": "string"
+    },
+    "seatingArea": {
+      "type": "enumeration",
+      "enum": ["main_hall", "vip_room", "terrace", "private", "bar_area", "outdoor"],
+      "default": "main_hall"
+    },
+    "menuPreset": {
+      "type": "enumeration",
+      "enum": ["a_la_carte", "set_menu", "buffet", "banquet", "custom"],
+      "default": "a_la_carte"
+    },
+    "items": {
+      "type": "json",
+      "required": true,
+      "default": []
+    },
+    "totalAmount": {
+      "type": "decimal",
+      "default": 0
+    },
+    "contactName": {
+      "type": "string"
+    },
+    "contactPhone": {
+      "type": "string"
+    },
+    "contactEmail": {
+      "type": "email"
+    },
+    "contactCompany": {
+      "type": "string"
+    },
+    "paymentStatus": {
+      "type": "enumeration",
+      "enum": ["pending", "deposit_paid", "fully_paid", "refunded"],
+      "default": "pending"
+    },
+    "depositAmount": {
+      "type": "decimal"
+    },
+    "depositPaidAt": {
+      "type": "datetime"
+    },
+    "depositMethod": {
+      "type": "string"
+    },
+    "dietaryRequirements": {
+      "type": "json"
+    },
+    "assignedCoordinator": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "courseTimeline": {
+      "type": "json"
+    },
+    "checklist": {
+      "type": "json"
+    },
+    "decorations": {
+      "type": "text"
+    },
+    "musicPreference": {
+      "type": "text"
+    },
+    "cakeDetails": {
+      "type": "text"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "createdBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "confirmedAt": {
+      "type": "datetime"
+    },
+    "confirmationSentAt": {
+      "type": "datetime"
+    },
+    "reminderSentAt": {
+      "type": "datetime"
+    },
+    "activatedOrder": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::order.order"
+    }
+  }
+}

@@ -1,60 +1,88 @@
 "use client";
 
 import * as React from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QRScanner } from "@/features/inventory/qr-scanner";
-import { CategoryFilter } from "@/features/storage/category-filter";
-import { BatchesList, MOCK_BATCHES } from "@/features/storage/batches-list";
-import { StorageHistoryList } from "@/features/storage/storage-history-list";
-import { cn, formatRelativeTime } from "@/lib/utils";
-import { getCategoryCounts, filterProductsByCategory } from "@/lib/mock-storage-data";
-import { useStorageProducts } from "@/hooks/use-storage";
+
+// New optimized components
 import {
-  Package,
+  ViewToggle,
+  AlertBanner,
+  AlertIndicator,
+  ProductPreview,
+} from "@/features/storage/components";
+import { CategoryFilterMinimal } from "@/features/storage/components/category-filter-minimal";
+import { ProductList, ProductListSkeleton } from "@/features/storage/views";
+import { BatchesListOptimized } from "@/features/storage/batches-list-optimized";
+import { StorageHistoryOptimized } from "@/features/storage/storage-history-optimized";
+import { MOCK_BATCHES } from "@/features/storage/batches-list";
+
+// Stores
+import { useStorageUIStore } from "@/stores/storage-ui-store";
+import { useStorageProducts } from "@/hooks/use-storage";
+import { getCategoryCounts, filterProductsByCategory } from "@/lib/mock-storage-data";
+
+// Icons
+import {
   QrCode,
   Plus,
-  AlertTriangle,
   Search,
-  Clock,
-  Thermometer,
-  TrendingDown,
   Layers,
   Archive,
   History,
+  ArrowUpDown,
 } from "lucide-react";
+
+// Types
 import type { ExtendedProduct, StorageMainCategory, StorageSubCategory } from "@/types/extended";
-import { STORAGE_CONDITION_LABELS, STORAGE_SUB_CATEGORY_LABELS } from "@/types/extended";
 
 type StorageTab = "inventory" | "batches" | "history";
+
+// ==========================================
+// MAIN PAGE COMPONENT
+// ==========================================
 
 export default function StoragePage() {
   // Tab state
   const [activeTab, setActiveTab] = React.useState<StorageTab>("inventory");
 
-  // State
+  // UI state from store
+  const viewMode = useStorageUIStore((s) => s.viewMode);
+  const setViewMode = useStorageUIStore((s) => s.setViewMode);
+  const sortBy = useStorageUIStore((s) => s.sortBy);
+  const sortOrder = useStorageUIStore((s) => s.sortOrder);
+  const setSortBy = useStorageUIStore((s) => s.setSortBy);
+  const previewProductId = useStorageUIStore((s) => s.previewProductId);
+  const openPreview = useStorageUIStore((s) => s.openPreview);
+  const closePreview = useStorageUIStore((s) => s.closePreview);
+  const alertsDismissed = useStorageUIStore((s) => s.alertsDismissed);
+  const dismissAlerts = useStorageUIStore((s) => s.dismissAlerts);
+
+  // Local state
   const [isScannerOpen, setIsScannerOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
-
-  // Category filters
   const [selectedMainCategory, setSelectedMainCategory] = React.useState<StorageMainCategory | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = React.useState<StorageSubCategory | null>(null);
 
-  // Fetch products from GraphQL
-  const { products, isLoading: isLoadingProducts, error: productsError } = useStorageProducts();
+  // Fetch products
+  const { products, isLoading, error } = useStorageProducts();
 
   // Calculate category counts
   const categoryCounts = React.useMemo(() => getCategoryCounts(products), [products]);
 
-  // Filter products
+  // Filter and sort products
   const filteredProducts = React.useMemo(() => {
-    let result = filterProductsByCategory(products, selectedMainCategory || undefined, selectedSubCategory || undefined);
+    let result = filterProductsByCategory(
+      products,
+      selectedMainCategory || undefined,
+      selectedSubCategory || undefined
+    );
 
-    // Apply search filter
+    // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -65,10 +93,38 @@ export default function StoragePage() {
       );
     }
 
-    return result;
-  }, [products, selectedMainCategory, selectedSubCategory, searchQuery]);
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0;
+      switch (sortBy) {
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "stock":
+          comparison = a.currentStock - b.currentStock;
+          break;
+        case "category":
+          comparison = a.category.localeCompare(b.category);
+          break;
+        case "updated":
+          comparison = new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
+          break;
+        case "status":
+          const getStatusPriority = (p: ExtendedProduct) => {
+            if (p.currentStock === 0) return 0;
+            if (p.currentStock <= p.minStock) return 1;
+            return 2;
+          };
+          comparison = getStatusPriority(a) - getStatusPriority(b);
+          break;
+      }
+      return sortOrder === "asc" ? comparison : -comparison;
+    });
 
-  // Get alert counts
+    return result;
+  }, [products, selectedMainCategory, selectedSubCategory, searchQuery, sortBy, sortOrder]);
+
+  // Alert data
   const lowStockProducts = React.useMemo(
     () => products.filter((p) => p.currentStock <= p.minStock),
     [products]
@@ -87,66 +143,78 @@ export default function StoragePage() {
   const todaysBatchesCount = React.useMemo(() => {
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    return MOCK_BATCHES.filter(b => new Date(b.receivedAt) >= todayStart).length;
+    return MOCK_BATCHES.filter((b) => new Date(b.receivedAt) >= todayStart).length;
   }, []);
+
+  // Selected product for preview
+  const selectedProduct = React.useMemo(
+    () => products.find((p) => p.documentId === previewProductId) || null,
+    [products, previewProductId]
+  );
 
   // Handle close shift
   const handleCloseShift = React.useCallback(() => {
-    // Generate CSV export of today's batches
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
-    const todaysBatches = MOCK_BATCHES.filter(b => new Date(b.receivedAt) >= todayStart);
+    const todaysBatches = MOCK_BATCHES.filter(
+      (b) => new Date(b.receivedAt) >= todayStart
+    );
 
     const csvContent = [
-      ['Продукт', 'Партія', 'Накладна', 'Вага (кг)', 'Ціна за кг', 'Загальна сума', 'Статус', 'Термін'].join(','),
-      ...todaysBatches.map(b => [
-        b.productName,
-        b.batchNumber,
-        b.invoiceNumber,
-        b.grossIn,
-        b.unitCost,
-        b.totalCost,
-        b.status,
-        b.expiryDate ? new Date(b.expiryDate).toLocaleDateString('uk-UA') : ''
-      ].join(','))
-    ].join('\n');
+      ["Продукт", "Партія", "Накладна", "Вага (кг)", "Ціна за кг", "Загальна сума", "Статус", "Термін"].join(","),
+      ...todaysBatches.map((b) =>
+        [
+          b.productName,
+          b.batchNumber,
+          b.invoiceNumber,
+          b.grossIn,
+          b.unitCost,
+          b.totalCost,
+          b.status,
+          b.expiryDate ? new Date(b.expiryDate).toLocaleDateString("uk-UA") : "",
+        ].join(",")
+      ),
+    ].join("\n");
 
-    // Create and download file
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `поставки_${new Date().toLocaleDateString('uk-UA').replace(/\./g, '-')}.csv`;
+    link.download = `поставки_${new Date().toLocaleDateString("uk-UA").replace(/\./g, "-")}.csv`;
     link.click();
   }, []);
 
-  // Handle QR scan result
-  const handleQRScan = (data: {
-    sku?: string;
-    name?: string;
-    quantity?: number;
-    expiryDate?: Date;
-    batchNumber?: string;
-  }) => {
+  // Handle QR scan
+  const handleQRScan = (data: { sku?: string }) => {
     if (data.sku) {
       setSearchQuery(data.sku);
     }
   };
 
+  // Handle product select
+  const handleProductSelect = (product: ExtendedProduct) => {
+    openPreview(product.documentId);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b px-4 py-3 safe-top">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-40 bg-background border-b safe-top">
+        {/* Top row */}
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold">Smart Storage</h1>
-            {totalAlerts > 0 && (
-              <Badge variant="warning" className="gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                {totalAlerts}
-              </Badge>
+            {totalAlerts > 0 && !alertsDismissed && (
+              <AlertIndicator
+                count={totalAlerts}
+                critical={lowStockProducts.some((p) => p.currentStock === 0)}
+                onClick={() => setSortBy("status")}
+              />
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2">
+            {activeTab === "inventory" && (
+              <ViewToggle value={viewMode} onChange={setViewMode} />
+            )}
             <Button
               variant="outline"
               size="icon"
@@ -162,29 +230,32 @@ export default function StoragePage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 p-1 bg-muted rounded-lg">
+        <div className="flex gap-1 px-4 pb-3">
           <button
             onClick={() => setActiveTab("inventory")}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
               activeTab === "inventory"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
           >
             <Layers className="h-4 w-4" />
             Інвентар
-            <Badge variant="outline" className="h-5 px-1.5 text-xs">
+            <Badge
+              variant={activeTab === "inventory" ? "secondary" : "outline"}
+              className="h-5 px-1.5 text-xs"
+            >
               {products.length}
             </Badge>
           </button>
           <button
             onClick={() => setActiveTab("batches")}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
               activeTab === "batches"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
           >
             <Archive className="h-4 w-4" />
@@ -198,10 +269,10 @@ export default function StoragePage() {
           <button
             onClick={() => setActiveTab("history")}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+              "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
               activeTab === "history"
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
           >
             <History className="h-4 w-4" />
@@ -211,91 +282,98 @@ export default function StoragePage() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto p-4 space-y-4">
-        {activeTab === "inventory" ? (
-          <>
+      <main className="flex-1 overflow-y-auto p-4">
+        {activeTab === "inventory" && (
+          <div className="space-y-4">
             {/* Alert banner */}
-            {(lowStockProducts.length > 0 || expiringProducts.length > 0) && (
-              <div className="p-3 bg-warning-light border border-warning/30 rounded-lg">
-                <div className="flex items-center gap-2 text-warning font-medium mb-1">
-                  <AlertTriangle className="h-4 w-4" />
-                  Потрібна увага
-                </div>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  {lowStockProducts.length > 0 && (
-                    <li>{lowStockProducts.length} товарів з низьким запасом</li>
-                  )}
-                  {expiringProducts.length > 0 && (
-                    <li>{expiringProducts.length} товарів з терміном, що закінчується</li>
-                  )}
-                </ul>
-              </div>
+            {!alertsDismissed && (
+              <AlertBanner
+                alerts={[
+                  {
+                    type: "low_stock",
+                    count: lowStockProducts.length,
+                    items: lowStockProducts.slice(0, 3).map((p) => ({
+                      id: p.documentId,
+                      name: p.name,
+                    })),
+                  },
+                  {
+                    type: "expiring",
+                    count: expiringProducts.length,
+                    items: expiringProducts.slice(0, 3).map((p) => ({
+                      id: p.documentId,
+                      name: p.name,
+                    })),
+                  },
+                ]}
+                collapsible
+                onViewAll={() => setSortBy("status")}
+                onDismiss={dismissAlerts}
+              />
             )}
 
-            {/* Category filter */}
-            <CategoryFilter
-              selectedMainCategory={selectedMainCategory}
-              selectedSubCategory={selectedSubCategory}
-              onMainCategoryChange={setSelectedMainCategory}
-              onSubCategoryChange={setSelectedSubCategory}
-              categoryCounts={categoryCounts}
-            />
-
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Пошук по назві або SKU..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-                aria-label="Пошук товарів"
+            {/* Toolbar: Search + Filters */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Пошук по назві або SKU..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                  aria-label="Пошук товарів"
+                />
+              </div>
+              <CategoryFilterMinimal
+                selectedMainCategory={selectedMainCategory}
+                selectedSubCategory={selectedSubCategory}
+                onMainCategoryChange={setSelectedMainCategory}
+                onSubCategoryChange={setSelectedSubCategory}
+                categoryCounts={categoryCounts}
               />
             </div>
 
-            {/* Results count */}
+            {/* Results info */}
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>
-                Знайдено: {filteredProducts.length} з {products.length} товарів
+                {filteredProducts.length === products.length
+                  ? `${products.length} товарів`
+                  : `${filteredProducts.length} з ${products.length} товарів`}
               </span>
-              {(selectedMainCategory || searchQuery) && (
+              <div className="flex items-center gap-2">
+                {(selectedMainCategory || searchQuery) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedMainCategory(null);
+                      setSelectedSubCategory(null);
+                      setSearchQuery("");
+                    }}
+                  >
+                    Скинути
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => {
-                    setSelectedMainCategory(null);
-                    setSelectedSubCategory(null);
-                    setSearchQuery("");
-                  }}
+                  onClick={() => setSortBy(sortBy)}
+                  className="gap-1"
                 >
-                  Скинути фільтри
+                  <ArrowUpDown className="h-3.5 w-3.5" />
+                  Сортування
                 </Button>
-              )}
+              </div>
             </div>
 
-            {/* Products grid */}
-            {isLoadingProducts ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <Card key={i} className="animate-pulse">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-14 h-14 rounded-lg bg-muted" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-5 bg-muted rounded w-1/3" />
-                          <div className="h-4 bg-muted rounded w-1/2" />
-                          <div className="h-2 bg-muted rounded w-full" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : productsError ? (
+            {/* Product list */}
+            {isLoading ? (
+              <ProductListSkeleton viewMode={viewMode} />
+            ) : error ? (
               <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-lg">
                 <p className="text-destructive font-medium">Помилка завантаження</p>
-                <p className="text-sm text-muted-foreground">{productsError}</p>
+                <p className="text-sm text-muted-foreground">{error}</p>
               </div>
             ) : filteredProducts.length === 0 ? (
               <EmptyState
@@ -303,150 +381,42 @@ export default function StoragePage() {
                 title={searchQuery ? "Нічого не знайдено" : "Склад порожній"}
               />
             ) : (
-              <div className="space-y-3">
-                {filteredProducts.map((product) => (
-                  <ProductCard key={product.documentId} product={product} />
-                ))}
-              </div>
+              <ProductList
+                products={filteredProducts}
+                viewMode={viewMode}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onSort={setSortBy}
+                onSelect={handleProductSelect}
+                selectedId={previewProductId || undefined}
+              />
             )}
-          </>
-        ) : activeTab === "batches" ? (
-          <BatchesList onCloseShift={handleCloseShift} />
-        ) : (
-          <StorageHistoryList />
+          </div>
         )}
+
+        {activeTab === "batches" && (
+          <BatchesListOptimized onCloseShift={handleCloseShift} />
+        )}
+
+        {activeTab === "history" && <StorageHistoryOptimized />}
       </main>
 
-      {/* QR Scanner dialog */}
+      {/* Product Preview Drawer */}
+      <ProductPreview
+        product={selectedProduct}
+        open={!!previewProductId}
+        onClose={closePreview}
+        onEdit={(p) => console.log("Edit", p)}
+        onUse={(p) => console.log("Use", p)}
+        onWriteOff={(p) => console.log("Write off", p)}
+      />
+
+      {/* QR Scanner */}
       <QRScanner
         open={isScannerOpen}
         onOpenChange={setIsScannerOpen}
         onScan={handleQRScan}
       />
     </div>
-  );
-}
-
-// ==========================================
-// PRODUCT CARD COMPONENT
-// ==========================================
-
-interface ProductCardProps {
-  product: ExtendedProduct;
-  onSelect?: (product: ExtendedProduct) => void;
-}
-
-function ProductCard({ product, onSelect }: ProductCardProps) {
-  const stockPercentage = Math.min(
-    (product.currentStock / product.maxStock) * 100,
-    100
-  );
-  const isLowStock = product.currentStock <= product.minStock;
-  const isExpiring =
-    product.expiryDate &&
-    new Date(product.expiryDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-  const storageCondition = STORAGE_CONDITION_LABELS[product.storageCondition] || { uk: 'Кімнатна', en: 'Ambient', tempRange: '15-25°C' };
-  const subCategoryLabel = STORAGE_SUB_CATEGORY_LABELS[product.subCategory] || { uk: product.subCategory || 'Інше', en: product.subCategory || 'Other', parent: 'raw' as const };
-
-  return (
-    <Card
-      className={cn(
-        "transition-all cursor-pointer hover:shadow-card-hover active:scale-[0.99]",
-        isLowStock && "border-warning",
-        isExpiring && "border-danger"
-      )}
-      onClick={() => onSelect?.(product)}
-      role="button"
-      tabIndex={0}
-      aria-label={`${product.name}, залишок ${product.currentStock} ${product.unit}`}
-    >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          {/* Product icon/image */}
-          <div className="relative w-14 h-14 shrink-0 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
-            <Package className="h-6 w-6 text-muted-foreground" />
-          </div>
-
-          {/* Product info */}
-          <div className="flex-1 min-w-0 space-y-2">
-            {/* Header row */}
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <h3 className="font-medium truncate">{product.name}</h3>
-                  {isLowStock && (
-                    <Badge variant="warning" className="shrink-0 h-5 text-xs">
-                      <AlertTriangle className="h-3 w-3 mr-1" />
-                      Мало
-                    </Badge>
-                  )}
-                  {isExpiring && (
-                    <Badge variant="destructive" className="shrink-0 h-5 text-xs">
-                      <Clock className="h-3 w-3 mr-1" />
-                      Термін
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {product.sku} | {subCategoryLabel.uk}
-                </p>
-              </div>
-
-              {/* Stock display */}
-              <div className="text-right shrink-0">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-xl font-bold">{product.currentStock}</span>
-                  <span className="text-sm text-muted-foreground">{product.unit}</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {product.minStock} - {product.maxStock}
-                </p>
-              </div>
-            </div>
-
-            {/* Stock progress */}
-            <Progress
-              value={stockPercentage}
-              className="h-1.5"
-              indicatorClassName={cn(
-                stockPercentage <= 20
-                  ? "bg-danger"
-                  : stockPercentage <= 40
-                    ? "bg-warning"
-                    : "bg-success"
-              )}
-            />
-
-            {/* Meta info */}
-            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-              {/* Storage condition */}
-              <span className="flex items-center gap-1">
-                <Thermometer className="h-3 w-3" />
-                {storageCondition.uk} ({storageCondition.tempRange})
-              </span>
-
-              {/* Expected yield - only for raw ingredients */}
-              {product.mainCategory === 'raw' && product.yieldProfile && (
-                <span className="flex items-center gap-1 text-amber-600">
-                  <TrendingDown className="h-3 w-3" />
-                  Вихід: {Math.round(product.yieldProfile.baseYieldRatio * 100)}%
-                </span>
-              )}
-            </div>
-
-            {/* Cost & update info */}
-            <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
-              <span>
-                {product.costPerUnit.toFixed(2)} грн/{product.unit}
-              </span>
-              <span>
-                Оновлено: {formatRelativeTime(new Date(product.lastUpdated))}
-              </span>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }

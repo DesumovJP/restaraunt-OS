@@ -37,6 +37,12 @@
     "occupiedAt": {
       "type": "datetime"
     },
+    "freedAt": {
+      "type": "datetime"
+    },
+    "lastSessionDurationMs": {
+      "type": "biginteger"
+    },
     "zone": {
       "type": "string"
     },

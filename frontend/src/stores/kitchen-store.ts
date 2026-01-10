@@ -27,6 +27,20 @@ export interface KitchenTask {
   // Scheduled order fields
   isScheduled?: boolean;
   scheduledOrderId?: string;
+
+  // Timer tracking timestamps (ISO strings)
+  startedAt?: string;     // When cooking started
+  readyAt?: string;       // When marked as ready
+  servedAt?: string;      // When served to guest
+
+  // Timer phase durations (ms)
+  queueMs?: number;       // Queue wait time (createdAt -> startedAt)
+  cookMs?: number;        // Cooking time (startedAt -> readyAt)
+  pickupMs?: number;      // Pickup wait time (readyAt -> servedAt)
+
+  // Target times for visual indicators
+  targetPickupMs?: number; // Expected pickup time (default 2 min)
+  isPickupOverdue?: boolean; // Pickup taking too long
 }
 
 // Callback type for when task starts (for inventory deduction)
@@ -35,15 +49,65 @@ type TaskStartedCallback = (task: KitchenTask, chefName?: string) => void;
 // Registry for task started callbacks
 const taskStartedCallbacks: Set<TaskStartedCallback> = new Set();
 
+// Backend timestamps that should override local timestamps
+interface BackendTimestamps {
+  startedAt?: string;
+  completedAt?: string;
+  servedAt?: string;
+}
+
+// Backend KitchenTicket type (from GraphQL)
+export interface BackendKitchenTicket {
+  documentId: string;
+  ticketNumber: string;
+  status: string;
+  station: string;
+  priority: string;
+  priorityScore: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  elapsedSeconds: number;
+  inventoryLocked: boolean;
+  createdAt: string;
+  assignedChef?: {
+    documentId: string;
+    username: string;
+  };
+  orderItem?: {
+    documentId: string;
+    quantity: number;
+    notes: string | null;
+    modifiers: any[];
+    menuItem: {
+      documentId: string;
+      name: string;
+      price: number;
+      preparationTime: number;
+      image?: { url: string };
+    };
+  };
+  order?: {
+    documentId: string;
+    orderNumber: string;
+    table: {
+      documentId: string;
+      number: number;
+    };
+  };
+}
+
 interface KitchenStore {
   tasks: KitchenTask[];
+  lastSyncedAt: string | null;
 
   // Actions
   addTask: (task: KitchenTask) => void;
   addTasks: (tasks: KitchenTask[]) => void;
-  updateTaskStatus: (taskId: string, status: StationSubTaskStatus, assignedChef?: string) => void;
+  updateTaskStatus: (taskId: string, status: StationSubTaskStatus, assignedChef?: string, backendTimestamps?: BackendTimestamps) => void;
   removeTask: (taskId: string) => void;
   clearCompletedTasks: () => void;
+  clearAllTasks: () => void;
+  syncFromBackend: (tickets: BackendKitchenTicket[]) => void;
 
   // Getters
   getTasksByStation: (station: StationType) => KitchenTask[];
@@ -78,10 +142,108 @@ function determineStationType(outputType?: string): StationType {
   }
 }
 
+// Map backend station enum to frontend StationType
+function mapBackendStationToFrontend(station: string): StationType {
+  switch (station) {
+    case "bar":
+      return "bar";
+    case "salad":
+    case "cold":
+      return "cold";
+    case "dessert":
+    case "pastry":
+      return "pastry";
+    case "grill":
+    case "fry":
+    case "hot":
+    case "prep":
+    default:
+      return "hot";
+  }
+}
+
+// Map backend status to frontend status
+function mapBackendStatusToFrontend(status: string): StationSubTaskStatus | null {
+  switch (status) {
+    case "queued":
+      return "pending";
+    case "started":
+    case "resumed":
+      return "in_progress";
+    case "ready":
+      return "completed";
+    case "paused":
+      return "in_progress"; // Show paused as in_progress for now
+    case "served":
+      return null; // Served items should not appear in kitchen queue
+    case "cancelled":
+    case "failed":
+      return null; // Hide cancelled/failed from queue
+    default:
+      return "pending";
+  }
+}
+
+// Convert backend ticket to frontend KitchenTask
+function convertTicketToTask(ticket: BackendKitchenTicket): KitchenTask | null {
+  if (!ticket.orderItem?.menuItem || !ticket.order?.table) {
+    console.warn("[Kitchen] Ticket missing required data:", ticket.documentId);
+    return null;
+  }
+
+  const menuItem = ticket.orderItem.menuItem;
+  const order = ticket.order;
+  const status = mapBackendStatusToFrontend(ticket.status);
+
+  // Skip served/cancelled/failed tickets - they should not appear in kitchen queue
+  if (status === null) {
+    return null;
+  }
+
+  return {
+    documentId: ticket.documentId,
+    orderItemDocumentId: ticket.orderItem.documentId,
+    orderDocumentId: order.documentId,
+    menuItemName: menuItem.name,
+    quantity: ticket.orderItem.quantity,
+    tableNumber: order.table.number,
+    tableOccupiedAt: undefined, // Not available from backend yet
+    courseType: "main" as CourseType, // Default
+    status,
+    priority: (ticket.priority || "normal") as "normal" | "rush" | "vip",
+    priorityScore: ticket.priorityScore || 50,
+    elapsedMs: (ticket.elapsedSeconds || 0) * 1000,
+    targetCompletionMs: (menuItem.preparationTime || 15) * 60 * 1000,
+    isOverdue: false, // Will be calculated based on elapsed time
+    assignedChefName: ticket.assignedChef?.username,
+    modifiers: ticket.orderItem.notes ? [ticket.orderItem.notes] : [],
+    comment: null, // Not available from backend
+    createdAt: ticket.createdAt,
+    stationType: mapBackendStationToFrontend(ticket.station),
+
+    // Timer timestamps from backend
+    startedAt: ticket.startedAt || undefined,
+    readyAt: ticket.completedAt || undefined,
+    servedAt: undefined,
+
+    // Timer durations - will be calculated in UI
+    queueMs: ticket.startedAt
+      ? new Date(ticket.startedAt).getTime() - new Date(ticket.createdAt).getTime()
+      : undefined,
+    cookMs: ticket.startedAt && ticket.completedAt
+      ? new Date(ticket.completedAt).getTime() - new Date(ticket.startedAt).getTime()
+      : undefined,
+    pickupMs: 0,
+    targetPickupMs: 2 * 60 * 1000, // 2 minutes
+    isPickupOverdue: false,
+  };
+}
+
 export const useKitchenStore = create<KitchenStore>()(
   persist(
     (set, get) => ({
       tasks: [] as KitchenTask[],
+      lastSyncedAt: null,
 
       addTask: (task) => {
         set((state) => ({
@@ -95,20 +257,46 @@ export const useKitchenStore = create<KitchenStore>()(
         }));
       },
 
-      updateTaskStatus: (taskId, status, assignedChef) => {
+      updateTaskStatus: (taskId, status, assignedChef, backendTimestamps) => {
         // Get task before updating for event logging
         const task = get().tasks.find((t) => t.documentId === taskId);
+        const now = new Date().toISOString();
 
         set((state) => ({
-          tasks: state.tasks.map((t) =>
-            t.documentId === taskId
-              ? {
-                  ...t,
-                  status,
-                  assignedChefName: assignedChef || t.assignedChefName,
-                }
-              : t
-          ),
+          tasks: state.tasks.map((t) => {
+            if (t.documentId !== taskId) return t;
+
+            const updates: Partial<KitchenTask> = {
+              status,
+              assignedChefName: assignedChef || t.assignedChefName,
+            };
+
+            // Set timestamps based on status transition
+            // Prefer backend timestamps over local ones for multi-user sync
+            if (status === "in_progress" && !t.startedAt) {
+              updates.startedAt = backendTimestamps?.startedAt || now;
+              // Calculate queue wait time based on server timestamp
+              const createdTime = new Date(t.createdAt).getTime();
+              const startedTime = new Date(updates.startedAt).getTime();
+              updates.queueMs = startedTime - createdTime;
+            }
+
+            if (status === "completed" && !t.readyAt) {
+              updates.readyAt = backendTimestamps?.completedAt || now;
+              // Calculate cooking time based on server timestamps
+              if (t.startedAt) {
+                const startTime = new Date(t.startedAt).getTime();
+                const readyTime = new Date(updates.readyAt).getTime();
+                updates.cookMs = readyTime - startTime;
+              }
+              // Reset pickup timer
+              updates.pickupMs = 0;
+              updates.isPickupOverdue = false;
+              updates.targetPickupMs = 2 * 60 * 1000; // 2 minutes
+            }
+
+            return { ...t, ...updates };
+          }),
         }));
 
         // Log analytics events (non-blocking)
@@ -178,6 +366,79 @@ export const useKitchenStore = create<KitchenStore>()(
         set((state) => ({
           tasks: state.tasks.filter((task) => task.status !== "completed"),
         }));
+      },
+
+      clearAllTasks: () => {
+        set({ tasks: [], lastSyncedAt: null });
+      },
+
+      syncFromBackend: (tickets: BackendKitchenTicket[]) => {
+        const currentTasks = get().tasks;
+        const now = Date.now();
+        const RECENT_UPDATE_THRESHOLD_MS = 15000; // 15 seconds
+
+        // Build a map of current tasks for quick lookup
+        const currentTaskMap = new Map(currentTasks.map(t => [t.documentId, t]));
+
+        const newTasks: KitchenTask[] = [];
+
+        for (const ticket of tickets) {
+          const backendTask = convertTicketToTask(ticket);
+          if (!backendTask) continue;
+
+          const existingTask = currentTaskMap.get(backendTask.documentId);
+
+          // If task exists locally and has a more advanced status, keep local version
+          // This prevents backend sync from reverting optimistic UI updates
+          if (existingTask) {
+            const statusOrder: Record<string, number> = { pending: 0, in_progress: 1, completed: 2 };
+            const existingOrder = statusOrder[existingTask.status] ?? 0;
+            const backendOrder = statusOrder[backendTask.status] ?? 0;
+
+            // Keep local task if it has more advanced status
+            // (local "in_progress" shouldn't be reverted to backend "pending")
+            if (existingOrder > backendOrder) {
+              console.log(`[Kitchen] Keeping local task (more advanced status):`, {
+                id: existingTask.documentId,
+                localStatus: existingTask.status,
+                backendStatus: backendTask.status,
+              });
+              newTasks.push(existingTask);
+              continue;
+            }
+
+            // Keep local timestamps if they exist and backend doesn't have them
+            if (existingTask.startedAt && !backendTask.startedAt) {
+              backendTask.startedAt = existingTask.startedAt;
+              backendTask.queueMs = existingTask.queueMs;
+            }
+            if (existingTask.readyAt && !backendTask.readyAt) {
+              backendTask.readyAt = existingTask.readyAt;
+              backendTask.cookMs = existingTask.cookMs;
+            }
+          }
+
+          newTasks.push(backendTask);
+        }
+
+        // Sort by priority score (high to low) then by creation date (old to new)
+        newTasks.sort((a, b) => {
+          if (a.priorityScore !== b.priorityScore) {
+            return b.priorityScore - a.priorityScore;
+          }
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+
+        console.log(`[Kitchen] Synced ${newTasks.length} tasks from backend`, {
+          pending: newTasks.filter(t => t.status === "pending").length,
+          inProgress: newTasks.filter(t => t.status === "in_progress").length,
+          completed: newTasks.filter(t => t.status === "completed").length,
+        });
+
+        set({
+          tasks: newTasks,
+          lastSyncedAt: new Date().toISOString(),
+        });
       },
 
       getTasksByStation: (station) => {

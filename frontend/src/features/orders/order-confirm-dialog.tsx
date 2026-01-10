@@ -12,12 +12,45 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/stores/cart-store";
 import { useTableStore } from "@/stores/table-store";
-import { useKitchenStore, createKitchenTasksFromOrder } from "@/stores/kitchen-store";
 import { formatPrice } from "@/lib/utils";
-import { Loader2, ChefHat, UtensilsCrossed } from "lucide-react";
+import { Loader2, ChefHat, UtensilsCrossed, AlertCircle } from "lucide-react";
 import { tableSessionEventsApi } from "@/lib/api-events";
 import { storageHistoryApi } from "@/hooks/use-inventory-deduction";
+import { useCreateOrder, useAddOrderItem, useUpdateOrderStatus } from "@/hooks/use-graphql-orders";
 import type { ItemComment } from "@/types/extended";
+import { COMMENT_PRESETS } from "@/types/extended";
+
+// Helper function to generate comment preview text
+function getCommentPreview(comment: ItemComment | null | undefined): string {
+  if (!comment) return '';
+
+  const parts: string[] = [];
+
+  // Add preset labels (in Ukrainian)
+  if (comment.presets && comment.presets.length > 0) {
+    const presetLabels = comment.presets
+      .map(key => COMMENT_PRESETS.find(p => p.key === key)?.label.uk)
+      .filter(Boolean)
+      .slice(0, 2); // Limit to 2 presets for brevity
+
+    if (presetLabels.length > 0) {
+      parts.push(presetLabels.join(', '));
+      if (comment.presets.length > 2) {
+        parts[0] += ` +${comment.presets.length - 2}`;
+      }
+    }
+  }
+
+  // Add custom text (truncated)
+  if (comment.text) {
+    const truncatedText = comment.text.length > 30
+      ? comment.text.slice(0, 30) + '...'
+      : comment.text;
+    parts.push(truncatedText);
+  }
+
+  return parts.join(' • ') || '';
+}
 
 interface OrderConfirmDialogProps {
   open: boolean;
@@ -34,8 +67,9 @@ export function OrderConfirmDialog({
 }: OrderConfirmDialogProps) {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [isSuccess, setIsSuccess] = React.useState(false);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
   // Store submitted order info for success message (cart gets cleared before success shows)
-  const [submittedOrder, setSubmittedOrder] = React.useState<{ tableNumber: number; itemCount: number } | null>(null);
+  const [submittedOrder, setSubmittedOrder] = React.useState<{ tableNumber: number; itemCount: number; orderNumber?: string } | null>(null);
 
   // Cart store
   const items = useCartStore((state) => state.items);
@@ -46,8 +80,10 @@ export function OrderConfirmDialog({
   const selectedTable = useTableStore((state) => state.selectedTable);
   const updateTableStatus = useTableStore((state) => state.updateTableStatus);
 
-  // Kitchen store
-  const addKitchenTasks = useKitchenStore((state) => state.addTasks);
+  // GraphQL mutations
+  const { createOrder, loading: creatingOrder } = useCreateOrder();
+  const { addItem: addOrderItem, loading: addingItem } = useAddOrderItem();
+  const { updateStatus: updateOrderStatus } = useUpdateOrderStatus();
 
   const totalAmount = getTotalAmount();
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
@@ -56,10 +92,9 @@ export function OrderConfirmDialog({
     if (!selectedTable || items.length === 0) return;
 
     setIsSubmitting(true);
-    try {
-      // Generate order ID
-      const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    setSubmitError(null);
 
+    try {
       // Get table occupied time for timer tracking
       const tableOccupiedAt = selectedTable.occupiedAt
         ? (selectedTable.occupiedAt instanceof Date
@@ -67,35 +102,83 @@ export function OrderConfirmDialog({
             : String(selectedTable.occupiedAt))
         : undefined;
 
-      // Create kitchen tasks from cart items with comments
-      const kitchenTasks = createKitchenTasksFromOrder(
-        orderId,
-        selectedTable.number,
-        items.map((item) => ({
-          menuItem: {
-            id: item.menuItem.id,
-            name: item.menuItem.name,
-            outputType: item.menuItem.outputType,
-            preparationTime: item.menuItem.preparationTime,
-          },
+      // ============================================
+      // STEP 0: Validate table has documentId
+      // ============================================
+      const tableDocumentId = selectedTable.documentId;
+      if (!tableDocumentId) {
+        console.error("[Order] Table missing documentId:", selectedTable);
+        throw new Error(
+          `Стіл ${selectedTable.number} не синхронізовано з базою даних. ` +
+          `Будь ласка, оновіть сторінку або перезайдіть на сторінку столів.`
+        );
+      }
+
+      // ============================================
+      // STEP 1: Create Order in Strapi via GraphQL
+      // ============================================
+      console.log("[Order] Creating order in Strapi...", { tableDocumentId });
+
+      const order = await createOrder({
+        table: tableDocumentId,
+        guestCount: selectedTable.currentGuests || 1,
+        notes: items.some(i => i.notes) ? items.map(i => i.notes).filter(Boolean).join('; ') : undefined,
+      });
+
+      if (!order?.documentId) {
+        throw new Error("Не вдалося створити замовлення в базі даних");
+      }
+
+      const orderId = order.documentId;
+      const orderNumber = order.orderNumber || orderId;
+      console.log(`[Order] Created order: ${orderNumber} (${orderId})`);
+
+      // ============================================
+      // STEP 2: Create Order Items via GraphQL
+      // ============================================
+      console.log("[Order] Creating order items...");
+
+      const createdItems: Array<{ documentId: string; menuItemId: string }> = [];
+
+      for (const item of items) {
+        const menuItemDocId = item.menuItem.documentId || item.menuItem.id;
+
+        const orderItem = await addOrderItem({
+          order: orderId,
+          menuItem: menuItemDocId,
           quantity: item.quantity,
+          unitPrice: item.menuItem.price,
+          courseType: item.menuItem.courseType || 'main',
           notes: item.notes,
-          comment: itemComments[item.menuItem.id] || null,
-        })),
-        tableOccupiedAt // Pass actual table occupied time for timer
-      );
+        });
 
-      // Add tasks to kitchen store
-      addKitchenTasks(kitchenTasks);
+        if (orderItem?.documentId) {
+          createdItems.push({
+            documentId: orderItem.documentId,
+            menuItemId: menuItemDocId,
+          });
+        }
+      }
 
-      // Immediate deduction for bar items (non-blocking)
+      console.log(`[Order] Created ${createdItems.length} order items`);
+      // NOTE: Backend lifecycle (order-item/lifecycles.ts) automatically creates
+      // KitchenTickets for each order item. Kitchen page fetches them via GraphQL.
+
+      // ============================================
+      // STEP 3: Update Order Status to 'confirmed'
+      // ============================================
+      await updateOrderStatus(orderId, 'confirmed');
+      console.log("[Order] Order status updated to 'confirmed'");
+
+      // ============================================
+      // STEP 4: Bar Items - Immediate Deduction Logging
+      // ============================================
       const barItems = items.filter((item) => item.menuItem.outputType === "bar");
       if (barItems.length > 0) {
         barItems.forEach((item) => {
-          // Log to storage history (actual FIFO deduction happens when recipe is available)
           storageHistoryApi.addEntry({
             operationType: "use",
-            productDocumentId: `menu_${item.menuItem.id}`, // Menu item reference
+            productDocumentId: `menu_${item.menuItem.id}`,
             productName: item.menuItem.name,
             quantity: item.quantity,
             unit: "pcs",
@@ -105,10 +188,12 @@ export function OrderConfirmDialog({
             notes: "Автоматичне списання (бар)",
           });
         });
-        console.log(`[Inventory] Bar items immediate deduction logged: ${barItems.length} items`);
+        console.log(`[Inventory] Bar items deduction logged: ${barItems.length} items`);
       }
 
-      // Log order_taken analytics event
+      // ============================================
+      // STEP 5: Log Analytics Event
+      // ============================================
       const sessionId = `session_${selectedTable.id}_${Date.now()}`;
       tableSessionEventsApi.createEvent({
         tableNumber: selectedTable.number,
@@ -120,21 +205,18 @@ export function OrderConfirmDialog({
         metadata: {
           itemCount: totalItems,
           totalAmount,
+          orderNumber,
           timeToTakeOrderMs: tableOccupiedAt
             ? Date.now() - new Date(tableOccupiedAt).getTime()
             : 0,
         },
       });
 
-      console.log("Order sent to kitchen:", {
+      console.log("[Order] Complete:", {
         orderId,
+        orderNumber,
         table: selectedTable.number,
-        tasks: kitchenTasks.length,
-        items: items.map((item) => ({
-          name: item.menuItem.name,
-          quantity: item.quantity,
-          notes: item.notes,
-        })),
+        items: items.length,
         total: totalAmount,
       });
 
@@ -147,6 +229,7 @@ export function OrderConfirmDialog({
       setSubmittedOrder({
         tableNumber: selectedTable.number,
         itemCount: totalItems,
+        orderNumber,
       });
 
       // Clear the cart
@@ -162,7 +245,8 @@ export function OrderConfirmDialog({
         onSuccess?.();
       }, 1500);
     } catch (error) {
-      console.error("Order failed:", error);
+      console.error("[Order] Failed:", error);
+      setSubmitError(error instanceof Error ? error.message : "Помилка при створенні замовлення");
     } finally {
       setIsSubmitting(false);
     }
@@ -178,6 +262,7 @@ export function OrderConfirmDialog({
   React.useEffect(() => {
     if (open) {
       setIsSuccess(false);
+      setSubmitError(null);
       setSubmittedOrder(null);
     }
   }, [open]);
@@ -199,7 +284,12 @@ export function OrderConfirmDialog({
               Замовлення відправлено на кухню!
             </DialogTitle>
             <div className="text-center mt-2 text-sm text-muted-foreground">
-              Стіл {submittedOrder.tableNumber} • {submittedOrder.itemCount} позицій
+              {submittedOrder.orderNumber && (
+                <Badge variant="secondary" className="mb-2">
+                  #{submittedOrder.orderNumber}
+                </Badge>
+              )}
+              <div>Стіл {submittedOrder.tableNumber} • {submittedOrder.itemCount} позицій</div>
             </div>
           </div>
         ) : (
@@ -228,22 +318,36 @@ export function OrderConfirmDialog({
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => (
-                    <tr key={item.menuItem.id} className="border-t">
-                      <td className="py-2 px-3">
-                        <span className="font-medium">{item.menuItem.name}</span>
-                        {item.notes && (
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {item.notes}
-                          </p>
-                        )}
-                      </td>
-                      <td className="text-center py-2">{item.quantity}</td>
-                      <td className="text-right py-2 px-3">
-                        {formatPrice(item.menuItem.price * item.quantity)}
-                      </td>
-                    </tr>
-                  ))}
+                  {items.map((item) => {
+                    const comment = itemComments[item.menuItem.id];
+                    const commentPreview = getCommentPreview(comment);
+                    // Determine unit for weight/volume
+                    const weightUnit = item.menuItem.outputType === 'bar' ? 'мл' : 'г';
+
+                    return (
+                      <tr key={item.menuItem.id} className="border-t">
+                        <td className="py-2 px-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{item.menuItem.name}</span>
+                            {item.menuItem.weight && (
+                              <span className="text-xs text-muted-foreground">
+                                {item.menuItem.weight}{weightUnit}
+                              </span>
+                            )}
+                          </div>
+                          {(commentPreview || item.notes) && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {commentPreview || item.notes}
+                            </p>
+                          )}
+                        </td>
+                        <td className="text-center py-2">{item.quantity}</td>
+                        <td className="text-right py-2 px-3">
+                          {formatPrice(item.menuItem.price * item.quantity)}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -253,6 +357,14 @@ export function OrderConfirmDialog({
               <span className="font-semibold">Сума замовлення:</span>
               <span className="font-bold text-lg">{formatPrice(totalAmount)}</span>
             </div>
+
+            {/* Error message */}
+            {submitError && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{submitError}</span>
+              </div>
+            )}
 
             <DialogFooter className="gap-2 sm:gap-0">
               <Button

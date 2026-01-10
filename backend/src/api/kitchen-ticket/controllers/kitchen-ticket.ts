@@ -1,22 +1,78 @@
 import { factories } from '@strapi/strapi';
 
+// ============================================
+// LOGGING UTILITIES
+// ============================================
+
+const LOG_PREFIX = '[KitchenTicket]';
+
+interface LogContext {
+  ticketId?: string;
+  ticketNumber?: string;
+  action?: string;
+  user?: string;
+  duration?: number;
+  status?: string;
+  error?: string;
+  [key: string]: unknown;
+}
+
+function logTicket(level: 'info' | 'success' | 'error' | 'warn', message: string, context?: LogContext) {
+  const timestamp = new Date().toISOString();
+  const logData = { timestamp, ...context };
+
+  switch (level) {
+    case 'error':
+      console.error(`${LOG_PREFIX} ${message}`, logData);
+      break;
+    case 'warn':
+      console.warn(`${LOG_PREFIX} ${message}`, logData);
+      break;
+    default:
+      console.log(`${LOG_PREFIX} ${message}`, logData);
+  }
+}
+
 export default factories.createCoreController('api::kitchen-ticket.kitchen-ticket', ({ strapi }) => ({
 
   // Custom action: Start ticket (triggers inventory deduction)
   async start(ctx) {
     const { documentId } = ctx.params;
     const user = ctx.state.user;
+    const startTime = Date.now();
+
+    logTicket('info', '→ START ticket requested', {
+      ticketId: documentId,
+      user: user?.username || 'anonymous',
+    });
 
     if (!user) {
+      logTicket('error', '✗ START failed: unauthorized', { ticketId: documentId });
       return ctx.unauthorized('Authentication required');
     }
 
     const result = await strapi.service('api::kitchen-ticket.start-ticket')
       .startTicket(documentId, user.documentId);
 
+    const duration = Date.now() - startTime;
+
     if (!result.success) {
+      logTicket('error', '✗ START failed', {
+        ticketId: documentId,
+        duration,
+        error: result.error?.message,
+        errorCode: result.error?.code,
+      });
       return ctx.badRequest(result.error?.message, result.error);
     }
+
+    logTicket('success', '✓ START completed', {
+      ticketId: documentId,
+      ticketNumber: result.ticket?.ticketNumber,
+      duration,
+      consumedBatches: result.consumedBatches?.length || 0,
+      totalCost: result.consumedBatches?.reduce((sum, b) => sum + b.cost, 0) || 0,
+    });
 
     return ctx.send(result);
   },
@@ -25,6 +81,12 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
   async complete(ctx) {
     const { documentId } = ctx.params;
     const user = ctx.state.user;
+    const startTime = Date.now();
+
+    logTicket('info', '→ COMPLETE ticket requested', {
+      ticketId: documentId,
+      user: user?.username || 'anonymous',
+    });
 
     const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
       documentId,
@@ -32,10 +94,15 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
     });
 
     if (!ticket) {
+      logTicket('error', '✗ COMPLETE failed: ticket not found', { ticketId: documentId });
       return ctx.notFound('Ticket not found');
     }
 
     if (ticket.status !== 'started' && ticket.status !== 'resumed') {
+      logTicket('error', '✗ COMPLETE failed: invalid status', {
+        ticketId: documentId,
+        currentStatus: ticket.status,
+      });
       return ctx.badRequest(`Cannot complete ticket with status: ${ticket.status}`);
     }
 
@@ -51,13 +118,17 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       }
     });
 
-    // Update order item
+    // Update order item with readyAt timestamp
+    const nowIso = new Date().toISOString();
     if (ticket.orderItem) {
+      const prepElapsedMs = elapsedSeconds * 1000;
       await strapi.documents('api::order-item.order-item').update({
         documentId: ticket.orderItem.documentId,
         data: {
           status: 'ready',
-          statusChangedAt: new Date().toISOString()
+          statusChangedAt: nowIso,
+          readyAt: nowIso,
+          prepElapsedMs: prepElapsedMs.toString() // biginteger requires string
         }
       });
     }
@@ -75,6 +146,7 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
     });
 
     // Check if all items in order are ready
+    let orderReady = false;
     if (ticket.order) {
       const orderTickets = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findMany({
         filters: {
@@ -91,8 +163,18 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
           documentId: ticket.order.documentId,
           data: { status: 'ready' }
         });
+        orderReady = true;
       }
     }
+
+    const duration = Date.now() - startTime;
+    logTicket('success', '✓ COMPLETE success', {
+      ticketId: documentId,
+      ticketNumber: ticket.ticketNumber,
+      duration,
+      elapsedSeconds,
+      orderReady,
+    });
 
     return ctx.send({ success: true, ticket: updatedTicket });
   },
@@ -102,16 +184,28 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
     const { documentId } = ctx.params;
     const { reason } = ctx.request.body || {};
     const user = ctx.state.user;
+    const startTime = Date.now();
+
+    logTicket('info', '→ PAUSE ticket requested', {
+      ticketId: documentId,
+      user: user?.username || 'anonymous',
+      reason,
+    });
 
     const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
       documentId
     });
 
     if (!ticket) {
+      logTicket('error', '✗ PAUSE failed: ticket not found', { ticketId: documentId });
       return ctx.notFound('Ticket not found');
     }
 
     if (ticket.status !== 'started' && ticket.status !== 'resumed') {
+      logTicket('error', '✗ PAUSE failed: invalid status', {
+        ticketId: documentId,
+        currentStatus: ticket.status,
+      });
       return ctx.badRequest(`Cannot pause ticket with status: ${ticket.status}`);
     }
 
@@ -134,6 +228,14 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       }
     });
 
+    const duration = Date.now() - startTime;
+    logTicket('success', '✓ PAUSE success', {
+      ticketId: documentId,
+      ticketNumber: ticket.ticketNumber,
+      duration,
+      reason,
+    });
+
     return ctx.send({ success: true, ticket: updatedTicket });
   },
 
@@ -141,16 +243,27 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
   async resume(ctx) {
     const { documentId } = ctx.params;
     const user = ctx.state.user;
+    const startTime = Date.now();
+
+    logTicket('info', '→ RESUME ticket requested', {
+      ticketId: documentId,
+      user: user?.username || 'anonymous',
+    });
 
     const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
       documentId
     });
 
     if (!ticket) {
+      logTicket('error', '✗ RESUME failed: ticket not found', { ticketId: documentId });
       return ctx.notFound('Ticket not found');
     }
 
     if (ticket.status !== 'paused') {
+      logTicket('error', '✗ RESUME failed: invalid status', {
+        ticketId: documentId,
+        currentStatus: ticket.status,
+      });
       return ctx.badRequest(`Cannot resume ticket with status: ${ticket.status}`);
     }
 
@@ -172,6 +285,13 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       }
     });
 
+    const duration = Date.now() - startTime;
+    logTicket('success', '✓ RESUME success', {
+      ticketId: documentId,
+      ticketNumber: ticket.ticketNumber,
+      duration,
+    });
+
     return ctx.send({ success: true, ticket: updatedTicket });
   },
 
@@ -180,6 +300,13 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
     const { documentId } = ctx.params;
     const { reason } = ctx.request.body || {};
     const user = ctx.state.user;
+    const startTime = Date.now();
+
+    logTicket('info', '→ CANCEL ticket requested', {
+      ticketId: documentId,
+      user: user?.username || 'anonymous',
+      reason,
+    });
 
     const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
       documentId,
@@ -187,17 +314,25 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
     });
 
     if (!ticket) {
+      logTicket('error', '✗ CANCEL failed: ticket not found', { ticketId: documentId });
       return ctx.notFound('Ticket not found');
     }
 
     if (ticket.status === 'cancelled' || ticket.status === 'ready') {
+      logTicket('error', '✗ CANCEL failed: invalid status', {
+        ticketId: documentId,
+        currentStatus: ticket.status,
+      });
       return ctx.badRequest(`Cannot cancel ticket with status: ${ticket.status}`);
     }
 
     // Release inventory if locked
+    let inventoryReleased = false;
     if (ticket.inventoryLocked) {
+      logTicket('info', '  Releasing locked inventory...', { ticketId: documentId });
       await strapi.service('api::kitchen-ticket.start-ticket')
         .releaseInventory(documentId, reason || 'Ticket cancelled', user?.documentId);
+      inventoryReleased = true;
     }
 
     const updatedTicket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').update({
@@ -231,6 +366,15 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       }
     });
 
+    const duration = Date.now() - startTime;
+    logTicket('success', '✓ CANCEL success', {
+      ticketId: documentId,
+      ticketNumber: ticket.ticketNumber,
+      duration,
+      inventoryReleased,
+      reason,
+    });
+
     return ctx.send({ success: true, ticket: updatedTicket });
   },
 
@@ -239,6 +383,13 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
     const { documentId } = ctx.params;
     const { reason } = ctx.request.body || {};
     const user = ctx.state.user;
+    const startTime = Date.now();
+
+    logTicket('info', '→ FAIL ticket requested', {
+      ticketId: documentId,
+      user: user?.username || 'anonymous',
+      reason,
+    });
 
     const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
       documentId,
@@ -246,17 +397,25 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
     });
 
     if (!ticket) {
+      logTicket('error', '✗ FAIL failed: ticket not found', { ticketId: documentId });
       return ctx.notFound('Ticket not found');
     }
 
     if (ticket.status === 'failed' || ticket.status === 'cancelled' || ticket.status === 'ready') {
+      logTicket('error', '✗ FAIL failed: invalid status', {
+        ticketId: documentId,
+        currentStatus: ticket.status,
+      });
       return ctx.badRequest(`Cannot fail ticket with status: ${ticket.status}`);
     }
 
     // Release inventory if locked
+    let inventoryReleased = false;
     if (ticket.inventoryLocked) {
+      logTicket('info', '  Releasing locked inventory...', { ticketId: documentId });
       await strapi.service('api::kitchen-ticket.start-ticket')
         .releaseInventory(documentId, reason || 'Ticket failed', user?.documentId);
+      inventoryReleased = true;
     }
 
     const updatedTicket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').update({
@@ -279,6 +438,138 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       }
     });
 
+    const duration = Date.now() - startTime;
+    logTicket('warn', '⚠ FAIL recorded', {
+      ticketId: documentId,
+      ticketNumber: ticket.ticketNumber,
+      duration,
+      inventoryReleased,
+      reason,
+    });
+
     return ctx.send({ success: true, ticket: updatedTicket });
+  },
+
+  // Custom action: Serve ticket (dish picked up by waiter)
+  async serve(ctx) {
+    const { documentId } = ctx.params;
+    const user = ctx.state.user;
+    const startTime = Date.now();
+
+    logTicket('info', '→ SERVE ticket requested', {
+      ticketId: documentId,
+      user: user?.username || 'anonymous',
+    });
+
+    const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
+      documentId,
+      populate: {
+        orderItem: {
+          populate: ['menuItem']
+        },
+        order: {
+          populate: ['table']
+        }
+      }
+    });
+
+    if (!ticket) {
+      logTicket('error', '✗ SERVE failed: ticket not found', { ticketId: documentId });
+      return ctx.notFound('Ticket not found');
+    }
+
+    if (ticket.status !== 'ready') {
+      logTicket('error', '✗ SERVE failed: invalid status', {
+        ticketId: documentId,
+        currentStatus: ticket.status,
+      });
+      return ctx.badRequest(`Cannot serve ticket with status: ${ticket.status}. Must be 'ready'.`);
+    }
+
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    // Calculate pickup wait time
+    const completedAt = ticket.completedAt ? new Date(ticket.completedAt) : now;
+    const pickupWaitSeconds = Math.floor((now.getTime() - completedAt.getTime()) / 1000);
+    const pickupWaitMs = pickupWaitSeconds * 1000;
+
+    // Update ticket with servedAt and status
+    const updatedTicket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').update({
+      documentId,
+      data: {
+        status: 'served',
+        servedAt: nowIso,
+        pickupWaitSeconds
+      }
+    });
+
+    // Update order item
+    if (ticket.orderItem) {
+      await strapi.documents('api::order-item.order-item').update({
+        documentId: ticket.orderItem.documentId,
+        data: {
+          status: 'served',
+          statusChangedAt: nowIso,
+          servedAt: nowIso,
+          pickupWaitMs: pickupWaitMs.toString() // biginteger requires string
+        }
+      });
+    }
+
+    // Create event for history/analytics
+    await strapi.documents('api::ticket-event.ticket-event').create({
+      data: {
+        kitchenTicket: documentId,
+        eventType: 'served',
+        previousStatus: ticket.status,
+        newStatus: 'served',
+        actor: user?.documentId,
+        metadata: {
+          pickupWaitSeconds,
+          totalElapsedSeconds: ticket.elapsedSeconds,
+          menuItemName: ticket.orderItem?.menuItem?.name,
+          tableNumber: ticket.order?.table?.number,
+        }
+      }
+    });
+
+    // Check if all items in order are served
+    let orderServed = false;
+    if (ticket.order) {
+      const orderItems = await strapi.documents('api::order-item.order-item').findMany({
+        filters: {
+          order: { documentId: ticket.order.documentId }
+        }
+      });
+
+      const allServed = orderItems.every(item =>
+        item.status === 'served' || item.status === 'cancelled' || item.status === 'voided'
+      );
+
+      if (allServed) {
+        await strapi.documents('api::order.order').update({
+          documentId: ticket.order.documentId,
+          data: { status: 'served' }
+        });
+        orderServed = true;
+      }
+    }
+
+    const duration = Date.now() - startTime;
+    logTicket('success', '✓ SERVE success', {
+      ticketId: documentId,
+      ticketNumber: ticket.ticketNumber,
+      duration,
+      pickupWaitSeconds,
+      orderServed,
+    });
+
+    return ctx.send({
+      success: true,
+      ticket: updatedTicket,
+      pickupWaitSeconds,
+      orderServed
+    });
   }
 }));

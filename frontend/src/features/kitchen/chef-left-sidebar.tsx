@@ -1,24 +1,30 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   ClipboardList,
   ChefHat,
   User,
   X,
+  ListTodo,
 } from 'lucide-react';
 import {
   Drawer,
   DrawerContent,
 } from '@/components/ui/drawer';
 
-export type ChefView = 'orders' | 'recipes' | 'stations' | 'calendar';
+export type ChefView = 'orders' | 'recipes' | 'stations' | 'calendar' | 'dailies';
 
 const defaultNavigationItems: { id: ChefView; icon: typeof ClipboardList; label: string }[] = [
   { id: 'orders', icon: ClipboardList, label: 'Замовлення' },
   { id: 'recipes', icon: ChefHat, label: 'Рецепти' },
 ];
+
+// External link items (navigate to different pages)
+// Dailies is now a tab, not an external link
+const externalLinks: { id: string; icon: typeof ClipboardList; label: string; path: string }[] = [];
 
 interface ChefLeftSidebarProps {
   open?: boolean;
@@ -39,6 +45,7 @@ export function ChefLeftSidebar({
   onViewChange,
   navigationItems = defaultNavigationItems,
 }: ChefLeftSidebarProps) {
+  const router = useRouter();
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
 
@@ -88,6 +95,29 @@ export function ChefLeftSidebar({
                 isActive
                   ? 'bg-orange-600 text-white shadow-lg'
                   : 'text-slate-600 hover:text-slate-900'
+              )}
+              aria-label={item.label}
+              title={item.label}
+            >
+              <Icon className="w-5 h-5" />
+            </button>
+          );
+        })}
+
+        {/* Separator */}
+        <div className="w-8 h-px bg-slate-200 my-2" />
+
+        {/* External links */}
+        {externalLinks.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => router.push(item.path)}
+              className={cn(
+                'w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200',
+                'hover:bg-slate-100 active:scale-95',
+                'text-slate-600 hover:text-slate-900'
               )}
               aria-label={item.label}
               title={item.label}
@@ -149,6 +179,32 @@ export function ChefLeftSidebar({
                       isActive
                         ? 'bg-orange-600 text-white shadow-lg'
                         : 'text-slate-600 hover:text-slate-900'
+                    )}
+                    aria-label={item.label}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                );
+              })}
+
+              {/* Separator */}
+              <div className="h-px bg-slate-200 my-2" />
+
+              {/* External links */}
+              {externalLinks.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      router.push(item.path);
+                      handleOpenChange(false);
+                    }}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
+                      'hover:bg-slate-100 active:scale-95',
+                      'text-slate-600 hover:text-slate-900'
                     )}
                     aria-label={item.label}
                   >

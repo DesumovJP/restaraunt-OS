@@ -19,7 +19,7 @@
     },
     "eventType": {
       "type": "enumeration",
-      "enum": ["created", "started", "paused", "resumed", "completed", "failed", "cancelled", "inventory_locked", "inventory_released"]
+      "enum": ["created", "started", "paused", "resumed", "completed", "served", "failed", "cancelled", "inventory_locked", "inventory_released"]
     },
     "previousStatus": {
       "type": "string"

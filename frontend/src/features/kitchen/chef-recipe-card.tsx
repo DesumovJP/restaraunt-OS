@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import {
   Dialog,
   DialogContent,
@@ -19,22 +19,62 @@ import {
   Minus,
   Plus,
   AlertTriangle,
-  CheckCircle,
-  MoreHorizontal,
-  ChevronDown,
   Package,
   Clock,
   Edit,
+  DollarSign,
+  AlertCircle,
+  Utensils,
+  Timer,
+  Layers,
+  MoreHorizontal,
 } from "lucide-react";
 import type { Recipe } from "@/types";
+
+// ==========================================
+// HELPERS
+// ==========================================
+
+function getMarginColor(foodCostPercent: number): string {
+  if (foodCostPercent <= 0) return "border-l-gray-300";
+  if (foodCostPercent < 25) return "border-l-green-500";
+  if (foodCostPercent < 30) return "border-l-emerald-400";
+  if (foodCostPercent < 35) return "border-l-amber-400";
+  if (foodCostPercent < 40) return "border-l-orange-500";
+  return "border-l-red-500";
+}
+
+function getMarginTextColor(foodCostPercent: number): string {
+  if (foodCostPercent <= 0) return "text-muted-foreground";
+  if (foodCostPercent < 30) return "text-green-600";
+  if (foodCostPercent < 35) return "text-amber-600";
+  return "text-red-600";
+}
+
+function getMarginStatus(foodCostPercent: number) {
+  if (foodCostPercent <= 0) return { label: "—", color: "text-muted-foreground", bg: "bg-muted" };
+  if (foodCostPercent < 25) return { label: "Відмінно", color: "text-green-700", bg: "bg-green-50" };
+  if (foodCostPercent < 30) return { label: "Добре", color: "text-emerald-600", bg: "bg-emerald-50" };
+  if (foodCostPercent < 35) return { label: "Норма", color: "text-amber-600", bg: "bg-amber-50" };
+  if (foodCostPercent < 40) return { label: "Увага", color: "text-orange-600", bg: "bg-orange-50" };
+  return { label: "Критично", color: "text-red-600", bg: "bg-red-50" };
+}
+
+function fmt(n: number): string {
+  return n % 1 === 0 ? n.toString() : n.toFixed(1);
+}
+
+// ==========================================
+// COMPACT RECIPE CARD
+// ==========================================
 
 interface ChefRecipeCardProps {
   recipe: Recipe;
   className?: string;
   onEdit?: () => void;
   onReserve?: (recipeId: string, portions: number) => void;
+  onViewDetails?: (recipe: Recipe) => void;
   outputTypeLabel?: string;
-  servingCourseLabel?: string;
 }
 
 export function ChefRecipeCard({
@@ -42,255 +82,285 @@ export function ChefRecipeCard({
   className,
   onEdit,
   onReserve,
-  outputTypeLabel,
+  onViewDetails,
 }: ChefRecipeCardProps) {
-  const [isExpanded, setIsExpanded] = React.useState(false);
-  const [isReserveModalOpen, setIsReserveModalOpen] = React.useState(false);
-  const [reservePortions, setReservePortions] = React.useState(1);
-
-  // Calculate max portions available
+  // Calculations
   const maxPortions = React.useMemo(() => {
     if (recipe.ingredients.length === 0) return 0;
-    const portionsPerIngredient = recipe.ingredients.map((ing) => {
-      if (ing.quantity <= 0) return Infinity;
-      return Math.floor(ing.product.currentStock / ing.quantity);
-    });
-    return Math.min(...portionsPerIngredient);
+    return Math.min(
+      ...recipe.ingredients.map((ing) =>
+        ing.quantity <= 0 ? Infinity : Math.floor(ing.product.currentStock / ing.quantity)
+      )
+    );
   }, [recipe.ingredients]);
 
-  // Check ingredient availability
-  const unavailableCount = recipe.ingredients.filter((ing) => {
-    return ing.product.currentStock < ing.quantity;
-  }).length;
+  const unavailableCount = recipe.ingredients.filter(
+    (ing) => ing.product.currentStock < ing.quantity
+  ).length;
 
-  const allIngredientsAvailable = unavailableCount === 0;
+  const cost = recipe.calculatedCost || recipe.costPerPortion || 0;
+  const price = recipe.sellingPrice || recipe.menuItem.price || 0;
+  const marginPct = recipe.marginPercent || 0;
+  const foodCostPct = recipe.foodCostPercent || 0;
+
+  const hasIssue = unavailableCount > 0 || foodCostPct >= 40;
+
+  return (
+    <button
+      onClick={() => onViewDetails?.(recipe)}
+      className={cn(
+        "w-full text-left border-l-2 px-1.5 py-0.5 hover:bg-muted/50",
+        getMarginColor(foodCostPct),
+        hasIssue && "bg-red-50/50",
+        className
+      )}
+    >
+      <div className="flex items-center text-xs">
+        <span className="truncate flex-1">{recipe.menuItem.name}</span>
+        <span className="text-muted-foreground tabular-nums ml-1">{fmt(cost)}→{fmt(price)}</span>
+        <span className={cn("w-8 text-right tabular-nums font-medium", getMarginTextColor(foodCostPct))}>{marginPct > 0 ? `${Math.round(marginPct)}%` : "—"}</span>
+        <span className={cn(
+          "w-6 text-right tabular-nums font-bold",
+          maxPortions > 10 ? "text-green-600" : maxPortions > 0 ? "text-amber-600" : "text-red-600"
+        )}>{unavailableCount > 0 ? `!${unavailableCount}` : maxPortions}</span>
+      </div>
+    </button>
+  );
+}
+
+// ==========================================
+// RECIPE DETAIL MODAL (Full info on click)
+// ==========================================
+
+interface RecipeDetailModalProps {
+  recipe: Recipe | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onEdit?: () => void;
+  onReserve?: (recipeId: string, portions: number) => void;
+}
+
+export function RecipeDetailModal({
+  recipe,
+  open,
+  onOpenChange,
+  onEdit,
+  onReserve,
+}: RecipeDetailModalProps) {
+  const [reserveCount, setReserveCount] = React.useState(1);
+
+  if (!recipe) return null;
+
+  const cost = recipe.calculatedCost || recipe.costPerPortion || 0;
+  const price = recipe.sellingPrice || recipe.menuItem.price || 0;
+  const marginPct = recipe.marginPercent || 0;
+  const foodCostPct = recipe.foodCostPercent || 0;
+  const marginAbs = recipe.marginAbsolute || 0;
+  const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
+  const status = getMarginStatus(foodCostPct);
+
+  const maxPortions = recipe.ingredients.length === 0
+    ? 0
+    : Math.min(
+        ...recipe.ingredients.map((ing) =>
+          ing.quantity <= 0 ? Infinity : Math.floor(ing.product.currentStock / ing.quantity)
+        )
+      );
+
+  const totalIngCost = recipe.ingredients.reduce(
+    (sum, ing) => sum + (ing.product.costPerUnit || 0) * ing.quantity,
+    0
+  );
 
   const handleReserve = () => {
-    onReserve?.(recipe.id, reservePortions);
-    setIsReserveModalOpen(false);
-    setReservePortions(1);
+    onReserve?.(recipe.id, reserveCount);
+    setReserveCount(1);
   };
 
   return (
-    <>
-      <Card
-        className={cn(
-          "group overflow-hidden transition-all hover:shadow-md cursor-pointer",
-          className
-        )}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        {/* Compact Header */}
-        <div className="p-3">
-          <div className="flex items-start gap-2">
-            {/* Icon + Title */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5 mb-1">
-                <ChefHat className="h-4 w-4 text-orange-600 shrink-0" />
-                <h3 className="font-semibold text-sm truncate leading-tight">
-                  {recipe.menuItem.name}
-                </h3>
-              </div>
-              {/* Meta row */}
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {outputTypeLabel && (
-                  <span className="truncate">{outputTypeLabel}</span>
-                )}
-                <span className="text-muted-foreground/50">•</span>
-                <span>{recipe.ingredients.length} інгр.</span>
-              </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto p-0">
+        {/* Header */}
+        <div className={cn("p-4 border-b", status.bg)}>
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-lg">{recipe.menuItem.name}</DialogTitle>
+            <DialogDescription className="flex items-center gap-2 text-xs">
+              {recipe.outputType && (
+                <Badge variant="outline" className="text-[10px] h-5">
+                  {recipe.outputType === "kitchen" && "Кухня"}
+                  {recipe.outputType === "bar" && "Бар"}
+                  {recipe.outputType === "pastry" && "Кондитерська"}
+                  {recipe.outputType === "cold" && "Холодний цех"}
+                </Badge>
+              )}
+              {totalTime > 0 && (
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" /> {totalTime} хв
+                </span>
+              )}
+              <span>{recipe.ingredients.length} інгредієнтів</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Economics summary */}
+          <div className="grid grid-cols-4 gap-2 mt-3 text-center">
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase">Собів.</div>
+              <div className="text-sm font-bold">{fmt(cost)} ₴</div>
             </div>
-
-            {/* Status badge */}
-            <Badge
-              variant={allIngredientsAvailable ? "success" : "warning"}
-              className="shrink-0 h-5 text-xs px-1.5"
-            >
-              {allIngredientsAvailable ? (
-                <CheckCircle className="h-3 w-3" />
-              ) : (
-                <AlertTriangle className="h-3 w-3" />
-              )}
-            </Badge>
-          </div>
-
-          {/* Key metric */}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50">
-            <span className="text-xs text-muted-foreground">Можливо:</span>
-            <span
-              className={cn(
-                "text-sm font-bold tabular-nums",
-                maxPortions > 10
-                  ? "text-green-600"
-                  : maxPortions > 0
-                  ? "text-amber-600"
-                  : "text-red-600"
-              )}
-            >
-              {maxPortions} порц.
-            </span>
-          </div>
-
-          {/* Expand indicator */}
-          <div className="flex items-center justify-center mt-2">
-            <ChevronDown
-              className={cn(
-                "h-4 w-4 text-muted-foreground/50 transition-transform",
-                isExpanded && "rotate-180"
-              )}
-            />
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase">Ціна</div>
+              <div className="text-sm font-bold">{fmt(price)} ₴</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase">Маржа</div>
+              <div className={cn("text-sm font-bold", status.color)}>{fmt(marginAbs)} ₴</div>
+            </div>
+            <div>
+              <div className="text-[10px] text-muted-foreground uppercase">Food Cost</div>
+              <div className={cn("text-sm font-bold", status.color)}>{fmt(foodCostPct)}%</div>
+            </div>
           </div>
         </div>
 
-        {/* Expandable section */}
-        {isExpanded && (
-          <div
-            className="border-t bg-muted/30 p-3 space-y-3"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Ingredients compact list */}
-            <div className="space-y-1">
-              {recipe.ingredients.slice(0, 4).map((ing, idx) => {
+        {/* Content */}
+        <div className="p-4 space-y-4">
+          {/* Availability */}
+          <div className="flex items-center justify-between p-2 rounded bg-muted/50">
+            <span className="text-sm">Можливо порцій:</span>
+            <span
+              className={cn(
+                "text-lg font-bold tabular-nums",
+                maxPortions > 10 ? "text-green-600" : maxPortions > 0 ? "text-amber-600" : "text-red-600"
+              )}
+            >
+              {maxPortions}
+            </span>
+          </div>
+
+          {/* Ingredients */}
+          <div>
+            <div className="text-xs font-medium text-muted-foreground uppercase mb-2">
+              Інгредієнти
+            </div>
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {recipe.ingredients.map((ing, idx) => {
                 const hasEnough = ing.product.currentStock >= ing.quantity;
+                const ingCost = (ing.product.costPerUnit || 0) * ing.quantity;
+
                 return (
                   <div
                     key={ing.product.id || idx}
-                    className="flex items-center justify-between text-xs"
+                    className={cn(
+                      "flex items-center text-xs py-1 px-2 rounded",
+                      !hasEnough && "bg-red-50"
+                    )}
                   >
-                    <span
-                      className={cn(
-                        "truncate",
-                        !hasEnough && "text-red-600"
-                      )}
-                    >
+                    <span className={cn("flex-1 truncate", !hasEnough && "text-red-700")}>
+                      {!hasEnough && <AlertCircle className="h-3 w-3 inline mr-1 text-red-500" />}
                       {ing.product.name}
                     </span>
-                    <span className="tabular-nums text-muted-foreground ml-2 shrink-0">
+                    <span className="text-muted-foreground tabular-nums w-16 text-right">
                       {ing.quantity} {ing.unit}
+                    </span>
+                    <span className="text-muted-foreground tabular-nums w-14 text-right">
+                      {fmt(ingCost)} ₴
+                    </span>
+                    <span
+                      className={cn(
+                        "tabular-nums w-10 text-right font-medium",
+                        hasEnough ? "text-green-600" : "text-red-600"
+                      )}
+                    >
+                      {ing.product.currentStock}
                     </span>
                   </div>
                 );
               })}
-              {recipe.ingredients.length > 4 && (
-                <div className="text-xs text-muted-foreground">
-                  +{recipe.ingredients.length - 4} ще...
-                </div>
-              )}
             </div>
-
-            {/* Actions */}
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1 h-8 text-xs"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit?.();
-                }}
-              >
-                <Edit className="h-3 w-3 mr-1" />
-                Редаг.
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1 h-8 text-xs"
-                disabled={maxPortions === 0}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsReserveModalOpen(true);
-                }}
-              >
-                <Package className="h-3 w-3 mr-1" />
-                Списати
-              </Button>
+            <div className="flex justify-between text-xs font-medium pt-2 mt-2 border-t">
+              <span>Всього:</span>
+              <span className="tabular-nums">{fmt(totalIngCost)} ₴</span>
             </div>
           </div>
-        )}
-      </Card>
 
-      {/* Reserve Modal */}
-      <Dialog open={isReserveModalOpen} onOpenChange={setIsReserveModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ChefHat className="h-5 w-5 text-orange-600" />
-              {recipe.menuItem.name}
-            </DialogTitle>
-            <DialogDescription>
-              Максимально доступно: {maxPortions} порцій
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="flex items-center justify-between">
-              <span className="font-medium">Кількість порцій:</span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setReservePortions((p) => Math.max(1, p - 1))}
-                  disabled={reservePortions <= 1}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <Input
-                  type="number"
-                  min={1}
-                  max={maxPortions}
-                  value={reservePortions}
-                  onChange={(e) =>
-                    setReservePortions(
-                      Math.min(maxPortions, Math.max(1, parseInt(e.target.value) || 1))
-                    )
-                  }
-                  className="w-16 h-8 text-center"
-                />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setReservePortions((p) => Math.min(maxPortions, p + 1))}
-                  disabled={reservePortions >= maxPortions}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
+          {/* Steps (if any) */}
+          {recipe.steps && recipe.steps.length > 0 && (
+            <div>
+              <div className="text-xs font-medium text-muted-foreground uppercase mb-2">
+                Кроки ({recipe.steps.length})
               </div>
-            </div>
-
-            <div className="bg-muted p-3 rounded-lg max-h-40 overflow-y-auto">
-              <div className="space-y-1.5 text-sm">
-                {recipe.ingredients.map((ing, idx) => (
-                  <div key={ing.product.id || idx} className="flex justify-between">
-                    <span className="text-muted-foreground truncate">
-                      {ing.product.name}
+              <div className="space-y-2 text-xs">
+                {recipe.steps.map((step) => (
+                  <div key={step.stepNumber} className="flex gap-2">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-[10px] font-bold">
+                      {step.stepNumber}
                     </span>
-                    <span className="font-mono tabular-nums ml-2 shrink-0">
-                      {(ing.quantity * reservePortions).toFixed(1)} {ing.unit}
-                    </span>
+                    <span className="flex-1 text-muted-foreground">{step.instruction}</span>
                   </div>
                 ))}
               </div>
             </div>
+          )}
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Clock className="h-3.5 w-3.5" />
-              Резервування діє 24 години
+          {/* Reserve section */}
+          {maxPortions > 0 && (
+            <div className="pt-3 border-t">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Списати інгредієнти:</span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setReserveCount((c) => Math.max(1, c - 1))}
+                    disabled={reserveCount <= 1}
+                  >
+                    <Minus className="h-3 w-3" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={maxPortions}
+                    value={reserveCount}
+                    onChange={(e) =>
+                      setReserveCount(Math.min(maxPortions, Math.max(1, parseInt(e.target.value) || 1)))
+                    }
+                    className="w-12 h-7 text-center text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => setReserveCount((c) => Math.min(maxPortions, c + 1))}
+                    disabled={reserveCount >= maxPortions}
+                  >
+                    <Plus className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground mb-2">
+                Вартість: <span className="font-medium">{fmt(cost * reserveCount)} ₴</span>
+              </div>
+              <Button size="sm" className="w-full h-8" onClick={handleReserve}>
+                <Package className="h-3.5 w-3.5 mr-1.5" />
+                Списати {reserveCount} порц.
+              </Button>
             </div>
-          </div>
+          )}
+        </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsReserveModalOpen(false)}
-            >
-              Скасувати
-            </Button>
-            <Button onClick={handleReserve}>Списати інгредієнти</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+        {/* Footer */}
+        <div className="flex gap-2 p-4 border-t bg-muted/30">
+          <Button variant="outline" size="sm" className="flex-1" onClick={() => onOpenChange(false)}>
+            Закрити
+          </Button>
+          <Button variant="outline" size="sm" className="flex-1" onClick={onEdit}>
+            <Edit className="h-3.5 w-3.5 mr-1.5" />
+            Редагувати
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

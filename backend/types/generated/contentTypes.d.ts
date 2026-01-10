@@ -467,6 +467,113 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
+export interface ApiDailyTaskDailyTask extends Struct.CollectionTypeSchema {
+  collectionName: 'daily_tasks';
+  info: {
+    description: 'Employee daily tasks and assignments';
+    displayName: 'Daily Task';
+    pluralName: 'daily-tasks';
+    singularName: 'daily-task';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    actualMinutes: Schema.Attribute.Integer;
+    assignee: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    category: Schema.Attribute.Enumeration<
+      [
+        'prep',
+        'cleaning',
+        'inventory',
+        'maintenance',
+        'training',
+        'admin',
+        'service',
+        'other',
+      ]
+    > &
+      Schema.Attribute.DefaultTo<'other'>;
+    completedAt: Schema.Attribute.DateTime;
+    completedByUser: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    createdByUser: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    description: Schema.Attribute.Text;
+    dueDate: Schema.Attribute.Date;
+    dueTime: Schema.Attribute.Time;
+    estimatedMinutes: Schema.Attribute.Integer &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 1;
+        },
+        number
+      >;
+    isRecurring: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::daily-task.daily-task'
+    > &
+      Schema.Attribute.Private;
+    notes: Schema.Attribute.Text;
+    parentTask: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::daily-task.daily-task'
+    >;
+    priority: Schema.Attribute.Enumeration<
+      ['low', 'normal', 'high', 'urgent']
+    > &
+      Schema.Attribute.DefaultTo<'normal'>;
+    publishedAt: Schema.Attribute.DateTime;
+    recurringPattern: Schema.Attribute.Enumeration<
+      ['daily', 'weekdays', 'weekly', 'monthly']
+    >;
+    startedAt: Schema.Attribute.DateTime;
+    station: Schema.Attribute.Enumeration<
+      [
+        'grill',
+        'fry',
+        'salad',
+        'hot',
+        'dessert',
+        'bar',
+        'pass',
+        'prep',
+        'front',
+        'back',
+      ]
+    >;
+    status: Schema.Attribute.Enumeration<
+      ['pending', 'in_progress', 'completed', 'cancelled', 'overdue']
+    > &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<'pending'>;
+    subtasks: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::daily-task.daily-task'
+    >;
+    title: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMaxLength<{
+        maxLength: 200;
+      }>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
 export interface ApiIngredientIngredient extends Struct.CollectionTypeSchema {
   collectionName: 'ingredients';
   info: {
@@ -650,16 +757,27 @@ export interface ApiKitchenTicketKitchenTicket
       'oneToOne',
       'api::order-item.order-item'
     >;
+    pickupWaitSeconds: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     priority: Schema.Attribute.Enumeration<['normal', 'rush', 'vip']> &
       Schema.Attribute.DefaultTo<'normal'>;
     priorityScore: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     publishedAt: Schema.Attribute.DateTime;
+    servedAt: Schema.Attribute.DateTime;
     startedAt: Schema.Attribute.DateTime;
     station: Schema.Attribute.Enumeration<
       ['grill', 'fry', 'salad', 'hot', 'dessert', 'bar', 'pass', 'prep']
     >;
     status: Schema.Attribute.Enumeration<
-      ['queued', 'started', 'paused', 'resumed', 'ready', 'failed', 'cancelled']
+      [
+        'queued',
+        'started',
+        'paused',
+        'resumed',
+        'ready',
+        'served',
+        'failed',
+        'cancelled',
+      ]
     > &
       Schema.Attribute.DefaultTo<'queued'>;
     ticketNumber: Schema.Attribute.String;
@@ -796,12 +914,14 @@ export interface ApiOrderItemOrderItem extends Struct.CollectionTypeSchema {
     modifiers: Schema.Attribute.JSON & Schema.Attribute.DefaultTo<[]>;
     notes: Schema.Attribute.Text;
     order: Schema.Attribute.Relation<'manyToOne', 'api::order.order'>;
+    pickupWaitMs: Schema.Attribute.BigInteger & Schema.Attribute.DefaultTo<0>;
     prepElapsedMs: Schema.Attribute.BigInteger & Schema.Attribute.DefaultTo<0>;
     prepStartAt: Schema.Attribute.DateTime;
     publishedAt: Schema.Attribute.DateTime;
     quantity: Schema.Attribute.Integer &
       Schema.Attribute.Required &
       Schema.Attribute.DefaultTo<1>;
+    readyAt: Schema.Attribute.DateTime;
     servedAt: Schema.Attribute.DateTime;
     status: Schema.Attribute.Enumeration<
       [
@@ -909,6 +1029,166 @@ export interface ApiRecipeRecipe extends Struct.CollectionTypeSchema {
     publishedAt: Schema.Attribute.DateTime;
     slug: Schema.Attribute.UID<'name'>;
     steps: Schema.Attribute.Component<'recipe.recipe-step', true>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiReservationReservation extends Struct.CollectionTypeSchema {
+  collectionName: 'reservations';
+  info: {
+    description: 'Table reservations with time slots';
+    displayName: 'Reservation';
+    pluralName: 'reservations';
+    singularName: 'reservation';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    completedAt: Schema.Attribute.DateTime;
+    confirmationCode: Schema.Attribute.String;
+    confirmedAt: Schema.Attribute.DateTime;
+    contactEmail: Schema.Attribute.Email;
+    contactName: Schema.Attribute.String & Schema.Attribute.Required;
+    contactPhone: Schema.Attribute.String & Schema.Attribute.Required;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    date: Schema.Attribute.Date & Schema.Attribute.Required;
+    endTime: Schema.Attribute.Time & Schema.Attribute.Required;
+    guestCount: Schema.Attribute.Integer &
+      Schema.Attribute.Required &
+      Schema.Attribute.SetMinMax<
+        {
+          min: 1;
+        },
+        number
+      > &
+      Schema.Attribute.DefaultTo<2>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::reservation.reservation'
+    > &
+      Schema.Attribute.Private;
+    notes: Schema.Attribute.Text;
+    occasion: Schema.Attribute.Enumeration<
+      ['none', 'birthday', 'anniversary', 'business', 'romantic', 'other']
+    >;
+    publishedAt: Schema.Attribute.DateTime;
+    reminderSentAt: Schema.Attribute.DateTime;
+    scheduledOrder: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::scheduled-order.scheduled-order'
+    >;
+    seatedAt: Schema.Attribute.DateTime;
+    source: Schema.Attribute.Enumeration<
+      ['phone', 'walk_in', 'website', 'app', 'third_party']
+    > &
+      Schema.Attribute.DefaultTo<'phone'>;
+    specialRequests: Schema.Attribute.Text;
+    startTime: Schema.Attribute.Time & Schema.Attribute.Required;
+    status: Schema.Attribute.Enumeration<
+      ['pending', 'confirmed', 'seated', 'completed', 'cancelled', 'no_show']
+    > &
+      Schema.Attribute.DefaultTo<'pending'>;
+    table: Schema.Attribute.Relation<'manyToOne', 'api::table.table'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiScheduledOrderScheduledOrder
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'scheduled_orders';
+  info: {
+    description: 'Pre-planned orders for events, reservations, and HoReCa';
+    displayName: 'Scheduled Order';
+    pluralName: 'scheduled-orders';
+    singularName: 'scheduled-order';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    activatedOrder: Schema.Attribute.Relation<'oneToOne', 'api::order.order'>;
+    adultsCount: Schema.Attribute.Integer;
+    assignedCoordinator: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    cakeDetails: Schema.Attribute.Text;
+    checklist: Schema.Attribute.JSON;
+    childrenCount: Schema.Attribute.Integer;
+    confirmationSentAt: Schema.Attribute.DateTime;
+    confirmedAt: Schema.Attribute.DateTime;
+    contactCompany: Schema.Attribute.String;
+    contactEmail: Schema.Attribute.Email;
+    contactName: Schema.Attribute.String;
+    contactPhone: Schema.Attribute.String;
+    courseTimeline: Schema.Attribute.JSON;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    decorations: Schema.Attribute.Text;
+    depositAmount: Schema.Attribute.Decimal;
+    depositMethod: Schema.Attribute.String;
+    depositPaidAt: Schema.Attribute.DateTime;
+    dietaryRequirements: Schema.Attribute.JSON;
+    eventName: Schema.Attribute.String;
+    eventType: Schema.Attribute.Enumeration<
+      [
+        'regular',
+        'birthday',
+        'corporate',
+        'wedding',
+        'anniversary',
+        'funeral',
+        'baptism',
+        'graduation',
+        'business',
+        'romantic',
+        'other',
+      ]
+    > &
+      Schema.Attribute.DefaultTo<'regular'>;
+    guestCount: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<1>;
+    items: Schema.Attribute.JSON &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<[]>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::scheduled-order.scheduled-order'
+    > &
+      Schema.Attribute.Private;
+    menuPreset: Schema.Attribute.Enumeration<
+      ['a_la_carte', 'set_menu', 'buffet', 'banquet', 'custom']
+    > &
+      Schema.Attribute.DefaultTo<'a_la_carte'>;
+    musicPreference: Schema.Attribute.Text;
+    notes: Schema.Attribute.Text;
+    paymentStatus: Schema.Attribute.Enumeration<
+      ['pending', 'deposit_paid', 'fully_paid', 'refunded']
+    > &
+      Schema.Attribute.DefaultTo<'pending'>;
+    prepStartAt: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    publishedAt: Schema.Attribute.DateTime;
+    reminderSentAt: Schema.Attribute.DateTime;
+    scheduledFor: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    seatingArea: Schema.Attribute.Enumeration<
+      ['main_hall', 'vip_room', 'terrace', 'private', 'bar_area', 'outdoor']
+    > &
+      Schema.Attribute.DefaultTo<'main_hall'>;
+    status: Schema.Attribute.Enumeration<
+      ['scheduled', 'activating', 'activated', 'completed', 'cancelled']
+    > &
+      Schema.Attribute.DefaultTo<'scheduled'>;
+    table: Schema.Attribute.Relation<'manyToOne', 'api::table.table'>;
+    totalAmount: Schema.Attribute.Decimal & Schema.Attribute.DefaultTo<0>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1082,7 +1362,9 @@ export interface ApiTableTable extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     currentGuests: Schema.Attribute.Integer;
+    freedAt: Schema.Attribute.DateTime;
     isActive: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    lastSessionDurationMs: Schema.Attribute.BigInteger;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::table.table'> &
       Schema.Attribute.Private;
@@ -1127,6 +1409,7 @@ export interface ApiTicketEventTicketEvent extends Struct.CollectionTypeSchema {
         'paused',
         'resumed',
         'completed',
+        'served',
         'failed',
         'cancelled',
         'inventory_locked',
@@ -1644,20 +1927,28 @@ export interface PluginUsersPermissionsUser
   };
   options: {
     draftAndPublish: false;
-    timestamps: true;
   };
   attributes: {
+    avatarUrl: Schema.Attribute.String;
     blocked: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     confirmationToken: Schema.Attribute.String & Schema.Attribute.Private;
     confirmed: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    department: Schema.Attribute.Enumeration<
+      ['management', 'kitchen', 'service', 'bar', 'none']
+    > &
+      Schema.Attribute.DefaultTo<'none'>;
     email: Schema.Attribute.Email &
       Schema.Attribute.Required &
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    firstName: Schema.Attribute.String;
+    hireDate: Schema.Attribute.Date;
+    isActive: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
+    lastName: Schema.Attribute.String;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -1669,6 +1960,7 @@ export interface PluginUsersPermissionsUser
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
       }>;
+    phone: Schema.Attribute.String;
     provider: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
     resetPasswordToken: Schema.Attribute.String & Schema.Attribute.Private;
@@ -1676,6 +1968,34 @@ export interface PluginUsersPermissionsUser
       'manyToOne',
       'plugin::users-permissions.role'
     >;
+    station: Schema.Attribute.Enumeration<
+      [
+        'grill',
+        'fry',
+        'salad',
+        'hot',
+        'dessert',
+        'bar',
+        'pass',
+        'prep',
+        'front',
+        'back',
+      ]
+    >;
+    systemRole: Schema.Attribute.Enumeration<
+      [
+        'admin',
+        'manager',
+        'chef',
+        'cook',
+        'waiter',
+        'host',
+        'bartender',
+        'cashier',
+        'viewer',
+      ]
+    > &
+      Schema.Attribute.DefaultTo<'viewer'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -1700,6 +2020,7 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
+      'api::daily-task.daily-task': ApiDailyTaskDailyTask;
       'api::ingredient.ingredient': ApiIngredientIngredient;
       'api::inventory-movement.inventory-movement': ApiInventoryMovementInventoryMovement;
       'api::kitchen-ticket.kitchen-ticket': ApiKitchenTicketKitchenTicket;
@@ -1708,6 +2029,8 @@ declare module '@strapi/strapi' {
       'api::order-item.order-item': ApiOrderItemOrderItem;
       'api::order.order': ApiOrderOrder;
       'api::recipe.recipe': ApiRecipeRecipe;
+      'api::reservation.reservation': ApiReservationReservation;
+      'api::scheduled-order.scheduled-order': ApiScheduledOrderScheduledOrder;
       'api::stock-batch.stock-batch': ApiStockBatchStockBatch;
       'api::supplier.supplier': ApiSupplierSupplier;
       'api::table-session-event.table-session-event': ApiTableSessionEventTableSessionEvent;

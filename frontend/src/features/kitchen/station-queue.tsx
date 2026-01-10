@@ -108,6 +108,10 @@ interface StationTask {
   // Scheduled order fields
   isScheduled?: boolean;
   scheduledOrderId?: string;
+  // Timer tracking timestamps
+  startedAt?: string;   // When cooking started
+  readyAt?: string;     // When marked as ready (for pickup timer)
+  servedAt?: string;    // When served to guest
 }
 
 // Station queue panel
@@ -429,6 +433,30 @@ function TableGroupCard({
   onTaskReturn,
   onTaskServed,
 }: TableGroupCardProps) {
+  const [pickupWait, setPickupWait] = React.useState(0);
+
+  // Track pickup wait time for completed groups
+  React.useEffect(() => {
+    if (!isCompleted) {
+      setPickupWait(0);
+      return;
+    }
+
+    // Get the oldest ready time (longest waiting)
+    const readyTimes = group.tasks
+      .map((t) => t.readyAt ? new Date(t.readyAt).getTime() : Date.now())
+      .filter((t) => !isNaN(t));
+
+    const oldestReadyTime = readyTimes.length > 0 ? Math.min(...readyTimes) : Date.now();
+    setPickupWait(Date.now() - oldestReadyTime);
+
+    const interval = setInterval(() => {
+      setPickupWait(Date.now() - oldestReadyTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isCompleted, group.tasks]);
+
   // Check if any task has allergen
   const hasAllergen = group.tasks.some((task) =>
     task.comment?.presets.some((preset) =>
@@ -441,34 +469,52 @@ function TableGroupCard({
   const hasVip = group.tasks.some((t) => t.priority === "vip");
   const hasScheduled = group.tasks.some((t) => t.isScheduled);
 
-  // Get min remaining time for the group header
-  const minRemainingMs = Math.min(
-    ...group.tasks.map((t) => t.targetCompletionMs - t.elapsedMs)
-  );
-  const isOverdue = minRemainingMs < 0;
+  // Get max elapsed time for the group header (show longest cooking item)
+  const maxElapsedMs = Math.max(...group.tasks.map((t) => t.elapsedMs));
+  const maxTargetMs = Math.max(...group.tasks.map((t) => t.targetCompletionMs));
+  const isOverdue = maxElapsedMs > maxTargetMs;
+  const isWarning = !isOverdue && maxElapsedMs > maxTargetMs * 0.8;
   const timerColor = isOverdue
-    ? "text-danger"
-    : minRemainingMs < 60000
+    ? "text-danger font-bold"
+    : isWarning
       ? "text-warning"
       : "text-foreground";
+
+  // Pickup wait thresholds for completed groups
+  const pickupWarningMs = 60 * 1000;  // 1 minute
+  const pickupOverdueMs = 2 * 60 * 1000; // 2 minutes
+  const isPickupOverdue = pickupWait > pickupOverdueMs;
+  const isPickupWarning = !isPickupOverdue && pickupWait > pickupWarningMs;
+  const pickupTimerColor = isPickupOverdue
+    ? "text-danger font-bold"
+    : isPickupWarning
+      ? "text-warning"
+      : "text-success";
 
   return (
     <div
       className={cn(
         "rounded-lg border transition-all overflow-hidden",
         isCompleted
-          ? "bg-success/5 border-success/50"
+          ? isPickupOverdue
+            ? "bg-danger/5 border-danger"
+            : "bg-success/5 border-success/50"
           : isActive
             ? "bg-primary/5 border-primary"
             : "bg-background hover:border-primary/50",
         !isCompleted && hasRush && "ring-2 ring-danger",
-        !isCompleted && hasVip && !hasRush && "ring-2 ring-warning"
+        !isCompleted && hasVip && !hasRush && "ring-2 ring-warning",
+        !isCompleted && isOverdue && !hasRush && !hasVip && "ring-2 ring-danger/50 bg-danger/5",
+        isCompleted && isPickupOverdue && "ring-2 ring-danger"
       )}
     >
       {/* Table Header */}
       <div className={cn(
         "px-3 py-2 border-b flex items-center justify-between",
-        isCompleted ? "bg-success/10" : isActive ? "bg-primary/10" : "bg-muted/50"
+        isCompleted
+          ? isPickupOverdue ? "bg-danger/10" : "bg-success/10"
+          : isActive ? "bg-primary/10" : "bg-muted/50",
+        isOverdue && !isCompleted && "bg-danger/10"
       )}>
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="text-xs px-2 py-0.5 font-semibold">
@@ -502,11 +548,15 @@ function TableGroupCard({
           <Badge variant="outline" className="text-[10px] px-1.5 py-0">
             {group.tasks.length} {group.tasks.length === 1 ? "страва" : group.tasks.length < 5 ? "страви" : "страв"}
           </Badge>
-          {!isCompleted && (
+          {isCompleted ? (
+            <div className={cn("font-mono text-xs flex items-center gap-1", pickupTimerColor)}>
+              <Clock className="h-3 w-3" />
+              {formatDurationMs(pickupWait)}
+            </div>
+          ) : (
             <div className={cn("font-mono text-xs flex items-center gap-1", timerColor)}>
               <Timer className="h-3 w-3" />
-              {isOverdue ? "+" : ""}
-              {formatDurationMs(Math.abs(minRemainingMs))}
+              {formatDurationMs(maxElapsedMs)}
             </div>
           )}
         </div>
@@ -552,25 +602,89 @@ function TaskItemRow({
   onServed,
 }: TaskItemRowProps) {
   const [currentElapsed, setCurrentElapsed] = React.useState(task.elapsedMs);
+  const [pickupWait, setPickupWait] = React.useState(0);
+  const [queueWait, setQueueWait] = React.useState(0);
+  const isPending = !isActive && !isCompleted;
 
-  // Update timer for active tasks
+  // Update timer for pending tasks (queue wait time)
   React.useEffect(() => {
-    if (!isActive) return;
+    if (!isPending) {
+      setQueueWait(0);
+      return;
+    }
+
+    const createdTime = new Date(task.createdAt).getTime();
+    setQueueWait(Date.now() - createdTime);
 
     const interval = setInterval(() => {
-      setCurrentElapsed((prev) => prev + 1000);
+      setQueueWait(Date.now() - createdTime);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [isPending, task.createdAt]);
 
-  const remainingMs = task.targetCompletionMs - currentElapsed;
-  const isOverdue = remainingMs < 0;
-  const timerColor = isOverdue
-    ? "text-danger"
-    : remainingMs < 60000
+  // Update timer for active tasks (calculate from backend startedAt timestamp)
+  React.useEffect(() => {
+    if (!isActive) return;
+
+    // Use backend startedAt timestamp for accurate time across all clients
+    const startedTime = task.startedAt ? new Date(task.startedAt).getTime() : Date.now();
+    setCurrentElapsed(Date.now() - startedTime);
+
+    const interval = setInterval(() => {
+      setCurrentElapsed(Date.now() - startedTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isActive, task.startedAt]);
+
+  // Update pickup wait timer for completed tasks (count UP from 0 when ready)
+  React.useEffect(() => {
+    if (!isCompleted) {
+      setPickupWait(0);
+      return;
+    }
+
+    const readyTime = task.readyAt ? new Date(task.readyAt).getTime() : Date.now();
+    setPickupWait(Date.now() - readyTime);
+
+    const interval = setInterval(() => {
+      setPickupWait(Date.now() - readyTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isCompleted, task.readyAt]);
+
+  // Queue wait thresholds (5 min warning, 10 min overdue)
+  const queueWarningMs = 5 * 60 * 1000;
+  const queueOverdueMs = 10 * 60 * 1000;
+  const isQueueOverdue = queueWait > queueOverdueMs;
+  const isQueueWarning = !isQueueOverdue && queueWait > queueWarningMs;
+  const queueTimerColor = isQueueOverdue
+    ? "text-danger font-bold"
+    : isQueueWarning
       ? "text-warning"
       : "text-muted-foreground";
+
+  // Cooking time thresholds
+  const isOverdue = currentElapsed > task.targetCompletionMs;
+  const isWarning = !isOverdue && currentElapsed > task.targetCompletionMs * 0.8;
+  const timerColor = isOverdue
+    ? "text-danger font-bold"
+    : isWarning
+      ? "text-warning"
+      : "text-primary";
+
+  // Pickup wait thresholds
+  const pickupWarningMs = 60 * 1000;  // 1 minute
+  const pickupOverdueMs = 2 * 60 * 1000; // 2 minutes
+  const isPickupOverdue = pickupWait > pickupOverdueMs;
+  const isPickupWarning = !isPickupOverdue && pickupWait > pickupWarningMs;
+  const pickupTimerColor = isPickupOverdue
+    ? "text-danger font-bold"
+    : isPickupWarning
+      ? "text-warning"
+      : "text-success";
 
   const hasAllergen = task.comment?.presets.some((preset) =>
     ["gluten_free", "dairy_free", "nut_free", "shellfish_free"].includes(preset)
@@ -580,7 +694,10 @@ function TaskItemRow({
     <div className={cn(
       "px-3 py-2 flex items-center gap-3",
       task.priority === "rush" && "bg-danger/5",
-      task.priority === "vip" && "bg-warning/5"
+      task.priority === "vip" && "bg-warning/5",
+      isQueueOverdue && isPending && "bg-warning/10",
+      isOverdue && isActive && "bg-danger/10",
+      isPickupOverdue && isCompleted && "bg-danger/10"
     )}>
       {/* Quantity & Name */}
       <div className="flex-1 min-w-0">
@@ -612,10 +729,46 @@ function TaskItemRow({
         )}
       </div>
 
-      {/* Timer */}
-      <div className={cn("font-mono text-xs shrink-0", timerColor)}>
-        {isOverdue ? "+" : ""}
-        {formatDurationMs(Math.abs(remainingMs))}
+      {/* Phase-specific timer with label */}
+      <div className={cn(
+        "shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs",
+        isPending && "bg-muted/50",
+        isActive && (isOverdue ? "bg-danger/10" : "bg-primary/10"),
+        isCompleted && (isPickupOverdue ? "bg-danger/10" : "bg-success/10")
+      )}>
+        {isPending && (
+          <>
+            <Clock className={cn("h-3.5 w-3.5", queueTimerColor)} />
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-muted-foreground leading-none">в черзі</span>
+              <span className={cn("font-mono font-medium leading-none", queueTimerColor)}>
+                {formatDurationMs(queueWait)}
+              </span>
+            </div>
+          </>
+        )}
+        {isActive && (
+          <>
+            <Flame className={cn("h-3.5 w-3.5", timerColor)} />
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-muted-foreground leading-none">готується</span>
+              <span className={cn("font-mono font-medium leading-none", timerColor)}>
+                {formatDurationMs(currentElapsed)}
+              </span>
+            </div>
+          </>
+        )}
+        {isCompleted && (
+          <>
+            <Timer className={cn("h-3.5 w-3.5", pickupTimerColor)} />
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-muted-foreground leading-none">очікує</span>
+              <span className={cn("font-mono font-medium leading-none", pickupTimerColor)}>
+                {formatDurationMs(pickupWait)}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Actions */}
@@ -663,26 +816,89 @@ function TaskCard({
   onServed,
 }: TaskCardProps) {
   const [currentElapsed, setCurrentElapsed] = React.useState(task.elapsedMs);
+  const [pickupWait, setPickupWait] = React.useState(0);
+  const [queueWait, setQueueWait] = React.useState(0);
+  const isPending = !isActive && !isCompleted;
 
-  // Update timer for active tasks
+  // Update timer for pending tasks (queue wait time)
   React.useEffect(() => {
-    if (!isActive) return;
+    if (!isPending) {
+      setQueueWait(0);
+      return;
+    }
+
+    const createdTime = new Date(task.createdAt).getTime();
+    setQueueWait(Date.now() - createdTime);
 
     const interval = setInterval(() => {
-      setCurrentElapsed((prev) => prev + 1000);
+      setQueueWait(Date.now() - createdTime);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isActive]);
+  }, [isPending, task.createdAt]);
 
-  const remainingMs = task.targetCompletionMs - currentElapsed;
-  const isOverdue = remainingMs < 0;
+  // Update timer for active tasks (calculate from backend startedAt timestamp)
+  React.useEffect(() => {
+    if (!isActive) return;
 
-  const timerColor = isOverdue
-    ? "text-danger"
-    : remainingMs < 60000
+    // Use backend startedAt timestamp for accurate time across all clients
+    const startedTime = task.startedAt ? new Date(task.startedAt).getTime() : Date.now();
+    setCurrentElapsed(Date.now() - startedTime);
+
+    const interval = setInterval(() => {
+      setCurrentElapsed(Date.now() - startedTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isActive, task.startedAt]);
+
+  // Update pickup wait timer for completed tasks
+  React.useEffect(() => {
+    if (!isCompleted) {
+      setPickupWait(0);
+      return;
+    }
+
+    const readyTime = task.readyAt ? new Date(task.readyAt).getTime() : Date.now();
+    setPickupWait(Date.now() - readyTime);
+
+    const interval = setInterval(() => {
+      setPickupWait(Date.now() - readyTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isCompleted, task.readyAt]);
+
+  // Queue wait thresholds
+  const queueWarningMs = 5 * 60 * 1000;
+  const queueOverdueMs = 10 * 60 * 1000;
+  const isQueueOverdue = queueWait > queueOverdueMs;
+  const isQueueWarning = !isQueueOverdue && queueWait > queueWarningMs;
+  const queueTimerColor = isQueueOverdue
+    ? "text-danger font-bold"
+    : isQueueWarning
       ? "text-warning"
-      : "text-foreground";
+      : "text-muted-foreground";
+
+  // Cooking time thresholds
+  const isOverdue = currentElapsed > task.targetCompletionMs;
+  const isWarning = !isOverdue && currentElapsed > task.targetCompletionMs * 0.8;
+  const timerColor = isOverdue
+    ? "text-danger font-bold"
+    : isWarning
+      ? "text-warning"
+      : "text-primary";
+
+  // Pickup wait thresholds
+  const pickupWarningMs = 60 * 1000;
+  const pickupOverdueMs = 2 * 60 * 1000;
+  const isPickupOverdue = pickupWait > pickupOverdueMs;
+  const isPickupWarning = !isPickupOverdue && pickupWait > pickupWarningMs;
+  const pickupTimerColor = isPickupOverdue
+    ? "text-danger font-bold"
+    : isPickupWarning
+      ? "text-warning"
+      : "text-success";
 
   const hasAllergen = task.comment?.presets.some((preset) =>
     ["gluten_free", "dairy_free", "nut_free", "shellfish_free"].includes(preset)
@@ -693,12 +909,16 @@ function TaskCard({
       className={cn(
         "p-2.5 rounded-lg border transition-all",
         isCompleted
-          ? "bg-success/10 border-success/50"
+          ? isPickupOverdue
+            ? "bg-danger/10 border-danger"
+            : "bg-success/10 border-success/50"
           : isActive
             ? "bg-primary/5 border-primary"
             : "bg-background hover:border-primary/50",
         !isCompleted && task.priority === "rush" && "ring-2 ring-danger",
-        !isCompleted && task.priority === "vip" && "ring-2 ring-warning"
+        !isCompleted && task.priority === "vip" && "ring-2 ring-warning",
+        isOverdue && isActive && "bg-danger/10 border-danger",
+        isPickupOverdue && isCompleted && "ring-2 ring-danger"
       )}
     >
       {/* Header */}
@@ -734,10 +954,46 @@ function TaskCard({
             </Badge>
           )}
         </div>
-        <div className={cn("font-mono text-xs flex items-center gap-1", timerColor)}>
-          <Timer className="h-3 w-3" />
-          {isOverdue ? "+" : ""}
-          {formatDurationMs(Math.abs(remainingMs))}
+        {/* Phase-specific timer with label */}
+        <div className={cn(
+          "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs",
+          isPending && "bg-muted/50",
+          isActive && (isOverdue ? "bg-danger/10" : "bg-primary/10"),
+          isCompleted && (isPickupOverdue ? "bg-danger/10" : "bg-success/10")
+        )}>
+          {isPending && (
+            <>
+              <Clock className={cn("h-3.5 w-3.5", queueTimerColor)} />
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] text-muted-foreground leading-none">в черзі</span>
+                <span className={cn("font-mono font-medium leading-none", queueTimerColor)}>
+                  {formatDurationMs(queueWait)}
+                </span>
+              </div>
+            </>
+          )}
+          {isActive && (
+            <>
+              <Flame className={cn("h-3.5 w-3.5", timerColor)} />
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] text-muted-foreground leading-none">готується</span>
+                <span className={cn("font-mono font-medium leading-none", timerColor)}>
+                  {formatDurationMs(currentElapsed)}
+                </span>
+              </div>
+            </>
+          )}
+          {isCompleted && (
+            <>
+              <Timer className={cn("h-3.5 w-3.5", pickupTimerColor)} />
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] text-muted-foreground leading-none">очікує</span>
+                <span className={cn("font-mono font-medium leading-none", pickupTimerColor)}>
+                  {formatDurationMs(pickupWait)}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -827,8 +1083,8 @@ interface StationOverviewProps {
     isPaused: boolean;
     overdueCount: number;
   }>;
-  onSelectStation: (stationType: StationType) => void;
-  selectedStation?: StationType;
+  onSelectStation: (stationType: StationType | "all") => void;
+  selectedStation?: StationType | "all";
   className?: string;
 }
 
@@ -838,41 +1094,431 @@ export function StationOverview({
   selectedStation,
   className,
 }: StationOverviewProps) {
-  return (
-    <div className={cn("grid grid-cols-4 gap-2", className)}>
-      {stations.map((station) => {
-        const config = STATION_CONFIGS[station.type];
-        const Icon = config.icon;
-        const loadPercent = (station.currentLoad / station.maxCapacity) * 100;
-        const isSelected = selectedStation === station.type;
+  // Calculate totals for "All Kitchen" view
+  const totalTasks = stations.reduce((sum, s) => sum + s.taskCount, 0);
+  const totalOverdue = stations.reduce((sum, s) => sum + s.overdueCount, 0);
+  const totalLoad = stations.reduce((sum, s) => sum + s.currentLoad, 0);
+  const totalCapacity = stations.reduce((sum, s) => sum + s.maxCapacity, 0);
+  const totalLoadPercent = totalCapacity > 0 ? (totalLoad / totalCapacity) * 100 : 0;
+  const isAllSelected = selectedStation === "all";
 
-        return (
-          <button
-            key={station.type}
-            onClick={() => onSelectStation(station.type)}
-            className={cn(
-              "p-3 rounded-lg border text-left transition-all",
-              config.bgColor,
-              isSelected && "ring-2 ring-primary",
-              station.isPaused && "opacity-50"
+  return (
+    <div className={cn("space-y-2", className)}>
+      {/* "All Kitchen" button */}
+      <button
+        onClick={() => onSelectStation("all")}
+        className={cn(
+          "w-full p-3 rounded-lg border text-left transition-all bg-gradient-to-r from-orange-50 to-amber-50",
+          isAllSelected && "ring-2 ring-primary"
+        )}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <ChefHat className="h-5 w-5 text-orange-600" />
+            <span className="font-medium text-sm">Вся кухня</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {totalOverdue > 0 && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                {totalOverdue}!
+              </Badge>
             )}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <Icon className={cn("h-5 w-5", config.color)} />
-              {station.overdueCount > 0 && (
-                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                  {station.overdueCount}
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {totalTasks}
+            </Badge>
+          </div>
+        </div>
+        <Progress value={totalLoadPercent} className="h-1" />
+      </button>
+
+      {/* Individual stations - 5 columns grid */}
+      <div className="grid grid-cols-5 gap-2">
+        {stations.map((station) => {
+          const config = STATION_CONFIGS[station.type];
+          const Icon = config.icon;
+          const loadPercent = (station.currentLoad / station.maxCapacity) * 100;
+          const isSelected = selectedStation === station.type;
+
+          return (
+            <button
+              key={station.type}
+              onClick={() => onSelectStation(station.type)}
+              className={cn(
+                "p-3 rounded-lg border text-center transition-all min-h-[100px] flex flex-col",
+                config.bgColor,
+                isSelected && "ring-2 ring-primary",
+                station.isPaused && "opacity-50"
+              )}
+            >
+              {/* Icon + overdue badge */}
+              <div className="flex items-center justify-center gap-1 mb-2">
+                <Icon className={cn("h-5 w-5", config.color)} />
+                {station.overdueCount > 0 && (
+                  <Badge variant="destructive" className="text-[10px] px-1 py-0 min-w-[18px]">
+                    {station.overdueCount}
+                  </Badge>
+                )}
+              </div>
+
+              {/* Station name */}
+              <h4 className="font-medium text-xs leading-tight mb-1 line-clamp-2">
+                {config.nameUk}
+              </h4>
+
+              {/* Task count */}
+              <div className="mt-auto">
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                  {station.taskCount}
                 </Badge>
+              </div>
+
+              {/* Progress */}
+              <Progress value={loadPercent} className="h-1 mt-2" />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// All Kitchen View - shows tasks from all stations grouped by station
+interface AllKitchenViewProps {
+  tasksByStation: Record<StationType, StationTask[]>;
+  onTaskStart: (taskDocumentId: string) => void;
+  onTaskComplete: (taskDocumentId: string) => void;
+  onTaskPass: (taskDocumentId: string) => void;
+  onTaskReturn?: (taskDocumentId: string) => void;
+  onTaskServed?: (taskDocumentId: string) => void;
+  className?: string;
+}
+
+export function AllKitchenView({
+  tasksByStation,
+  onTaskStart,
+  onTaskComplete,
+  onTaskPass,
+  onTaskReturn,
+  onTaskServed,
+  className,
+}: AllKitchenViewProps) {
+  // Get active stations (excluding pass for main view)
+  const activeStations: StationType[] = ["hot", "cold", "pastry", "bar"];
+
+  // Group all tasks by table for unified view
+  const allActiveTasks = activeStations.flatMap((station) =>
+    tasksByStation[station]?.filter((t) => t.status !== "completed") || []
+  );
+
+  const completedTasks = tasksByStation.pass || [];
+
+  // Group by table
+  const tableGroups = groupTasksByTableWithStation(allActiveTasks);
+  const completedGroups = groupTasksByTableWithStation(completedTasks);
+
+  return (
+    <Card className={cn("flex flex-col h-full", className)}>
+      <CardHeader className="pb-3 bg-gradient-to-r from-orange-50 to-amber-50">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <ChefHat className="h-5 w-5 text-orange-600" />
+            Вся кухня
+            <Badge variant="secondary" className="ml-1">
+              {allActiveTasks.length + completedTasks.length}
+            </Badge>
+          </CardTitle>
+        </div>
+      </CardHeader>
+
+      <CardContent className="flex-1 overflow-hidden p-4">
+        <div className="grid grid-cols-3 gap-4 h-full">
+          {/* Column 1: Pending */}
+          <div className="flex flex-col min-h-0">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <h4 className="font-medium text-sm">Очікує</h4>
+              <Badge variant="secondary" className="ml-auto">
+                {allActiveTasks.filter((t) => t.status === "pending").length}
+              </Badge>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+              {tableGroups
+                .filter((g) => g.tasks.some((t) => t.status === "pending"))
+                .map((group) => (
+                  <AllKitchenTableCard
+                    key={`pending-${group.tableNumber}`}
+                    group={{
+                      ...group,
+                      tasks: group.tasks.filter((t) => t.status === "pending"),
+                    }}
+                    onTaskStart={onTaskStart}
+                  />
+                ))}
+              {tableGroups.filter((g) => g.tasks.some((t) => t.status === "pending")).length === 0 && (
+                <div className="flex flex-col items-center justify-center h-24 text-muted-foreground">
+                  <Clock className="h-6 w-6 mb-1 opacity-40" />
+                  <p className="text-xs">Немає завдань</p>
+                </div>
               )}
             </div>
-            <h4 className="font-medium text-sm">{config.nameUk}</h4>
-            <p className="text-xs text-muted-foreground">
-              {station.taskCount} завдань
-            </p>
-            <Progress value={loadPercent} className="h-1 mt-2" />
-          </button>
-        );
-      })}
+          </div>
+
+          {/* Column 2: In Progress */}
+          <div className="flex flex-col min-h-0 border-l pl-4">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+              <RefreshCw className="h-4 w-4 text-warning animate-spin" />
+              <h4 className="font-medium text-sm">В процесі</h4>
+              <Badge variant="secondary" className="ml-auto bg-warning/20 text-warning-foreground">
+                {allActiveTasks.filter((t) => t.status === "in_progress").length}
+              </Badge>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+              {tableGroups
+                .filter((g) => g.tasks.some((t) => t.status === "in_progress"))
+                .map((group) => (
+                  <AllKitchenTableCard
+                    key={`active-${group.tableNumber}`}
+                    group={{
+                      ...group,
+                      tasks: group.tasks.filter((t) => t.status === "in_progress"),
+                    }}
+                    isActive
+                    onTaskComplete={onTaskComplete}
+                  />
+                ))}
+              {tableGroups.filter((g) => g.tasks.some((t) => t.status === "in_progress")).length === 0 && (
+                <div className="flex flex-col items-center justify-center h-24 text-muted-foreground">
+                  <RefreshCw className="h-6 w-6 mb-1 opacity-40" />
+                  <p className="text-xs">Немає активних</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Column 3: Ready (Pass) */}
+          <div className="flex flex-col min-h-0 border-l pl-4">
+            <div className="flex items-center gap-2 mb-3 pb-2 border-b">
+              <Check className="h-4 w-4 text-success" />
+              <h4 className="font-medium text-sm">Готово</h4>
+              <Badge variant="secondary" className="ml-auto bg-success/20 text-success">
+                {completedTasks.length}
+              </Badge>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2">
+              {completedGroups.map((group) => (
+                <AllKitchenTableCard
+                  key={`completed-${group.tableNumber}`}
+                  group={group}
+                  isCompleted
+                  onTaskReturn={onTaskReturn}
+                  onTaskServed={onTaskServed}
+                />
+              ))}
+              {completedGroups.length === 0 && (
+                <div className="flex flex-col items-center justify-center h-24 text-muted-foreground">
+                  <Check className="h-6 w-6 mb-1 opacity-40" />
+                  <p className="text-xs">Немає готових</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// Extended table group with station info
+interface TableTaskGroupWithStation extends TableTaskGroup {
+  stationTypes: Set<StationType>;
+}
+
+function groupTasksByTableWithStation(tasks: (StationTask & { stationType?: StationType })[]): TableTaskGroupWithStation[] {
+  const groups: Record<number, TableTaskGroupWithStation> = {};
+
+  tasks.forEach((task) => {
+    if (!groups[task.tableNumber]) {
+      groups[task.tableNumber] = {
+        tableNumber: task.tableNumber,
+        tableOccupiedAt: task.tableOccupiedAt,
+        tasks: [],
+        stationTypes: new Set(),
+      };
+    }
+    groups[task.tableNumber].tasks.push(task);
+    if ((task as any).stationType) {
+      groups[task.tableNumber].stationTypes.add((task as any).stationType);
+    }
+  });
+
+  return Object.values(groups).sort((a, b) => {
+    const aMaxPriority = Math.max(...a.tasks.map((t) => t.priorityScore));
+    const bMaxPriority = Math.max(...b.tasks.map((t) => t.priorityScore));
+    return bMaxPriority - aMaxPriority;
+  });
+}
+
+// All Kitchen Table Card - shows station badges
+interface AllKitchenTableCardProps {
+  group: TableTaskGroupWithStation;
+  isActive?: boolean;
+  isCompleted?: boolean;
+  onTaskStart?: (taskId: string) => void;
+  onTaskComplete?: (taskId: string) => void;
+  onTaskReturn?: (taskId: string) => void;
+  onTaskServed?: (taskId: string) => void;
+}
+
+function AllKitchenTableCard({
+  group,
+  isActive = false,
+  isCompleted = false,
+  onTaskStart,
+  onTaskComplete,
+  onTaskReturn,
+  onTaskServed,
+}: AllKitchenTableCardProps) {
+  const [pickupWait, setPickupWait] = React.useState(0);
+
+  // Track pickup wait time for completed groups
+  React.useEffect(() => {
+    if (!isCompleted) {
+      setPickupWait(0);
+      return;
+    }
+
+    const readyTimes = group.tasks
+      .map((t) => t.readyAt ? new Date(t.readyAt).getTime() : Date.now())
+      .filter((t) => !isNaN(t));
+
+    const oldestReadyTime = readyTimes.length > 0 ? Math.min(...readyTimes) : Date.now();
+    setPickupWait(Date.now() - oldestReadyTime);
+
+    const interval = setInterval(() => {
+      setPickupWait(Date.now() - oldestReadyTime);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isCompleted, group.tasks]);
+
+  const hasAllergen = group.tasks.some((task) =>
+    task.comment?.presets.some((preset) =>
+      ["gluten_free", "dairy_free", "nut_free", "shellfish_free"].includes(preset)
+    )
+  );
+
+  const hasRush = group.tasks.some((t) => t.priority === "rush");
+  const hasVip = group.tasks.some((t) => t.priority === "vip");
+  const hasScheduled = group.tasks.some((t) => t.isScheduled);
+
+  // Get unique stations for this group
+  const taskStations = new Set(group.tasks.map((t) => (t as any).stationType).filter(Boolean));
+
+  // Check if any task is overdue (for card highlighting)
+  const hasOverdue = group.tasks.some((t) => t.elapsedMs > t.targetCompletionMs);
+
+  // Pickup wait thresholds
+  const pickupWarningMs = 60 * 1000;  // 1 minute
+  const pickupOverdueMs = 2 * 60 * 1000; // 2 minutes
+  const isPickupOverdue = pickupWait > pickupOverdueMs;
+  const isPickupWarning = !isPickupOverdue && pickupWait > pickupWarningMs;
+  const pickupTimerColor = isPickupOverdue
+    ? "text-danger font-bold"
+    : isPickupWarning
+      ? "text-warning"
+      : "text-success";
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border transition-all overflow-hidden",
+        isCompleted
+          ? isPickupOverdue
+            ? "bg-danger/5 border-danger"
+            : "bg-success/5 border-success/50"
+          : isActive
+            ? "bg-primary/5 border-primary"
+            : "bg-background hover:border-primary/50",
+        !isCompleted && hasRush && "ring-2 ring-danger",
+        !isCompleted && hasVip && !hasRush && "ring-2 ring-warning",
+        !isCompleted && hasOverdue && !hasRush && !hasVip && "ring-2 ring-danger/50 bg-danger/5",
+        isCompleted && isPickupOverdue && "ring-2 ring-danger"
+      )}
+    >
+      {/* Table Header */}
+      <div className={cn(
+        "px-3 py-2 border-b flex items-center justify-between",
+        isCompleted
+          ? isPickupOverdue ? "bg-danger/10" : "bg-success/10"
+          : isActive ? "bg-primary/10" : "bg-muted/50",
+        hasOverdue && !isCompleted && "bg-danger/10"
+      )}>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="text-xs px-2 py-0.5 font-semibold">
+            Стіл {group.tableNumber}
+          </Badge>
+          {/* Table session time */}
+          {group.tableOccupiedAt && (
+            <TableSessionTimer occupiedAt={group.tableOccupiedAt} />
+          )}
+          {/* Station badges */}
+          {Array.from(taskStations).map((station) => {
+            const config = STATION_CONFIGS[station as StationType];
+            if (!config) return null;
+            return (
+              <Badge
+                key={station}
+                variant="outline"
+                className={cn("text-[10px] px-1.5 py-0", config.color)}
+              >
+                {config.nameUk}
+              </Badge>
+            );
+          })}
+          {hasRush && (
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+              Терміново
+            </Badge>
+          )}
+          {hasAllergen && (
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 gap-0.5">
+              <AlertTriangle className="h-2.5 w-2.5" />
+            </Badge>
+          )}
+          {hasScheduled && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 gap-0.5 border-purple-300 text-purple-700 bg-purple-50">
+              <Calendar className="h-2.5 w-2.5" />
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+            {group.tasks.length} страв
+          </Badge>
+          {isCompleted && (
+            <div className={cn("font-mono text-xs flex items-center gap-1", pickupTimerColor)}>
+              <Clock className="h-3 w-3" />
+              {formatDurationMs(pickupWait)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tasks list */}
+      <div className="divide-y">
+        {group.tasks.map((task) => (
+          <TaskItemRow
+            key={task.documentId}
+            task={task}
+            isActive={isActive}
+            isCompleted={isCompleted}
+            onStart={onTaskStart ? () => onTaskStart(task.documentId) : undefined}
+            onComplete={onTaskComplete ? () => onTaskComplete(task.documentId) : undefined}
+            onReturn={onTaskReturn ? () => onTaskReturn(task.documentId) : undefined}
+            onServed={onTaskServed ? () => onTaskServed(task.documentId) : undefined}
+          />
+        ))}
+      </div>
     </div>
   );
 }

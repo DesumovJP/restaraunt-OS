@@ -1,0 +1,102 @@
+{
+  "kind": "collectionType",
+  "collectionName": "up_users",
+  "info": {
+    "name": "user",
+    "description": "",
+    "singularName": "user",
+    "pluralName": "users",
+    "displayName": "User"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "username": {
+      "type": "string",
+      "minLength": 3,
+      "unique": true,
+      "configurable": false,
+      "required": true
+    },
+    "email": {
+      "type": "email",
+      "minLength": 6,
+      "configurable": false,
+      "required": true
+    },
+    "provider": {
+      "type": "string",
+      "configurable": false
+    },
+    "password": {
+      "type": "password",
+      "minLength": 6,
+      "configurable": false,
+      "private": true,
+      "searchable": false
+    },
+    "resetPasswordToken": {
+      "type": "string",
+      "configurable": false,
+      "private": true,
+      "searchable": false
+    },
+    "confirmationToken": {
+      "type": "string",
+      "configurable": false,
+      "private": true,
+      "searchable": false
+    },
+    "confirmed": {
+      "type": "boolean",
+      "default": false,
+      "configurable": false
+    },
+    "blocked": {
+      "type": "boolean",
+      "default": false,
+      "configurable": false
+    },
+    "role": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.role",
+      "inversedBy": "users",
+      "configurable": false
+    },
+    "systemRole": {
+      "type": "enumeration",
+      "enum": ["admin", "manager", "chef", "cook", "waiter", "host", "bartender", "cashier", "viewer"],
+      "default": "viewer"
+    },
+    "department": {
+      "type": "enumeration",
+      "enum": ["management", "kitchen", "service", "bar", "none"],
+      "default": "none"
+    },
+    "station": {
+      "type": "enumeration",
+      "enum": ["grill", "fry", "salad", "hot", "dessert", "bar", "pass", "prep", "front", "back"]
+    },
+    "isActive": {
+      "type": "boolean",
+      "default": true
+    },
+    "avatarUrl": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "firstName": {
+      "type": "string"
+    },
+    "lastName": {
+      "type": "string"
+    },
+    "hireDate": {
+      "type": "date"
+    }
+  }
+}

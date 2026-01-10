@@ -68,8 +68,15 @@
       "type": "biginteger",
       "default": 0
     },
+    "readyAt": {
+      "type": "datetime"
+    },
     "servedAt": {
       "type": "datetime"
+    },
+    "pickupWaitMs": {
+      "type": "biginteger",
+      "default": 0
     },
     "modifiers": {
       "type": "json",

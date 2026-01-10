@@ -27,7 +27,7 @@
     },
     "status": {
       "type": "enumeration",
-      "enum": ["queued", "started", "paused", "resumed", "ready", "failed", "cancelled"],
+      "enum": ["queued", "started", "paused", "resumed", "ready", "served", "failed", "cancelled"],
       "default": "queued"
     },
     "station": {
@@ -55,6 +55,13 @@
       "type": "datetime"
     },
     "elapsedSeconds": {
+      "type": "integer",
+      "default": 0
+    },
+    "servedAt": {
+      "type": "datetime"
+    },
+    "pickupWaitSeconds": {
       "type": "integer",
       "default": 0
     },

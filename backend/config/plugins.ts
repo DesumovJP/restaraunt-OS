@@ -13,4 +13,12 @@ export default ({ env }) => ({
       },
     },
   },
+  // Users & Permissions plugin - extend JWT expiration
+  'users-permissions': {
+    config: {
+      jwt: {
+        expiresIn: '7d', // Token valid for 7 days (default is 30 days but sometimes shorter)
+      },
+    },
+  },
 });

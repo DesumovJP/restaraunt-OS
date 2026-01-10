@@ -128,8 +128,9 @@ export const CREATE_ORDER = gql`
 `;
 
 // Update Order Status
+// Note: Strapi v5 uses ENUM_ORDER_STATUS for the status field
 export const UPDATE_ORDER_STATUS = gql`
-  mutation UpdateOrderStatus($documentId: ID!, $status: String!) {
+  mutation UpdateOrderStatus($documentId: ID!, $status: ENUM_ORDER_STATUS!) {
     updateOrder(documentId: $documentId, data: { status: $status }) {
       documentId
       status
@@ -159,7 +160,7 @@ export const CREATE_ORDER_ITEM = gql`
 
 // Update Order Item Status
 export const UPDATE_ORDER_ITEM_STATUS = gql`
-  mutation UpdateOrderItemStatus($documentId: ID!, $status: String!) {
+  mutation UpdateOrderItemStatus($documentId: ID!, $status: ENUM_ORDERITEM_STATUS!) {
     updateOrderItem(documentId: $documentId, data: { status: $status }) {
       documentId
       status
@@ -170,7 +171,7 @@ export const UPDATE_ORDER_ITEM_STATUS = gql`
 
 // Update Table Status
 export const UPDATE_TABLE_STATUS = gql`
-  mutation UpdateTableStatus($documentId: ID!, $status: String!, $currentGuests: Int) {
+  mutation UpdateTableStatus($documentId: ID!, $status: ENUM_TABLE_STATUS!, $currentGuests: Int) {
     updateTable(
       documentId: $documentId
       data: { status: $status, currentGuests: $currentGuests }
@@ -211,7 +212,7 @@ export const CREATE_STOCK_BATCH = gql`
 
 // Update Stock Batch Status
 export const UPDATE_STOCK_BATCH_STATUS = gql`
-  mutation UpdateStockBatchStatus($documentId: ID!, $status: String!) {
+  mutation UpdateStockBatchStatus($documentId: ID!, $status: ENUM_STOCKBATCH_STATUS!) {
     updateStockBatch(documentId: $documentId, data: { status: $status }) {
       documentId
       status
@@ -251,6 +252,133 @@ export const UPDATE_INGREDIENT_STOCK = gql`
       documentId
       name
       currentStock
+    }
+  }
+`;
+
+// ==========================================
+// SCHEDULED ORDERS
+// ==========================================
+
+// Create Scheduled Order
+export const CREATE_SCHEDULED_ORDER = gql`
+  mutation CreateScheduledOrder($data: ScheduledOrderInput!) {
+    createScheduledOrder(data: $data) {
+      documentId
+      scheduledFor
+      prepStartAt
+      status
+      eventType
+      eventName
+      guestCount
+      totalAmount
+      table {
+        documentId
+        number
+      }
+      contactName
+      contactPhone
+      paymentStatus
+    }
+  }
+`;
+
+// Update Scheduled Order
+export const UPDATE_SCHEDULED_ORDER = gql`
+  mutation UpdateScheduledOrder($documentId: ID!, $data: ScheduledOrderInput!) {
+    updateScheduledOrder(documentId: $documentId, data: $data) {
+      documentId
+      status
+      scheduledFor
+      prepStartAt
+      eventType
+      eventName
+      guestCount
+      totalAmount
+      contactName
+      paymentStatus
+    }
+  }
+`;
+
+// Update Scheduled Order Status
+export const UPDATE_SCHEDULED_ORDER_STATUS = gql`
+  mutation UpdateScheduledOrderStatus($documentId: ID!, $status: ENUM_SCHEDULEDORDER_STATUS!) {
+    updateScheduledOrder(documentId: $documentId, data: { status: $status }) {
+      documentId
+      status
+    }
+  }
+`;
+
+// Delete Scheduled Order
+export const DELETE_SCHEDULED_ORDER = gql`
+  mutation DeleteScheduledOrder($documentId: ID!) {
+    deleteScheduledOrder(documentId: $documentId) {
+      documentId
+    }
+  }
+`;
+
+// ==========================================
+// RESERVATIONS
+// ==========================================
+
+// Create Reservation
+export const CREATE_RESERVATION = gql`
+  mutation CreateReservation($data: ReservationInput!) {
+    createReservation(data: $data) {
+      documentId
+      date
+      startTime
+      endTime
+      guestCount
+      status
+      contactName
+      contactPhone
+      confirmationCode
+      table {
+        documentId
+        number
+      }
+    }
+  }
+`;
+
+// Update Reservation
+export const UPDATE_RESERVATION = gql`
+  mutation UpdateReservation($documentId: ID!, $data: ReservationInput!) {
+    updateReservation(documentId: $documentId, data: $data) {
+      documentId
+      date
+      startTime
+      endTime
+      guestCount
+      status
+      contactName
+      contactPhone
+    }
+  }
+`;
+
+// Update Reservation Status
+export const UPDATE_RESERVATION_STATUS = gql`
+  mutation UpdateReservationStatus($documentId: ID!, $status: ENUM_RESERVATION_STATUS!) {
+    updateReservation(documentId: $documentId, data: { status: $status }) {
+      documentId
+      status
+      seatedAt
+      completedAt
+    }
+  }
+`;
+
+// Cancel Reservation
+export const CANCEL_RESERVATION = gql`
+  mutation CancelReservation($documentId: ID!) {
+    updateReservation(documentId: $documentId, data: { status: "cancelled" }) {
+      documentId
+      status
     }
   }
 `;

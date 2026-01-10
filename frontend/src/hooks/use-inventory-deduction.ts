@@ -2,6 +2,8 @@
 
 import { useCallback } from "react";
 import { useStorageContext } from "@/hooks/use-storage";
+import { getUrqlClient } from "@/lib/urql-client";
+import { GET_MENU_ITEM_RECIPE } from "@/graphql/queries";
 import type { KitchenTask } from "@/stores/kitchen-store";
 
 /**
@@ -96,17 +98,51 @@ interface RecipeIngredient {
 }
 
 /**
- * Mock recipe lookup
- * In production, this would fetch from backend API
+ * Fetch recipe for menu item via GraphQL
+ * Uses urql client directly (not a hook) for use in callbacks
  */
 async function getRecipeForMenuItem(
   menuItemId: string
 ): Promise<{ documentId: string; ingredients: RecipeIngredient[] } | null> {
-  // Placeholder - in production this would call API
-  // For now, return null to indicate no recipe found
-  // The deduction will be skipped for items without recipes
-  console.log(`[Inventory] Looking up recipe for menu item: ${menuItemId}`);
-  return null;
+  try {
+    console.log(`[Inventory] Looking up recipe for menu item: ${menuItemId}`);
+
+    const client = getUrqlClient();
+    const result = await client
+      .query(GET_MENU_ITEM_RECIPE, { menuItemId })
+      .toPromise();
+
+    if (result.error) {
+      console.error("[Inventory] GraphQL error:", result.error.message);
+      return null;
+    }
+
+    const menuItem = result.data?.menuItem;
+    if (!menuItem?.recipe) {
+      console.log(`[Inventory] No recipe found for menu item: ${menuItemId}`);
+      return null;
+    }
+
+    const recipe = menuItem.recipe;
+    console.log(`[Inventory] Found recipe: ${recipe.name} with ${recipe.ingredients.length} ingredients`);
+
+    // Transform to expected format
+    const ingredients: RecipeIngredient[] = recipe.ingredients.map((ri: any) => ({
+      productDocumentId: ri.ingredient.documentId,
+      productName: ri.ingredient.nameUk || ri.ingredient.name,
+      quantity: ri.quantity,
+      unit: ri.unit || ri.ingredient.unit,
+      yieldProfileId: ri.ingredient.yieldProfile?.documentId,
+    }));
+
+    return {
+      documentId: recipe.documentId,
+      ingredients,
+    };
+  } catch (err) {
+    console.error("[Inventory] Failed to fetch recipe:", err);
+    return null;
+  }
 }
 
 /**

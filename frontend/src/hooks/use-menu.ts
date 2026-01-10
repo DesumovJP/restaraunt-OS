@@ -56,10 +56,16 @@ function setCache<T>(key: string, data: T): void {
 const CATEGORIES_URL = "/api/menu-categories?pagination[limit]=50&sort=sortOrder:asc";
 
 // Menu items with recipe ingredients for availability check
-const MENU_ITEMS_URL = "/api/menu-items?pagination[limit]=200&populate[category][fields][0]=documentId&populate[category][fields][1]=slug&populate[recipe][populate][ingredients][populate][ingredient][fields][0]=currentStock";
+// Includes weight, image, and other display fields
+const MENU_ITEMS_URL = "/api/menu-items?pagination[limit]=200&fields[0]=documentId&fields[1]=name&fields[2]=nameUk&fields[3]=slug&fields[4]=description&fields[5]=descriptionUk&fields[6]=price&fields[7]=available&fields[8]=preparationTime&fields[9]=outputType&fields[10]=weight&populate[category][fields][0]=documentId&populate[category][fields][1]=slug&populate[image][fields][0]=url&populate[recipe][populate][ingredients][populate][ingredient][fields][0]=currentStock";
 
-// Recipes with full ingredient data (single optimized query with JOINs)
-const RECIPES_URL = "/api/recipes?pagination[limit]=100&populate[ingredients][populate][ingredient][fields][0]=documentId&populate[ingredients][populate][ingredient][fields][1]=name&populate[ingredients][populate][ingredient][fields][2]=nameUk&populate[ingredients][populate][ingredient][fields][3]=unit&populate[ingredients][populate][ingredient][fields][4]=currentStock&populate[steps]=*";
+// Recipes with full ingredient data including costs (single optimized query with JOINs)
+// Note: menuItem relation is from menu-item -> recipe, not recipe -> menuItem
+// So we fetch recipes and menu items separately, then join in transform
+const RECIPES_URL = "/api/recipes?pagination[limit]=100&populate[ingredients][populate][ingredient][fields][0]=documentId&populate[ingredients][populate][ingredient][fields][1]=name&populate[ingredients][populate][ingredient][fields][2]=nameUk&populate[ingredients][populate][ingredient][fields][3]=unit&populate[ingredients][populate][ingredient][fields][4]=currentStock&populate[ingredients][populate][ingredient][fields][5]=costPerUnit&populate[steps]=*";
+
+// Menu items with price for recipe margin calculation
+const MENU_ITEMS_PRICES_URL = "/api/menu-items?pagination[limit]=200&fields[0]=documentId&fields[1]=price&fields[2]=name&fields[3]=nameUk&populate[recipe][fields][0]=documentId";
 
 // ==========================================
 // TYPES
@@ -85,9 +91,13 @@ interface StrapiMenuItem {
   available?: boolean;
   preparationTime?: number;
   outputType?: string;
+  weight?: number; // Weight in grams or volume in ml
   category?: {
     documentId: string;
     slug: string;
+  };
+  image?: {
+    url: string;
   };
   recipe?: {
     documentId: string;
@@ -132,6 +142,17 @@ interface StrapiRecipe {
   }>;
 }
 
+// Menu item with recipe link for price mapping
+interface StrapiMenuItemPrice {
+  documentId: string;
+  price: number;
+  name: string;
+  nameUk?: string;
+  recipe?: {
+    documentId: string;
+  };
+}
+
 // ==========================================
 // TRANSFORM FUNCTIONS
 // ==========================================
@@ -148,6 +169,12 @@ function transformCategory(cat: StrapiMenuCategory): Category {
 }
 
 function transformMenuItem(item: StrapiMenuItem): MenuItem {
+  // Build image URL
+  const strapiUrl = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
+  const imageUrl = item.image?.url
+    ? (item.image.url.startsWith("http") ? item.image.url : `${strapiUrl}${item.image.url}`)
+    : undefined;
+
   // Check if item is manually disabled
   if (item.available === false) {
     return {
@@ -160,8 +187,10 @@ function transformMenuItem(item: StrapiMenuItem): MenuItem {
       categoryId: item.category?.documentId || "",
       categorySlug: item.category?.slug,
       recipeId: item.recipe?.documentId,
+      imageUrl,
       available: false,
       preparationTime: item.preparationTime || 15,
+      weight: item.weight,
       outputType: (item.outputType as "kitchen" | "bar" | "pastry" | "cold") || "kitchen",
     };
   }
@@ -185,57 +214,101 @@ function transformMenuItem(item: StrapiMenuItem): MenuItem {
     categoryId: item.category?.documentId || "",
     categorySlug: item.category?.slug,
     recipeId: item.recipe?.documentId,
+    imageUrl,
     available: hasEnoughStock,
     preparationTime: item.preparationTime || 15,
+    weight: item.weight,
     outputType: (item.outputType as "kitchen" | "bar" | "pastry" | "cold") || "kitchen",
   };
 }
 
-function transformRecipe(recipe: StrapiRecipe): Recipe {
-  const prepTime = (recipe.prepTimeMinutes || 0) + (recipe.cookTimeMinutes || 0) || 15;
+// Price map type: recipeId -> { price, name, menuItemId }
+type RecipePriceMap = Map<string, { price: number; name: string; nameUk?: string; menuItemId: string }>;
+
+function transformRecipe(recipe: StrapiRecipe, priceMap?: RecipePriceMap): Recipe {
+  const prepTime = recipe.prepTimeMinutes || 0;
+  const cookTime = recipe.cookTimeMinutes || 0;
+  const totalTime = prepTime + cookTime || 15;
   const outputType = recipe.outputType || "kitchen";
+  const portionYield = recipe.portionYield || 1;
+
+  // Transform ingredients first
+  const ingredients = recipe.ingredients?.map((ing) => ({
+    product: {
+      id: ing.ingredient?.documentId || "",
+      name: ing.ingredient?.nameUk || ing.ingredient?.name || "Unknown",
+      unit: ing.ingredient?.unit || "kg",
+      costPerUnit: ing.ingredient?.costPerUnit || 0,
+      currentStock: ing.ingredient?.currentStock || 0,
+    },
+    quantity: ing.quantity,
+    unit: ing.unit || ing.ingredient?.unit || "kg",
+    isOptional: ing.isOptional || false,
+  })) || [];
+
+  // === COST CALCULATION ===
+  // Calculate total ingredient cost for the recipe
+  const totalIngredientCost = ingredients.reduce((sum, ing) => {
+    const costPerUnit = ing.product.costPerUnit || 0;
+    return sum + (costPerUnit * ing.quantity);
+  }, 0);
+
+  // Cost per portion (divide by portion yield)
+  const calculatedCost = portionYield > 0 ? totalIngredientCost / portionYield : totalIngredientCost;
+
+  // Use stored costPerPortion if available, otherwise use calculated
+  const costPerPortion = recipe.costPerPortion || calculatedCost;
+
+  // === SELLING PRICE FROM LINKED MENU ITEM (via price map) ===
+  const linkedMenuItem = priceMap?.get(recipe.documentId);
+  const sellingPrice = linkedMenuItem?.price || 0;
+  const menuItemId = linkedMenuItem?.menuItemId;
+
+  // === MARGIN CALCULATIONS ===
+  const marginAbsolute = sellingPrice > 0 ? sellingPrice - costPerPortion : 0;
+  const marginPercent = sellingPrice > 0 ? (marginAbsolute / sellingPrice) * 100 : 0;
+  const foodCostPercent = sellingPrice > 0 ? (costPerPortion / sellingPrice) * 100 : 0;
+
+  // Use menu item name if available, otherwise recipe name
+  const menuItemName = linkedMenuItem?.nameUk || linkedMenuItem?.name || recipe.nameUk || recipe.name;
 
   return {
     id: recipe.documentId,
     documentId: recipe.documentId,
     slug: recipe.slug,
     name: recipe.nameUk || recipe.name,
+    menuItemId,
     menuItem: {
-      id: recipe.documentId,
-      documentId: recipe.documentId,
+      id: menuItemId || recipe.documentId,
+      documentId: menuItemId || recipe.documentId,
       slug: recipe.slug,
-      name: recipe.nameUk || recipe.name,
-      price: 0,
+      name: menuItemName,
+      price: sellingPrice,
       categoryId: "",
       available: true,
-      preparationTime: prepTime,
+      preparationTime: totalTime,
       outputType,
     },
     outputType,
     prepTime,
-    portions: recipe.portionYield || 1,
-    costPerPortion: recipe.costPerPortion || 0,
-    ingredients:
-      recipe.ingredients?.map((ing) => ({
-        product: {
-          id: ing.ingredient?.documentId || "",
-          name: ing.ingredient?.nameUk || ing.ingredient?.name || "Unknown",
-          unit: ing.ingredient?.unit || "kg",
-          costPerUnit: ing.ingredient?.costPerUnit || 0,
-          currentStock: ing.ingredient?.currentStock || 0,
-        },
-        quantity: ing.quantity,
-        unit: ing.unit || ing.ingredient?.unit || "kg",
-        isOptional: ing.isOptional || false,
-      })) || [],
-    steps:
-      recipe.steps?.map((step) => ({
-        stepNumber: step.stepNumber,
-        instruction: step.description,
-        duration: step.estimatedTimeMinutes,
-        station: step.station,
-      })) || [],
+    cookTime,
+    portions: portionYield,
+    costPerPortion,
+    ingredients,
+    steps: recipe.steps?.map((step) => ({
+      stepNumber: step.stepNumber,
+      instruction: step.description,
+      duration: step.estimatedTimeMinutes,
+      station: step.station,
+    })) || [],
     isActive: recipe.isActive !== false,
+    // Economics
+    sellingPrice,
+    calculatedCost: costPerPortion,
+    marginAbsolute,
+    marginPercent,
+    foodCostPercent,
+    allergens: [], // TODO: fetch allergens from ingredients if needed
   };
 }
 
@@ -362,16 +435,37 @@ export function useRecipes(): UseRecipesResult {
     setError(null);
 
     try {
-      // Use REST API - single optimized query with JOINs instead of N+1
-      const data = await fetchWithRetry(
-        () => fetchREST<StrapiRecipe[]>(RECIPES_URL),
-        { maxRetries: 3 }
-      );
+      // Fetch recipes and menu items (for prices) in parallel
+      const [recipesData, menuItemsData] = await Promise.all([
+        fetchWithRetry(
+          () => fetchREST<StrapiRecipe[]>(RECIPES_URL),
+          { maxRetries: 3 }
+        ),
+        fetchWithRetry(
+          () => fetchREST<StrapiMenuItemPrice[]>(MENU_ITEMS_PRICES_URL),
+          { maxRetries: 3 }
+        ),
+      ]);
 
-      if (data) {
-        const transformedRecipes = data
+      if (recipesData) {
+        // Build price map: recipeId -> { price, name, menuItemId }
+        const priceMap: RecipePriceMap = new Map();
+        if (menuItemsData) {
+          menuItemsData.forEach((item) => {
+            if (item.recipe?.documentId) {
+              priceMap.set(item.recipe.documentId, {
+                price: item.price,
+                name: item.name,
+                nameUk: item.nameUk,
+                menuItemId: item.documentId,
+              });
+            }
+          });
+        }
+
+        const transformedRecipes = recipesData
           .filter((r) => r.isActive !== false)
-          .map(transformRecipe);
+          .map((r) => transformRecipe(r, priceMap));
 
         // Cache the transformed data
         setCache(cacheKey, transformedRecipes);

@@ -188,11 +188,20 @@ export interface Recipe {
   portionYield?: number;
   portions?: number;
   prepTime?: number;
+  cookTime?: number;
   costPerPortion: number;
   outputType: OutputType;
   servingCourse?: ServingCourse;
   isActive?: boolean;
   reservations?: IngredientReservation[];
+  // === Margin/Economics (calculated) ===
+  sellingPrice?: number;              // From linked menu item
+  calculatedCost?: number;            // Sum of ingredient costs
+  marginAbsolute?: number;            // sellingPrice - calculatedCost
+  marginPercent?: number;             // (marginAbsolute / sellingPrice) * 100
+  foodCostPercent?: number;           // (calculatedCost / sellingPrice) * 100
+  // === Allergens (derived from ingredients) ===
+  allergens?: string[];
 }
 
 // ==========================================

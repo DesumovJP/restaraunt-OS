@@ -1,0 +1,101 @@
+{
+  "kind": "collectionType",
+  "collectionName": "daily_tasks",
+  "info": {
+    "singularName": "daily-task",
+    "pluralName": "daily-tasks",
+    "displayName": "Daily Task",
+    "description": "Employee daily tasks and assignments"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "maxLength": 200
+    },
+    "description": {
+      "type": "text"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["pending", "in_progress", "completed", "cancelled", "overdue"],
+      "default": "pending",
+      "required": true
+    },
+    "priority": {
+      "type": "enumeration",
+      "enum": ["low", "normal", "high", "urgent"],
+      "default": "normal"
+    },
+    "category": {
+      "type": "enumeration",
+      "enum": ["prep", "cleaning", "inventory", "maintenance", "training", "admin", "service", "other"],
+      "default": "other"
+    },
+    "dueDate": {
+      "type": "date"
+    },
+    "dueTime": {
+      "type": "time"
+    },
+    "isRecurring": {
+      "type": "boolean",
+      "default": false
+    },
+    "recurringPattern": {
+      "type": "enumeration",
+      "enum": ["daily", "weekdays", "weekly", "monthly"]
+    },
+    "assignee": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "createdByUser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "completedAt": {
+      "type": "datetime"
+    },
+    "completedByUser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "startedAt": {
+      "type": "datetime"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "station": {
+      "type": "enumeration",
+      "enum": ["grill", "fry", "salad", "hot", "dessert", "bar", "pass", "prep", "front", "back"]
+    },
+    "estimatedMinutes": {
+      "type": "integer",
+      "min": 1
+    },
+    "actualMinutes": {
+      "type": "integer"
+    },
+    "parentTask": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::daily-task.daily-task",
+      "inversedBy": "subtasks"
+    },
+    "subtasks": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::daily-task.daily-task",
+      "mappedBy": "parentTask"
+    }
+  }
+}

@@ -18,7 +18,8 @@ type EmptyStateType =
   | "inventory"
   | "alerts"
   | "search"
-  | "generic";
+  | "generic"
+  | "empty";
 
 interface EmptyStateProps {
   type?: EmptyStateType;
@@ -66,6 +67,11 @@ const defaultContent: Record<
     icon: FileText,
     title: "Дані відсутні",
     description: "Тут поки нічого немає",
+  },
+  empty: {
+    icon: FileText,
+    title: "Порожньо",
+    description: "Дані відсутні",
   },
 };
 

@@ -34,7 +34,21 @@
       "Bash(npm uninstall:*)",
       "Bash(dir /b \"C:\\\\Users\\\\Alex\\\\Claude Test - Restaraunt OS\\\\backend\\\\src\\\\api\")",
       "Bash(git reset:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nRestructure project: add backend, move frontend to subfolder\n\n- Add Strapi backend with full API schemas \\(orders, menu, kitchen, stock\\)\n- Move Next.js frontend code from root to frontend/ folder\n- Add GraphQL integration with urql client\n- Add Docker configuration for development and production\n- Add database seed scripts\n- Update .gitignore to exclude build artifacts\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(del \"C:\\\\Users\\\\Alex\\\\Claude Test - Restaraunt OS\\\\frontend\\\\src\\\\app\\\\storage\\\\page-new.tsx\")",
+      "Bash(dir /s /b \"C:\\\\Users\\\\Alex\\\\Claude Test - Restaraunt OS\")",
+      "Bash(set:*)",
+      "Bash(timeout /t 15 /nobreak)",
+      "Bash(npx cross-env SEED_TASKS=true npm run develop)",
+      "Bash(powershell -Command:*)",
+      "Bash(dir:*)",
+      "Bash(timeout 30 npm run dev)",
+      "Bash(npm run:*)",
+      "Bash(npx eslint:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

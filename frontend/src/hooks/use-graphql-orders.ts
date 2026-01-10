@@ -8,8 +8,8 @@
 
 'use client';
 
-import { useQuery, useMutation, useCallback } from 'urql';
-import { useMemo } from 'react';
+import { useQuery, useMutation } from 'urql';
+import { useMemo, useCallback } from 'react';
 import {
   GET_ACTIVE_ORDERS,
   GET_ORDER_DETAILS,
@@ -22,6 +22,46 @@ import {
   UPDATE_ORDER_ITEM_STATUS,
   UPDATE_TABLE_STATUS
 } from '@/graphql/mutations';
+
+// ============================================
+// LOGGING UTILITIES
+// ============================================
+
+const LOG_PREFIX = '[Orders]';
+const LOG_COLORS = {
+  info: 'color: #3B82F6',
+  success: 'color: #10B981',
+  error: 'color: #EF4444',
+  warn: 'color: #F59E0B',
+  mutation: 'color: #8B5CF6',
+  query: 'color: #06B6D4',
+};
+
+interface OrderLogContext {
+  orderId?: string;
+  orderNumber?: string;
+  tableId?: string;
+  tableNumber?: number;
+  itemCount?: number;
+  status?: string;
+  duration?: number;
+  [key: string]: unknown;
+}
+
+function logOrder(
+  level: keyof typeof LOG_COLORS,
+  message: string,
+  context?: OrderLogContext
+) {
+  const timestamp = new Date().toISOString().split('T')[1].slice(0, 12);
+  const prefix = `%c${LOG_PREFIX} [${timestamp}]`;
+
+  if (context) {
+    console.log(prefix, LOG_COLORS[level], message, context);
+  } else {
+    console.log(prefix, LOG_COLORS[level], message);
+  }
+}
 
 // Types
 interface OrderItem {
@@ -220,6 +260,12 @@ export function useCreateOrder() {
     guestCount?: number;
     notes?: string;
   }) => {
+    const startTime = performance.now();
+    logOrder('mutation', '→ CREATE_ORDER', {
+      tableId: data.table,
+      guestCount: data.guestCount,
+    });
+
     const result = await executeMutation({
       data: {
         ...data,
@@ -229,11 +275,26 @@ export function useCreateOrder() {
       },
     });
 
+    const duration = Math.round(performance.now() - startTime);
+
     if (result.error) {
+      logOrder('error', '✗ CREATE_ORDER failed', {
+        tableId: data.table,
+        duration,
+        error: result.error.message,
+      });
       throw new Error(result.error.message);
     }
 
-    return result.data?.createOrder;
+    const order = result.data?.createOrder;
+    logOrder('success', '✓ CREATE_ORDER completed', {
+      orderId: order?.documentId,
+      orderNumber: order?.orderNumber,
+      tableNumber: order?.table?.number,
+      duration,
+    });
+
+    return order;
   }, [executeMutation]);
 
   return { createOrder, loading: fetching };
@@ -246,11 +307,30 @@ export function useUpdateOrderStatus() {
   const [{ fetching }, executeMutation] = useMutation(UPDATE_ORDER_STATUS);
 
   const updateStatus = useCallback(async (documentId: string, status: string) => {
+    const startTime = performance.now();
+    logOrder('mutation', `→ UPDATE_ORDER_STATUS: ${status}`, {
+      orderId: documentId,
+      status,
+    });
+
     const result = await executeMutation({ documentId, status });
+    const duration = Math.round(performance.now() - startTime);
 
     if (result.error) {
+      logOrder('error', '✗ UPDATE_ORDER_STATUS failed', {
+        orderId: documentId,
+        status,
+        duration,
+        error: result.error.message,
+      });
       throw new Error(result.error.message);
     }
+
+    logOrder('success', `✓ Order status → ${status}`, {
+      orderId: documentId,
+      status,
+      duration,
+    });
 
     return result.data?.updateOrder;
   }, [executeMutation]);
@@ -272,6 +352,15 @@ export function useAddOrderItem() {
     courseType?: string;
     notes?: string;
   }) => {
+    const startTime = performance.now();
+    logOrder('mutation', '→ CREATE_ORDER_ITEM', {
+      orderId: data.order,
+      menuItemId: data.menuItem,
+      quantity: data.quantity,
+      price: data.unitPrice,
+      courseType: data.courseType,
+    });
+
     const result = await executeMutation({
       data: {
         ...data,
@@ -280,11 +369,27 @@ export function useAddOrderItem() {
       },
     });
 
+    const duration = Math.round(performance.now() - startTime);
+
     if (result.error) {
+      logOrder('error', '✗ CREATE_ORDER_ITEM failed', {
+        orderId: data.order,
+        duration,
+        error: result.error.message,
+      });
       throw new Error(result.error.message);
     }
 
-    return result.data?.createOrderItem;
+    const item = result.data?.createOrderItem;
+    logOrder('success', '✓ Item added to order', {
+      orderId: data.order,
+      itemId: item?.documentId,
+      menuItem: item?.menuItem?.name,
+      quantity: data.quantity,
+      duration,
+    });
+
+    return item;
   }, [executeMutation]);
 
   return { addItem, loading: fetching };

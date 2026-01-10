@@ -3,14 +3,21 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import type { Table } from '@/types/table';
-import { Users, CheckCircle2, Clock, Circle } from 'lucide-react';
+import { Users, Clock, Calendar } from 'lucide-react';
+
+interface NextReservation {
+  time: string;
+  guestCount: number;
+  contactName?: string;
+}
 
 interface TableCardProps {
   table: Table;
   onSelect: (table: Table) => void;
+  nextReservation?: NextReservation;
 }
 
-// Компонент таймера для відображення часу з моменту зайняття столика
+// Компонент таймера - компактний
 function TableTimer({ occupiedAt }: { occupiedAt?: Date | string }) {
   const [elapsed, setElapsed] = React.useState<string>('');
 
@@ -20,14 +27,12 @@ function TableTimer({ occupiedAt }: { occupiedAt?: Date | string }) {
       return;
     }
 
-    // Конвертуємо в Date об'єкт, якщо це рядок (після серіалізації)
     const startDate = occupiedAt instanceof Date ? occupiedAt : new Date(occupiedAt);
 
     const updateTimer = () => {
       const now = new Date();
       const diff = now.getTime() - startDate.getTime();
-      
-      // Перевірка на валідність дати
+
       if (isNaN(diff) || diff < 0) {
         setElapsed('');
         return;
@@ -35,19 +40,16 @@ function TableTimer({ occupiedAt }: { occupiedAt?: Date | string }) {
 
       const hours = Math.floor(diff / (1000 * 60 * 60));
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
       if (hours > 0) {
-        setElapsed(`${hours}г ${minutes}х`);
-      } else if (minutes > 0) {
-        setElapsed(`${minutes}х ${seconds}с`);
+        setElapsed(`${hours}г ${minutes}хв`);
       } else {
-        setElapsed(`${seconds}с`);
+        setElapsed(`${minutes}хв`);
       }
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+    const interval = setInterval(updateTimer, 30000); // Оновлення раз на 30с достатньо
 
     return () => clearInterval(interval);
   }, [occupiedAt]);
@@ -55,91 +57,84 @@ function TableTimer({ occupiedAt }: { occupiedAt?: Date | string }) {
   if (!occupiedAt || !elapsed) return null;
 
   return (
-    <div className="flex items-center gap-1 text-xs font-medium text-slate-600 mt-1">
-      <Clock className="w-3 h-3" />
-      <span>{elapsed}</span>
-    </div>
+    <span className="text-xs font-medium opacity-75">{elapsed}</span>
   );
 }
 
+// Конфіг статусів - колір фону картки замість badge
 const statusConfig = {
   free: {
-    label: 'Вільний',
-    color: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700',
-    icon: CheckCircle2,
-    iconColor: 'text-emerald-600',
+    bg: 'bg-emerald-50 border-emerald-200 hover:border-emerald-400',
+    text: 'text-emerald-900',
+    accent: 'text-emerald-600',
   },
   occupied: {
-    label: 'Зайнятий',
-    color: 'bg-amber-500/10 border-amber-500/30 text-amber-700',
-    icon: Clock,
-    iconColor: 'text-amber-600',
+    bg: 'bg-amber-50 border-amber-200 hover:border-amber-400',
+    text: 'text-amber-900',
+    accent: 'text-amber-600',
   },
   reserved: {
-    label: 'Заброньовано',
-    color: 'bg-blue-500/10 border-blue-500/30 text-blue-700',
-    icon: Circle,
-    iconColor: 'text-blue-600',
+    bg: 'bg-blue-50 border-blue-200 hover:border-blue-400',
+    text: 'text-blue-900',
+    accent: 'text-blue-600',
   },
 };
 
-export function TableCard({ table, onSelect }: TableCardProps) {
+export function TableCard({ table, onSelect, nextReservation }: TableCardProps) {
   const config = statusConfig[table.status];
-  const StatusIcon = config.icon;
-  
-  // Дозволяємо вибір вільних та зайнятих столиків (для обслуговування)
-  // Заброньовані столики також доступні для перегляду/обслуговування
-  const isSelectable = true; // Всі столики доступні для обслуговування
 
   return (
     <button
       onClick={() => onSelect(table)}
-      disabled={!isSelectable}
       className={cn(
-        'group relative flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 transition-all duration-300',
-        'hover:scale-105 active:scale-95',
-        'focus:outline-none focus:ring-2 focus:ring-accent-500 focus:ring-offset-2',
-        isSelectable
-          ? table.status === 'free'
-            ? 'bg-white/70 backdrop-blur-md border-slate-200 hover:border-accent-400 hover:shadow-lg cursor-pointer'
-            : 'bg-white/70 backdrop-blur-md border-amber-300 hover:border-amber-400 hover:shadow-lg cursor-pointer'
-          : 'bg-white/40 backdrop-blur-sm cursor-not-allowed opacity-75'
+        'flex flex-col items-center justify-center gap-1 p-4 rounded-xl border-2',
+        'transition-colors duration-150 active:scale-[0.98]',
+        'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+        'min-h-[100px] cursor-pointer relative',
+        config.bg
       )}
     >
-      {/* Table Number */}
-      <div className="flex flex-col items-center gap-2">
-        <div
-          className={cn(
-            'text-3xl font-bold transition-colors',
-            isSelectable ? 'text-navy-900' : 'text-slate-400'
-          )}
-        >
-          {table.number}
+      {/* Reservation indicator */}
+      {nextReservation && table.status === 'free' && (
+        <div className="absolute top-1 right-1 bg-blue-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">
+          {nextReservation.time}
         </div>
-        <div className="flex items-center gap-1.5 text-sm text-slate-600">
-          <Users className="w-4 h-4" />
-          <span>{table.capacity} місць</span>
-        </div>
+      )}
+
+      {/* Номер столу - великий і чіткий */}
+      <span className={cn('text-3xl font-bold', config.text)}>
+        {table.number}
+      </span>
+
+      {/* Місця */}
+      <div className={cn('flex items-center gap-1 text-sm', config.accent)}>
+        <Users className="w-4 h-4" />
+        <span>{table.capacity}</span>
       </div>
 
-      {/* Status Badge */}
-      <div className="flex flex-col items-center gap-1">
-        <div
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border',
-            config.color
-          )}
-        >
-          <StatusIcon className={cn('w-3.5 h-3.5', config.iconColor)} />
-          <span>{config.label}</span>
+      {/* Таймер для зайнятих */}
+      {table.status === 'occupied' && (
+        <div className={cn('flex items-center gap-1 mt-1', config.accent)}>
+          <Clock className="w-3 h-3" />
+          <TableTimer occupiedAt={table.occupiedAt} />
         </div>
-        {/* Timer */}
-        <TableTimer occupiedAt={table.occupiedAt} />
-      </div>
+      )}
 
-      {/* Hover Effect */}
-      {isSelectable && (
-        <div className="absolute inset-0 rounded-2xl bg-accent-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+      {/* Наступне бронювання */}
+      {nextReservation && table.status === 'free' && (
+        <div className="flex items-center gap-1 mt-1 text-xs text-blue-600">
+          <Calendar className="w-3 h-3" />
+          <span className="truncate max-w-[80px]">
+            {nextReservation.contactName || `${nextReservation.guestCount} гостей`}
+          </span>
+        </div>
+      )}
+
+      {/* Reserved info */}
+      {table.status === 'reserved' && table.reservedBy && (
+        <div className="flex items-center gap-1 mt-1 text-xs text-blue-600 truncate max-w-full">
+          <span className="truncate">{table.reservedBy}</span>
+        </div>
       )}
     </button>
   );

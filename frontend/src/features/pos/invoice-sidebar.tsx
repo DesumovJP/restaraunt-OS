@@ -3,10 +3,9 @@
 import * as React from 'react';
 import { useCartStore } from '@/stores/cart-store';
 import { useTableStore } from '@/stores/table-store';
-import { formatPrice } from '@/lib/utils';
+import { useScheduledOrderModeStore } from '@/stores/scheduled-order-mode-store';
+import { formatPrice, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 import {
   Trash2,
   Plus,
@@ -15,6 +14,7 @@ import {
   X,
   MessageSquare,
   ChefHat,
+  Calendar,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -23,7 +23,41 @@ import {
 } from '@/components/ui/drawer';
 import { CommentEditor, CommentDisplay } from '@/features/orders/comment-editor';
 import { OrderConfirmDialog } from '@/features/orders/order-confirm-dialog';
+import { ScheduledOrderSaveDialog } from '@/features/orders/scheduled-order-save-dialog';
 import type { ItemComment } from '@/types/extended';
+import { COMMENT_PRESETS } from '@/types/extended';
+
+// Helper function to generate comment preview text
+function getCommentPreview(comment: ItemComment | null): string {
+  if (!comment) return '';
+
+  const parts: string[] = [];
+
+  // Add preset labels (in Ukrainian)
+  if (comment.presets && comment.presets.length > 0) {
+    const presetLabels = comment.presets
+      .map(key => COMMENT_PRESETS.find(p => p.key === key)?.label.uk)
+      .filter(Boolean)
+      .slice(0, 2); // Limit to 2 presets for brevity
+
+    if (presetLabels.length > 0) {
+      parts.push(presetLabels.join(', '));
+      if (comment.presets.length > 2) {
+        parts[0] += ` +${comment.presets.length - 2}`;
+      }
+    }
+  }
+
+  // Add custom text (truncated)
+  if (comment.text) {
+    const truncatedText = comment.text.length > 20
+      ? comment.text.slice(0, 20) + '...'
+      : comment.text;
+    parts.push(truncatedText);
+  }
+
+  return parts.join(' • ') || 'Коментар';
+}
 
 interface InvoiceSidebarProps {
   open?: boolean;
@@ -39,9 +73,14 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
   const getTotalAmount = useCartStore((state) => state.getTotalAmount);
   const selectedTable = useTableStore((state) => state.selectedTable);
 
+  // Scheduled mode
+  const isScheduledMode = useScheduledOrderModeStore((state) => state.isScheduledMode);
+  const scheduledTableNumber = useScheduledOrderModeStore((state) => state.tableNumber);
+
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
   const [isOrderConfirmOpen, setIsOrderConfirmOpen] = React.useState(false);
+  const [isScheduledSaveOpen, setIsScheduledSaveOpen] = React.useState(false);
 
   // Comment state for each item
   const [itemComments, setItemComments] = React.useState<Record<string, ItemComment | null>>({});
@@ -75,8 +114,16 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
   const total = getTotalAmount();
 
   const handlePlaceOrder = () => {
-    if (items.length === 0 || !selectedTable) return;
-    setIsOrderConfirmOpen(true);
+    if (items.length === 0) return;
+
+    if (isScheduledMode) {
+      // In scheduled mode, open the scheduled save dialog
+      setIsScheduledSaveOpen(true);
+    } else {
+      // Normal mode - need table selected
+      if (!selectedTable) return;
+      setIsOrderConfirmOpen(true);
+    }
   };
 
   const handleOrderSuccess = () => {
@@ -94,33 +141,26 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
 
   const InvoiceContent = () => (
     <>
-      {/* Header */}
-      <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-slate-200">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg sm:text-xl font-bold text-slate-900">Invoice</h2>
-          {isMobile && (
-            <button
-              onClick={() => handleOpenChange(false)}
-              className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
-              aria-label="Close"
-            >
-              <X className="w-5 h-5 text-slate-600" />
-            </button>
-          )}
-        </div>
+      {/* Header - компактний */}
+      <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+        <h2 className="text-lg font-bold text-slate-900">Замовлення</h2>
+        {isMobile && (
+          <button
+            onClick={() => handleOpenChange(false)}
+            className="w-11 h-11 rounded-lg flex items-center justify-center hover:bg-slate-100"
+            aria-label="Закрити"
+          >
+            <X className="w-5 h-5 text-slate-600" />
+          </button>
+        )}
       </div>
 
-      {/* Cart Items */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-3">
+      {/* Cart Items - спрощений вигляд */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-              <ShoppingCart className="w-8 h-8 text-slate-400" />
-            </div>
-            <p className="text-slate-600 font-medium">Your cart is empty</p>
-            <p className="text-sm text-slate-500 mt-1">
-              Add items from the menu
-            </p>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <ShoppingCart className="w-10 h-10 text-slate-300 mb-2" />
+            <p className="text-slate-500 text-sm">Кошик порожній</p>
           </div>
         ) : (
           items.map((item) => {
@@ -129,69 +169,70 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
             return (
               <div
                 key={item.menuItem.id}
-                className="p-3 rounded-lg border border-slate-200 bg-slate-50/50"
+                className="p-3 rounded-lg bg-slate-50 border border-slate-100"
               >
-                {/* Header with name and quantity controls */}
-                <div className="flex items-start justify-between gap-2 mb-2">
+                {/* Верхній рядок: назва + кількість + видалити */}
+                <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900 text-sm">
-                      {item.menuItem.name}
-                    </h3>
-                    <p className="text-sm text-slate-600">
-                      {formatPrice(item.menuItem.price)}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-slate-900 text-sm truncate">
+                        {item.menuItem.name}
+                      </h3>
+                      {item.menuItem.weight && (
+                        <span className="text-xs text-slate-400 shrink-0">
+                          {item.menuItem.weight}{item.menuItem.outputType === 'bar' ? 'мл' : 'г'}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm text-slate-600">
+                      {formatPrice(item.menuItem.price * item.quantity)}
+                    </span>
                   </div>
+
+                  {/* Кількість */}
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
-                      className="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100"
+                      className="w-9 h-9 rounded-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 active:bg-slate-200"
                     >
-                      <Minus className="w-3 h-3" />
+                      <Minus className="w-4 h-4" />
                     </button>
-                    <span className="w-6 text-center text-sm font-medium">
+                    <span className="w-8 text-center font-semibold">
                       {item.quantity}
                     </span>
                     <button
                       onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
-                      className="w-7 h-7 rounded-full border border-slate-300 flex items-center justify-center hover:bg-slate-100"
+                      className="w-9 h-9 rounded-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 active:bg-slate-200"
                     >
-                      <Plus className="w-3 h-3" />
-                    </button>
-                    <button
-                      onClick={() => removeItem(item.menuItem.id)}
-                      className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-red-100 text-slate-400 hover:text-red-500 ml-1"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Plus className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
 
-                {/* Comment button */}
-                <div className="flex items-center gap-2 mb-2">
+                  {/* Видалити */}
                   <button
-                    onClick={() => setEditingCommentId(item.menuItem.id)}
-                    className={cn(
-                      "flex items-center gap-1 px-2 py-1 rounded text-xs transition-colors",
-                      comment ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                    )}
+                    onClick={() => removeItem(item.menuItem.id)}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500"
                   >
-                    <MessageSquare className="w-3 h-3" />
-                    {comment ? "Коментар" : "Додати"}
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 
-                {/* Comment display */}
-                {comment && (
-                  <div className="mt-2">
-                    <CommentDisplay comment={comment} size="sm" maxPresets={2} />
-                  </div>
-                )}
-
-                {/* Item total */}
-                <div className="flex justify-end mt-2 pt-2 border-t border-slate-200">
-                  <span className="text-sm font-semibold text-slate-900">
-                    {formatPrice(item.menuItem.price * item.quantity)}
-                  </span>
+                {/* Коментар */}
+                <div className="mt-2 pt-2 border-t border-slate-200">
+                  <button
+                    onClick={() => setEditingCommentId(item.menuItem.id)}
+                    className={cn(
+                      "flex items-center gap-1.5 text-xs px-2 py-1.5 rounded-md max-w-full",
+                      comment
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-slate-500 hover:bg-slate-100"
+                    )}
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="truncate">
+                      {comment ? getCommentPreview(comment) : "Додати коментар"}
+                    </span>
+                  </button>
                 </div>
               </div>
             );
@@ -199,49 +240,41 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
         )}
       </div>
 
-      {/* Summary & Send to Kitchen */}
-      <div className="px-4 sm:px-6 py-4 sm:py-6 border-t border-slate-200 space-y-4 bg-white">
-        {/* Order Summary */}
-        <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-600">Позицій</span>
-            <span className="font-semibold text-slate-900">
-              {items.reduce((sum, item) => sum + item.quantity, 0)}
-            </span>
-          </div>
-          <div className="h-px bg-slate-200 my-2" />
-          <div className="flex justify-between text-base">
-            <span className="font-bold text-slate-900">Сума</span>
-            <span className="font-bold text-slate-900">
-              {formatPrice(total)}
-            </span>
-          </div>
+      {/* Summary & Send to Kitchen - компактний */}
+      <div className="px-4 py-4 border-t border-slate-200 space-y-3 bg-white">
+        {/* Сума */}
+        <div className="flex justify-between items-center">
+          <span className="text-slate-600">
+            {items.reduce((sum, item) => sum + item.quantity, 0)} позицій
+          </span>
+          <span className="text-xl font-bold text-slate-900">
+            {formatPrice(total)}
+          </span>
         </div>
 
-        {/* Table info */}
-        {selectedTable && (
-          <div className="flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 rounded-lg">
-            <Badge variant="outline" className="text-sm">
-              Стіл {selectedTable.number}
-            </Badge>
-          </div>
-        )}
-
-        {/* Send to Kitchen Button */}
-        <Button
-          onClick={handlePlaceOrder}
-          disabled={items.length === 0 || !selectedTable}
-          className="w-full h-14 text-base font-semibold bg-orange-600 hover:bg-orange-700 text-white"
-          size="lg"
-        >
-          <ChefHat className="w-5 h-5 mr-2" />
-          Відправити на кухню
-        </Button>
-
-        {!selectedTable && items.length > 0 && (
-          <p className="text-xs text-center text-amber-600">
-            Оберіть стіл для оформлення замовлення
-          </p>
+        {/* Send to Kitchen / Save Scheduled Button */}
+        {isScheduledMode ? (
+          <Button
+            onClick={handlePlaceOrder}
+            disabled={items.length === 0}
+            className="w-full h-12 text-base font-semibold bg-purple-600 hover:bg-purple-700 text-white"
+            size="lg"
+          >
+            <Calendar className="w-5 h-5 mr-2" />
+            Зберегти замовлення
+            {scheduledTableNumber && <span className="ml-1 opacity-75">• Стіл {scheduledTableNumber}</span>}
+          </Button>
+        ) : (
+          <Button
+            onClick={handlePlaceOrder}
+            disabled={items.length === 0 || !selectedTable}
+            className="w-full h-12 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+            size="lg"
+          >
+            <ChefHat className="w-5 h-5 mr-2" />
+            На кухню
+            {selectedTable && <span className="ml-1 opacity-75">• Стіл {selectedTable.number}</span>}
+          </Button>
         )}
       </div>
 
@@ -297,6 +330,13 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
         open={isOrderConfirmOpen}
         onOpenChange={setIsOrderConfirmOpen}
         onSuccess={handleOrderSuccess}
+        itemComments={itemComments}
+      />
+
+      {/* Scheduled Order Save Dialog */}
+      <ScheduledOrderSaveDialog
+        open={isScheduledSaveOpen}
+        onOpenChange={setIsScheduledSaveOpen}
         itemComments={itemComments}
       />
     </>
