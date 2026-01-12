@@ -76,7 +76,7 @@ export function DailiesView({
   // Pending count for badge
   const pendingCount = useMemo(() => {
     return myTasks.filter(
-      (t) => t.status === "pending" || t.status === "in_progress"
+      (t: DailyTask) => t.status === "pending" || t.status === "in_progress"
     ).length;
   }, [myTasks]);
 

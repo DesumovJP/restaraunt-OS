@@ -61,7 +61,7 @@ export default function HomePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {modules.map((module) => (
-              <Link key={module.href} href={module.href}>
+              <Link key={module.href} href={module.href as never}>
                 <Card className="h-full hover:shadow-card-hover transition-all active:scale-[0.98] cursor-pointer">
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">

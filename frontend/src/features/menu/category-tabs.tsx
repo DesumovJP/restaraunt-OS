@@ -56,7 +56,7 @@ export function CategoryTabs({
 
           {/* Category tabs */}
           {categories.map((category) => {
-            const Icon = iconMap[category.icon] || UtensilsCrossed;
+            const Icon = (category.icon && iconMap[category.icon]) || UtensilsCrossed;
             return (
               <TabsTrigger
                 key={category.id}

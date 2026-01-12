@@ -26,12 +26,7 @@ import {
   GripVertical,
 } from "lucide-react";
 import type { BillSplit, SplitParticipant, SplitMode } from "@/types/extended";
-import {
-  createBillSplit,
-  calculateEvenSplit,
-  calculateByItemsSplit,
-  calculateMixedSplit,
-} from "@/lib/bill-split-calculator";
+import { calculateEvenSplit } from "@/lib/bill-split-calculator";
 
 interface BillSplitPanelProps {
   orderDocumentId: string;
@@ -76,12 +71,12 @@ export function BillSplitPanel({
       (_, i) => ({
         personId: `person_${i + 1}`,
         name: `Гість ${i + 1}`,
-        items: [],
+        share: 100 / participantCount,
+        assignedItems: [],
         subtotal: 0,
         tax: 0,
         tip: 0,
         total: 0,
-        isPaid: false,
       })
     );
     setParticipants(newParticipants);
@@ -89,54 +84,59 @@ export function BillSplitPanel({
     setSelectedPerson(newParticipants[0]?.personId || null);
   }, [participantCount]);
 
-  // Calculate split based on mode
-  const calculatedSplit = React.useMemo(() => {
+  // Calculate split based on mode - returns normalized structure with participants array and totals
+  type CalculatedTotals = { subtotal: number; tax: number; tip: number; total: number; unassigned: number };
+  const calculatedSplit = React.useMemo((): { participants: SplitParticipant[]; totals: CalculatedTotals } | null => {
     if (participants.length === 0) return null;
 
     const tax = subtotal * taxRate;
     const tip = subtotal * (tipPercent / 100);
+    const total = subtotal + tax + tip;
 
     if (mode === "even") {
-      return calculateEvenSplit(
-        subtotal,
-        tax,
-        tip,
-        participantCount,
-        { roundingMethod: "banker", taxDistribution: "per_person", tipCalculation: "on_subtotal", remainderPolicy: "first_person" }
-      );
+      const split = calculateEvenSplit(subtotal, participantCount, taxRate, tipPercent);
+      const splitParticipants: SplitParticipant[] = participants.map((p, i) => {
+        const isFirst = i === 0;
+        const personSubtotal = Math.floor((subtotal / participantCount) * 100) / 100;
+        return {
+          ...p,
+          subtotal: personSubtotal,
+          tax: split.tax,
+          tip: split.tip,
+          total: isFirst ? split.perPerson + split.remainder : split.perPerson,
+        };
+      });
+      return { participants: splitParticipants, totals: { subtotal, tax, tip, total, unassigned: 0 } };
     }
 
     if (mode === "by_items") {
       // Calculate totals per person based on item assignments
-      const personItems = participants.map((p) => ({
-        personId: p.personId,
-        items: Object.entries(itemAssignments)
-          .filter(([, assignees]) => assignees.includes(p.personId))
-          .map(([itemId]) => {
+      let assignedTotal = 0;
+      const splitParticipants: SplitParticipant[] = participants.map((p) => {
+        let personSubtotal = 0;
+        Object.entries(itemAssignments).forEach(([itemId, assignees]) => {
+          if (assignees.includes(p.personId)) {
             const item = items.find((i) => i.documentId === itemId);
-            return item
-              ? {
-                  itemDocumentId: itemId,
-                  share: 1 / (itemAssignments[itemId]?.length || 1),
-                  amount:
-                    (item.price * item.quantity) /
-                    (itemAssignments[itemId]?.length || 1),
-                }
-              : null;
-          })
-          .filter(Boolean) as Array<{
-          itemDocumentId: string;
-          share: number;
-          amount: number;
-        }>,
-      }));
+            if (item) {
+              const share = 1 / assignees.length;
+              personSubtotal += (item.price * item.quantity) * share;
+            }
+          }
+        });
+        assignedTotal += personSubtotal;
 
-      return calculateByItemsSplit(
-        personItems,
-        taxRate,
-        tipPercent,
-        { roundingMethod: "banker", taxDistribution: "per_person", tipCalculation: "on_subtotal", remainderPolicy: "first_person" }
-      );
+        const personTax = personSubtotal * taxRate;
+        const personTip = personSubtotal * (tipPercent / 100);
+        return {
+          ...p,
+          subtotal: personSubtotal,
+          tax: personTax,
+          tip: personTip,
+          total: personSubtotal + personTax + personTip,
+        };
+      });
+      const unassigned = subtotal - assignedTotal;
+      return { participants: splitParticipants, totals: { subtotal, tax, tip, total, unassigned } };
     }
 
     return null;
@@ -186,13 +186,29 @@ export function BillSplitPanel({
   const handleConfirm = () => {
     if (!calculatedSplit) return;
 
-    const split = createBillSplit(
-      orderDocumentId,
+    // Calculate totals from participants
+    const totalSubtotal = updatedParticipants.reduce((sum, p) => sum + p.subtotal, 0);
+    const totalTax = updatedParticipants.reduce((sum, p) => sum + p.tax, 0);
+    const totalTip = updatedParticipants.reduce((sum, p) => sum + p.tip, 0);
+    const totalAmount = updatedParticipants.reduce((sum, p) => sum + p.total, 0);
+
+    const split: BillSplit = {
+      documentId: `split_${Date.now()}`,
+      slug: `split-${Date.now()}`,
+      orderId: orderDocumentId,
       mode,
-      updatedParticipants,
-      calculatedSplit.totals,
-      "current_user"
-    );
+      participants: updatedParticipants,
+      totals: {
+        subtotal: totalSubtotal,
+        tax: totalTax,
+        tip: totalTip,
+        total: totalAmount,
+        unassigned: 0,
+      },
+      createdAt: new Date().toISOString(),
+      createdBy: "current_user",
+      status: "draft",
+    };
 
     onConfirm(split);
     onClose();
@@ -333,9 +349,9 @@ export function BillSplitPanel({
                           {formatPrice(participant.total)}
                         </span>
                       </div>
-                      {participant.items.length > 0 && (
+                      {participant.assignedItems.length > 0 && (
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {participant.items.length} позицій
+                          {participant.assignedItems.length} позицій
                         </p>
                       )}
                     </button>
@@ -468,7 +484,7 @@ interface PaymentButtonProps {
 export function PaymentButton({ participant, onPay }: PaymentButtonProps) {
   const [showMethods, setShowMethods] = React.useState(false);
 
-  if (participant.isPaid) {
+  if (participant.paidAt) {
     return (
       <Badge variant="default" className="gap-1">
         <Check className="h-3 w-3" />

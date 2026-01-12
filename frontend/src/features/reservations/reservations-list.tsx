@@ -346,7 +346,7 @@ export function ReservationsList({
     }
 
     const groups: Record<string, Reservation[]> = {};
-    reservations.forEach((res) => {
+    reservations.forEach((res: Reservation) => {
       if (!groups[res.date]) {
         groups[res.date] = [];
       }
@@ -387,7 +387,7 @@ export function ReservationsList({
             </div>
           )}
           <div className="space-y-3">
-            {dateReservations.map((reservation) => (
+            {dateReservations.map((reservation: Reservation) => (
               <ReservationCard
                 key={reservation.documentId}
                 reservation={reservation}

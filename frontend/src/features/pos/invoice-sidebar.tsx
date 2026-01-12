@@ -15,6 +15,7 @@ import {
   MessageSquare,
   ChefHat,
   Calendar,
+  Receipt,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -24,6 +25,7 @@ import {
 import { CommentEditor, CommentDisplay } from '@/features/orders/comment-editor';
 import { OrderConfirmDialog } from '@/features/orders/order-confirm-dialog';
 import { ScheduledOrderSaveDialog } from '@/features/orders/scheduled-order-save-dialog';
+import { CheckoutDialog } from '@/features/pos/checkout-dialog';
 import type { ItemComment } from '@/types/extended';
 import { COMMENT_PRESETS } from '@/types/extended';
 
@@ -81,6 +83,7 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
   const [isMobile, setIsMobile] = React.useState(false);
   const [isOrderConfirmOpen, setIsOrderConfirmOpen] = React.useState(false);
   const [isScheduledSaveOpen, setIsScheduledSaveOpen] = React.useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = React.useState(false);
 
   // Comment state for each item
   const [itemComments, setItemComments] = React.useState<Record<string, ItemComment | null>>({});
@@ -130,8 +133,8 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
     if (isMobile) {
       setIsMobileOpen(false);
     }
-    // Stay on POS page to continue adding orders or go to tables
-    router.push('/pos/waiter/tables');
+    // Stay on POS page to continue adding orders for the same table
+    // Don't navigate away - user might want to add more items
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -265,16 +268,31 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
             {scheduledTableNumber && <span className="ml-1 opacity-75">• Стіл {scheduledTableNumber}</span>}
           </Button>
         ) : (
-          <Button
-            onClick={handlePlaceOrder}
-            disabled={items.length === 0 || !selectedTable}
-            className="w-full h-12 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
-            size="lg"
-          >
-            <ChefHat className="w-5 h-5 mr-2" />
-            На кухню
-            {selectedTable && <span className="ml-1 opacity-75">• Стіл {selectedTable.number}</span>}
-          </Button>
+          <>
+            <Button
+              onClick={handlePlaceOrder}
+              disabled={items.length === 0 || !selectedTable}
+              className="w-full h-12 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+              size="lg"
+            >
+              <ChefHat className="w-5 h-5 mr-2" />
+              На кухню
+              {selectedTable && <span className="ml-1 opacity-75">• Стіл {selectedTable.number}</span>}
+            </Button>
+
+            {/* Checkout button - only when table is selected */}
+            {selectedTable && (
+              <Button
+                onClick={() => setIsCheckoutOpen(true)}
+                variant="outline"
+                className="w-full h-11 text-base font-medium border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                size="lg"
+              >
+                <Receipt className="w-5 h-5 mr-2" />
+                Розрахувати
+              </Button>
+            )}
+          </>
         )}
       </div>
 
@@ -338,6 +356,23 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
         open={isScheduledSaveOpen}
         onOpenChange={setIsScheduledSaveOpen}
         itemComments={itemComments}
+      />
+
+      {/* Checkout Dialog */}
+      <CheckoutDialog
+        open={isCheckoutOpen}
+        onOpenChange={setIsCheckoutOpen}
+        tableDocumentId={selectedTable?.documentId || null}
+        tableNumber={selectedTable?.number || null}
+        onSuccess={() => {
+          // Update table status to free and clear selected table
+          if (selectedTable?.id) {
+            useTableStore.getState().updateTableStatus(selectedTable.id, 'free');
+          }
+          useTableStore.getState().clearSelectedTable();
+          // Navigate to tables view after successful checkout
+          router.push('/pos/waiter/tables');
+        }}
       />
     </>
   );

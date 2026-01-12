@@ -9,21 +9,28 @@ import {
   User,
   X,
   ListTodo,
+  MessageSquare,
+  CalendarDays,
 } from 'lucide-react';
 import {
   Drawer,
   DrawerContent,
 } from '@/components/ui/drawer';
 
-export type ChefView = 'orders' | 'recipes' | 'stations' | 'calendar' | 'dailies';
+export type ChefView = 'orders' | 'recipes' | 'stations' | 'calendar' | 'dailies' | 'chat' | 'schedule' | 'profile';
 
 const defaultNavigationItems: { id: ChefView; icon: typeof ClipboardList; label: string }[] = [
   { id: 'orders', icon: ClipboardList, label: 'Замовлення' },
   { id: 'recipes', icon: ChefHat, label: 'Рецепти' },
 ];
 
+// Additional view tabs (chat, schedule)
+const additionalViewItems: { id: ChefView; icon: typeof ClipboardList; label: string }[] = [
+  { id: 'chat', icon: MessageSquare, label: 'Чат' },
+  { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
+];
+
 // External link items (navigate to different pages)
-// Dailies is now a tab, not an external link
 const externalLinks: { id: string; icon: typeof ClipboardList; label: string; path: string }[] = [];
 
 interface ChefLeftSidebarProps {
@@ -107,13 +114,37 @@ export function ChefLeftSidebar({
         {/* Separator */}
         <div className="w-8 h-px bg-slate-200 my-2" />
 
+        {/* Additional view items (chat, schedule) */}
+        {additionalViewItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeView === item.id;
+
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleNavigation(item.id)}
+              className={cn(
+                'w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200',
+                'hover:bg-slate-100 active:scale-95',
+                isActive
+                  ? 'bg-orange-600 text-white shadow-lg'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+              aria-label={item.label}
+              title={item.label}
+            >
+              <Icon className="w-5 h-5" />
+            </button>
+          );
+        })}
+
         {/* External links */}
         {externalLinks.map((item) => {
           const Icon = item.icon;
           return (
             <button
               key={item.id}
-              onClick={() => router.push(item.path)}
+              onClick={() => router.push(item.path as never)}
               className={cn(
                 'w-12 h-12 rounded-lg flex items-center justify-center transition-all duration-200',
                 'hover:bg-slate-100 active:scale-95',
@@ -129,17 +160,30 @@ export function ChefLeftSidebar({
       </div>
 
       {/* Profile bar at bottom */}
-      <div className="w-full px-2 py-3 bg-slate-50 rounded-lg border border-slate-200">
+      <button
+        onClick={() => handleNavigation('profile')}
+        className={cn(
+          "w-full px-2 py-3 rounded-lg border transition-colors",
+          activeView === 'profile'
+            ? "bg-orange-600 border-orange-600"
+            : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+        )}
+      >
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0">
-            <User className="w-4 h-4 text-white" />
+          <div className={cn(
+            "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+            activeView === 'profile'
+              ? "bg-white/20"
+              : "bg-gradient-to-br from-orange-500 to-orange-600"
+          )}>
+            <User className={cn("w-4 h-4", activeView === 'profile' ? "text-white" : "text-white")} />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-900 truncate">{userName}</p>
-            <p className="text-[10px] text-slate-600 truncate">{userRole}</p>
+          <div className="flex-1 min-w-0 text-left">
+            <p className={cn("text-xs font-semibold truncate", activeView === 'profile' ? "text-white" : "text-slate-900")}>{userName}</p>
+            <p className={cn("text-[10px] truncate", activeView === 'profile' ? "text-white/70" : "text-slate-600")}>{userRole}</p>
           </div>
         </div>
-      </div>
+      </button>
     </>
   );
 
@@ -191,6 +235,30 @@ export function ChefLeftSidebar({
               {/* Separator */}
               <div className="h-px bg-slate-200 my-2" />
 
+              {/* Additional view items (chat, schedule) */}
+              {additionalViewItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeView === item.id;
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavigation(item.id)}
+                    className={cn(
+                      'flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200',
+                      'hover:bg-slate-100 active:scale-95',
+                      isActive
+                        ? 'bg-orange-600 text-white shadow-lg'
+                        : 'text-slate-600 hover:text-slate-900'
+                    )}
+                    aria-label={item.label}
+                  >
+                    <Icon className="w-5 h-5" />
+                    <span className="font-medium text-sm">{item.label}</span>
+                  </button>
+                );
+              })}
+
               {/* External links */}
               {externalLinks.map((item) => {
                 const Icon = item.icon;
@@ -198,7 +266,7 @@ export function ChefLeftSidebar({
                   <button
                     key={item.id}
                     onClick={() => {
-                      router.push(item.path);
+                      router.push(item.path as never);
                       handleOpenChange(false);
                     }}
                     className={cn(
@@ -216,17 +284,30 @@ export function ChefLeftSidebar({
             </div>
 
             {/* Profile bar at bottom */}
-            <div className="mt-auto w-full px-4 py-3 bg-slate-50 rounded-lg border border-slate-200">
+            <button
+              onClick={() => handleNavigation('profile')}
+              className={cn(
+                "mt-auto w-full px-4 py-3 rounded-lg border transition-colors",
+                activeView === 'profile'
+                  ? "bg-orange-600 border-orange-600"
+                  : "bg-slate-50 border-slate-200 hover:bg-slate-100"
+              )}
+            >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                  activeView === 'profile'
+                    ? "bg-white/20"
+                    : "bg-gradient-to-br from-orange-500 to-orange-600"
+                )}>
                   <User className="w-5 h-5 text-white" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 truncate">{userName}</p>
-                  <p className="text-xs text-slate-600 truncate">{userRole}</p>
+                <div className="flex-1 min-w-0 text-left">
+                  <p className={cn("text-sm font-semibold truncate", activeView === 'profile' ? "text-white" : "text-slate-900")}>{userName}</p>
+                  <p className={cn("text-xs truncate", activeView === 'profile' ? "text-white/70" : "text-slate-600")}>{userRole}</p>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
         </DrawerContent>
       </Drawer>

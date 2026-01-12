@@ -1,0 +1,218 @@
+/**
+ * Mock Data for Storage Module
+ *
+ * Provides mock batch data for development and testing.
+ * Used as fallback when GraphQL is unavailable.
+ */
+
+import type { StorageBatch } from "@/types/extended";
+
+// ==========================================
+// HELPER FUNCTIONS
+// ==========================================
+
+const today = new Date();
+
+function formatDate(daysOffset: number): string {
+  const d = new Date(today);
+  d.setDate(d.getDate() + daysOffset);
+  return d.toISOString();
+}
+
+// ==========================================
+// MOCK BATCHES DATA
+// ==========================================
+
+export const MOCK_BATCHES: StorageBatch[] = [
+  // Сьогоднішні поставки
+  {
+    documentId: "batch_001",
+    slug: "pork-shoulder-001",
+    productId: "prod_001",
+    productName: "Свинина (лопатка)",
+    yieldProfileId: "yield_pork",
+    grossIn: 25,
+    unitCost: 185,
+    totalCost: 4625,
+    supplierId: "supplier_001",
+    invoiceNumber: "INV-2024-1201",
+    receivedAt: formatDate(0),
+    expiryDate: formatDate(5),
+    batchNumber: "B-001-1221",
+    processes: [],
+    netAvailable: 25,
+    usedAmount: 0,
+    wastedAmount: 0,
+    status: "received",
+  },
+  {
+    documentId: "batch_002",
+    slug: "chicken-whole-001",
+    productId: "prod_003",
+    productName: "Курка (ціла)",
+    yieldProfileId: "yield_chicken",
+    grossIn: 30,
+    unitCost: 98,
+    totalCost: 2940,
+    supplierId: "supplier_002",
+    invoiceNumber: "INV-2024-1202",
+    receivedAt: formatDate(0),
+    expiryDate: formatDate(4),
+    batchNumber: "B-002-1221",
+    processes: [],
+    netAvailable: 30,
+    usedAmount: 0,
+    wastedAmount: 0,
+    status: "received",
+  },
+  {
+    documentId: "batch_003",
+    slug: "salmon-fillet-001",
+    productId: "prod_005",
+    productName: "Лосось (філе)",
+    yieldProfileId: "yield_salmon",
+    grossIn: 8,
+    unitCost: 820,
+    totalCost: 6560,
+    supplierId: "supplier_003",
+    invoiceNumber: "INV-2024-1203",
+    receivedAt: formatDate(0),
+    expiryDate: formatDate(3),
+    batchNumber: "B-003-1221",
+    processes: [],
+    netAvailable: 8,
+    usedAmount: 0,
+    wastedAmount: 0,
+    status: "received",
+  },
+  {
+    documentId: "batch_004",
+    slug: "potato-001",
+    productId: "prod_007",
+    productName: "Картопля",
+    yieldProfileId: "yield_potato",
+    grossIn: 50,
+    unitCost: 18,
+    totalCost: 900,
+    supplierId: "supplier_004",
+    invoiceNumber: "INV-2024-1204",
+    receivedAt: formatDate(0),
+    expiryDate: formatDate(30),
+    batchNumber: "B-004-1221",
+    processes: [],
+    netAvailable: 50,
+    usedAmount: 0,
+    wastedAmount: 0,
+    status: "received",
+  },
+  {
+    documentId: "batch_005",
+    slug: "tomatoes-001",
+    productId: "prod_010",
+    productName: "Помідори",
+    yieldProfileId: "yield_potato",
+    grossIn: 15,
+    unitCost: 95,
+    totalCost: 1425,
+    supplierId: "supplier_004",
+    invoiceNumber: "INV-2024-1205",
+    receivedAt: formatDate(0),
+    expiryDate: formatDate(7),
+    batchNumber: "B-005-1221",
+    processes: [],
+    netAvailable: 15,
+    usedAmount: 0,
+    wastedAmount: 0,
+    status: "received",
+  },
+  // Вчорашні (частково оброблені)
+  {
+    documentId: "batch_006",
+    slug: "beef-tenderloin-001",
+    productId: "prod_002",
+    productName: "Яловичина (вирізка)",
+    yieldProfileId: "yield_beef",
+    grossIn: 12,
+    unitCost: 480,
+    totalCost: 5760,
+    supplierId: "supplier_001",
+    invoiceNumber: "INV-2024-1195",
+    receivedAt: formatDate(-1),
+    expiryDate: formatDate(4),
+    batchNumber: "B-006-1220",
+    processes: [
+      {
+        documentId: "proc_001",
+        processType: "portioning",
+        processedAt: formatDate(-1),
+        operatorId: "chef_001",
+        operatorName: "Олександр К.",
+        grossInput: 12,
+        netOutput: 8.64,
+        wasteOutput: 3.36,
+        expectedYield: 0.72,
+        actualYield: 0.72,
+        variancePercent: 0,
+      },
+    ],
+    netAvailable: 6.5,
+    usedAmount: 2.14,
+    wastedAmount: 3.36,
+    status: "in_use",
+  },
+  {
+    documentId: "batch_007",
+    slug: "duck-whole-001",
+    productId: "prod_004",
+    productName: "Качка (ціла)",
+    yieldProfileId: "yield_duck",
+    grossIn: 8,
+    unitCost: 290,
+    totalCost: 2320,
+    supplierId: "supplier_002",
+    invoiceNumber: "INV-2024-1196",
+    receivedAt: formatDate(-1),
+    expiryDate: formatDate(3),
+    batchNumber: "B-007-1220",
+    processes: [],
+    netAvailable: 8,
+    usedAmount: 0,
+    wastedAmount: 0,
+    status: "available",
+  },
+  // Позавчорашні
+  {
+    documentId: "batch_008",
+    slug: "shrimp-001",
+    productId: "prod_006",
+    productName: "Креветки тигрові",
+    yieldProfileId: "yield_shrimp",
+    grossIn: 5,
+    unitCost: 520,
+    totalCost: 2600,
+    supplierId: "supplier_003",
+    invoiceNumber: "INV-2024-1190",
+    receivedAt: formatDate(-2),
+    expiryDate: formatDate(0),
+    batchNumber: "B-008-1219",
+    processes: [
+      {
+        documentId: "proc_002",
+        processType: "cleaning",
+        processedAt: formatDate(-2),
+        operatorId: "chef_002",
+        operatorName: "Марія С.",
+        grossInput: 5,
+        netOutput: 2.25,
+        wasteOutput: 2.75,
+        expectedYield: 0.45,
+        actualYield: 0.45,
+        variancePercent: 0,
+      },
+    ],
+    netAvailable: 0.5,
+    usedAmount: 1.75,
+    wastedAmount: 2.75,
+    status: "in_use",
+  },
+];

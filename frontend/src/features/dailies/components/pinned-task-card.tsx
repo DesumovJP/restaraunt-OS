@@ -80,7 +80,7 @@ export function PinnedTaskCard({
       {/* Main content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <CategoryIcon category={task.category} size="xs" />
+          <CategoryIcon category={task.category} size="sm" />
           <h4
             className={cn(
               "text-sm font-medium truncate",

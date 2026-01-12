@@ -2,18 +2,19 @@
  * Hook for syncing tables from Strapi to local store
  *
  * @description Fetches tables from Strapi via GraphQL and updates the local table store.
- * Preserves local state (occupiedAt, status) for tables that are already in use.
+ * Strapi is the source of truth - all workers see the same data.
+ * Uses polling to keep data fresh across multiple devices.
  *
  * @example
  * ```tsx
  * // In a layout or provider component
- * useSyncTables();
+ * const { refetch } = useSyncTables();
  * ```
  */
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useQuery } from 'urql';
 import { GET_TABLES } from '@/graphql/queries';
 import { useTableStore } from '@/stores/table-store';
@@ -31,70 +32,63 @@ interface StrapiTable {
   zone?: string;
 }
 
+// Polling interval for multi-worker sync (5 seconds)
+const POLL_INTERVAL = 5000;
+
 export function useSyncTables() {
-  const [{ data, fetching, error }] = useQuery({
+  const [{ data, fetching, error }, reexecuteQuery] = useQuery({
     query: GET_TABLES,
     requestPolicy: 'cache-and-network',
   });
 
   const setTables = useTableStore((state) => state.setTables);
-  const localTables = useTableStore((state) => state.tables);
-  const hasSynced = useRef(false);
 
+  // Transform Strapi tables to local format
+  const transformTables = useCallback((strapiTables: StrapiTable[]): Table[] => {
+    return strapiTables.map((st) => ({
+      id: `table-${st.number}`,
+      documentId: st.documentId,
+      number: st.number,
+      capacity: st.capacity,
+      status: (st.status || 'free') as TableStatus,
+      currentGuests: st.currentGuests,
+      occupiedAt: st.occupiedAt ? new Date(st.occupiedAt) : undefined,
+      reservedBy: st.reservedBy,
+      reservedAt: st.reservedAt ? new Date(st.reservedAt) : undefined,
+      zone: st.zone,
+    }));
+  }, []);
+
+  // Sync tables from Strapi - Strapi is source of truth
   useEffect(() => {
     if (fetching || !data?.tables) return;
 
     const strapiTables: StrapiTable[] = data.tables;
-
     if (strapiTables.length === 0) return;
 
-    // Create a map of local tables for quick lookup
-    const localTableMap = new Map(
-      localTables.map(t => [t.number, t])
-    );
+    // Always use Strapi data as source of truth
+    const tables = transformTables(strapiTables);
+    setTables(tables);
+    console.log('[SyncTables] Synced', tables.length, 'tables from Strapi');
+  }, [data, fetching, setTables, transformTables]);
 
-    // Merge Strapi tables with local state
-    const mergedTables: Table[] = strapiTables.map((st) => {
-      const localTable = localTableMap.get(st.number);
+  // Polling for multi-worker sync
+  useEffect(() => {
+    const interval = setInterval(() => {
+      reexecuteQuery({ requestPolicy: 'network-only' });
+    }, POLL_INTERVAL);
 
-      // If table exists locally and is occupied/reserved, preserve local state
-      if (localTable && (localTable.status === 'occupied' || localTable.status === 'reserved')) {
-        return {
-          ...localTable,
-          // Update with Strapi documentId (critical for GraphQL mutations)
-          documentId: st.documentId,
-          // Update capacity from Strapi if changed
-          capacity: st.capacity,
-          zone: st.zone,
-        };
-      }
+    return () => clearInterval(interval);
+  }, [reexecuteQuery]);
 
-      // Otherwise, use Strapi data
-      return {
-        id: `table-${st.number}`,
-        documentId: st.documentId,
-        number: st.number,
-        capacity: st.capacity,
-        status: (st.status || 'free') as TableStatus,
-        currentGuests: st.currentGuests,
-        occupiedAt: st.occupiedAt ? new Date(st.occupiedAt) : undefined,
-        reservedBy: st.reservedBy,
-        reservedAt: st.reservedAt ? new Date(st.reservedAt) : undefined,
-        zone: st.zone,
-      };
-    });
-
-    // Only update if tables changed or first sync
-    if (!hasSynced.current || strapiTables.length !== localTables.length) {
-      setTables(mergedTables);
-      hasSynced.current = true;
-      console.log('[SyncTables] Synced', mergedTables.length, 'tables from Strapi');
-    }
-  }, [data, fetching, localTables, setTables]);
+  // Manual refetch function
+  const refetch = useCallback(() => {
+    reexecuteQuery({ requestPolicy: 'network-only' });
+  }, [reexecuteQuery]);
 
   return {
     loading: fetching,
     error: error?.message,
-    synced: hasSynced.current,
+    refetch,
   };
 }

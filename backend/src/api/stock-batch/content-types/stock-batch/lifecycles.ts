@@ -3,6 +3,8 @@
  * Validates status transitions and manages batch lifecycle
  */
 
+import { logAction } from '../../../../utils/action-logger';
+
 const VALID_TRANSITIONS: Record<string, string[]> = {
   received: ['inspecting', 'available', 'quarantine'],
   inspecting: ['available', 'quarantine', 'written_off'],
@@ -19,29 +21,33 @@ export default {
   async beforeUpdate(event) {
     const { data, where } = event.params;
 
-    // Only validate if status is being changed
-    if (!data.status) return;
+    // Store original for action logging
+    if (where?.documentId) {
+      try {
+        const batch = await strapi.documents('api::stock-batch.stock-batch').findOne({
+          documentId: where.documentId
+        });
+        event.state = { original: batch };
 
-    const batch = await strapi.documents('api::stock-batch.stock-batch').findOne({
-      documentId: where.documentId
-    });
+        if (!batch) return;
 
-    if (!batch) return;
+        // Validate status transition if status is being changed
+        if (data.status && batch.status !== data.status) {
+          const allowed = VALID_TRANSITIONS[batch.status] || [];
+          if (!allowed.includes(data.status)) {
+            throw new Error(
+              `Invalid batch transition: ${batch.status} -> ${data.status}. Allowed: ${allowed.join(', ') || 'none'}`
+            );
+          }
+        }
 
-    // Allow transition if status is the same (no change)
-    if (batch.status === data.status) return;
-
-    const allowed = VALID_TRANSITIONS[batch.status] || [];
-
-    if (!allowed.includes(data.status)) {
-      throw new Error(
-        `Invalid batch transition: ${batch.status} -> ${data.status}. Allowed: ${allowed.join(', ') || 'none'}`
-      );
-    }
-
-    // Auto-deplete if netAvailable reaches 0
-    if (data.netAvailable !== undefined && data.netAvailable <= 0 && batch.status !== 'depleted') {
-      data.status = 'depleted';
+        // Auto-deplete if netAvailable reaches 0
+        if (data.netAvailable !== undefined && data.netAvailable <= 0 && batch.status !== 'depleted') {
+          data.status = 'depleted';
+        }
+      } catch (e: any) {
+        if (e.message?.includes('Invalid batch transition')) throw e;
+      }
     }
   },
 
@@ -111,10 +117,21 @@ export default {
         }
       });
     }
+
+    // Log action
+    await logAction(strapi, {
+      action: 'receive',
+      entityType: 'stock_batch',
+      entityId: result.documentId,
+      entityName: result.batchNumber,
+      description: `Received batch: ${result.batchNumber}`,
+      dataAfter: result,
+      module: 'storage',
+    });
   },
 
   async afterUpdate(event) {
-    const { result, params } = event;
+    const { result } = event;
 
     // Check for expiry
     if (result.expiryDate && result.status === 'available') {
@@ -129,5 +146,56 @@ export default {
         });
       }
     }
+
+    // Log action - determine action type based on status
+    const original = event.state?.original;
+    let action: 'update' | 'write_off' = 'update';
+    if (result.status === 'written_off' && original?.status !== 'written_off') {
+      action = 'write_off';
+    }
+
+    await logAction(strapi, {
+      action,
+      entityType: 'stock_batch',
+      entityId: result.documentId,
+      entityName: result.batchNumber,
+      description: action === 'write_off'
+        ? `Wrote off batch: ${result.batchNumber}`
+        : `Updated batch: ${result.batchNumber}`,
+      dataBefore: original,
+      dataAfter: result,
+      module: 'storage',
+      severity: action === 'write_off' ? 'warning' : 'info',
+    });
+  },
+
+  async beforeDelete(event) {
+    const { where } = event.params;
+    if (where?.documentId) {
+      try {
+        const entity = await strapi.documents('api::stock-batch.stock-batch').findOne({
+          documentId: where.documentId
+        });
+        event.state = { ...event.state, entity };
+      } catch (e) {
+        // Ignore
+      }
+    }
+  },
+
+  async afterDelete(event) {
+    const { state, params } = event;
+    const entity = state?.entity;
+
+    await logAction(strapi, {
+      action: 'delete',
+      entityType: 'stock_batch',
+      entityId: params.where?.documentId || 'unknown',
+      entityName: entity?.batchNumber,
+      description: `Deleted batch: ${entity?.batchNumber || params.where?.documentId}`,
+      dataBefore: entity,
+      module: 'storage',
+      severity: 'warning',
+    });
   }
 };

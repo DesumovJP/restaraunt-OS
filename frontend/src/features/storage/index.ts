@@ -7,11 +7,8 @@ export * from "./views";
 // Hooks
 export * from "./hooks";
 
-// Optimized lists
-export { BatchesListOptimized } from "./batches-list-optimized";
-export { StorageHistoryOptimized } from "./storage-history-optimized";
+// Mock data (for testing and fallback)
+export { MOCK_BATCHES } from "./mock-data";
 
-// Legacy (for backwards compatibility)
-export { BatchesList, MOCK_BATCHES } from "./batches-list";
+// Category filter
 export { CategoryFilter, CategoryTabs } from "./category-filter";
-export { StorageHistoryList } from "./storage-history-list";

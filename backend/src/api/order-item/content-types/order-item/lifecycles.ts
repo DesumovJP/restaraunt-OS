@@ -2,7 +2,10 @@
  * Order Item Lifecycle Hooks
  * - Validates status transitions according to FSM
  * - Auto-creates KitchenTicket when order item is created
+ * - Logs actions to action-history
  */
+
+import { logAction } from '../../../../utils/action-logger';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   draft: ['queued', 'cancelled'],
@@ -43,26 +46,31 @@ export default {
   async beforeUpdate(event) {
     const { data, where } = event.params;
 
-    // Only validate if status is being changed
-    if (!data.status) return;
-
+    // Fetch original data for action logging
     const orderItem = await strapi.documents('api::order-item.order-item').findOne({
-      documentId: where.documentId
+      documentId: where.documentId,
+      populate: ['menuItem']
     });
 
     if (!orderItem) return;
 
-    const allowed = VALID_TRANSITIONS[orderItem.status] || [];
+    // Store original for action logging
+    event.state = { original: orderItem };
 
-    if (!allowed.includes(data.status)) {
-      throw new Error(
-        `Invalid order item transition: ${orderItem.status} -> ${data.status}. Allowed: ${allowed.join(', ') || 'none'}`
-      );
-    }
+    // Only validate if status is being changed
+    if (data.status) {
+      const allowed = VALID_TRANSITIONS[orderItem.status] || [];
 
-    // Auto-set statusChangedAt
-    if (data.status !== orderItem.status) {
-      data.statusChangedAt = new Date().toISOString();
+      if (!allowed.includes(data.status)) {
+        throw new Error(
+          `Invalid order item transition: ${orderItem.status} -> ${data.status}. Allowed: ${allowed.join(', ') || 'none'}`
+        );
+      }
+
+      // Auto-set statusChangedAt
+      if (data.status !== orderItem.status) {
+        data.statusChangedAt = new Date().toISOString();
+      }
     }
   },
 
@@ -100,6 +108,9 @@ export default {
 
       const menuItem = orderItem.menuItem;
       const order = orderItem.order;
+
+      // Note: Order item creation is NOT logged to action history
+      // All items are shown in the table session close log instead
 
       // Determine station from outputType or primaryStation
       let stationValue = menuItem.primaryStation || OUTPUT_TO_STATION[menuItem.outputType] || 'hot';
@@ -141,7 +152,7 @@ export default {
 
       console.log(`[OrderItem] Created kitchen ticket: ${ticket.ticketNumber} for ${menuItem.name}`);
 
-      // Create initial ticket event
+      // Create initial ticket event (for internal tracking, not action log)
       await strapi.documents('api::ticket-event.ticket-event').create({
         data: {
           kitchenTicket: ticket.documentId,
@@ -157,6 +168,9 @@ export default {
         }
       });
 
+      // Note: Order item creation is NOT logged to action history
+      // All items are shown in the table session close log instead
+
     } catch (error) {
       // Log but don't throw - ticket creation failure should not block order
       console.error('[OrderItem] Failed to create kitchen ticket:', error);
@@ -164,7 +178,40 @@ export default {
   },
 
   async afterUpdate(event) {
-    const { result } = event;
+    const { result, state } = event;
+    const original = state?.original;
+
+    // Only log cancellations/voids - other status changes are tracked via kitchen tickets
+    // This prevents duplicate logs for each cooking step
+    const isCancellation = result.status === 'cancelled' || result.status === 'voided';
+
+    if (isCancellation && original?.status !== result.status) {
+      const orderItem = await strapi.documents('api::order-item.order-item').findOne({
+        documentId: result.documentId,
+        populate: ['menuItem', 'order']
+      });
+
+      const menuItemName = orderItem?.menuItem?.name || original?.menuItem?.name || 'Unknown';
+
+      await logAction(strapi, {
+        action: 'cancel',
+        entityType: 'order_item',
+        entityId: result.documentId,
+        entityName: `${menuItemName} x${result.quantity || original?.quantity}`,
+        description: `Cancelled order item: ${menuItemName}`,
+        descriptionUk: `Позицію скасовано: ${menuItemName}`,
+        dataBefore: { status: original?.status },
+        dataAfter: { status: result.status },
+        module: 'pos',
+        severity: 'warning',
+        metadata: {
+          menuItemName,
+          quantity: result.quantity,
+          orderNumber: orderItem?.order?.orderNumber,
+          reason: result.status === 'voided' ? 'Анульовано' : 'Скасовано клієнтом',
+        }
+      });
+    }
 
     // If item is served, update order status if all items are served
     if (result.status === 'served' && result.order) {
@@ -193,5 +240,43 @@ export default {
         }
       }
     }
+  },
+
+  async beforeDelete(event) {
+    const { where } = event.params;
+    if (where?.documentId) {
+      try {
+        const entity = await strapi.documents('api::order-item.order-item').findOne({
+          documentId: where.documentId,
+          populate: ['menuItem', 'order']
+        });
+        event.state = { entity };
+      } catch (e) {
+        // Ignore if entity not found
+      }
+    }
+  },
+
+  async afterDelete(event) {
+    const { state, params } = event;
+    const entity = state?.entity;
+
+    const menuItemName = entity?.menuItem?.name || 'Unknown';
+    await logAction(strapi, {
+      action: 'delete',
+      entityType: 'order_item',
+      entityId: params.where?.documentId || 'unknown',
+      entityName: entity ? `${menuItemName} x${entity.quantity}` : undefined,
+      description: `Deleted order item: ${menuItemName}${entity?.order?.orderNumber ? ` from order ${entity.order.orderNumber}` : ''}`,
+      dataBefore: entity,
+      module: 'pos',
+      severity: 'warning',
+      metadata: {
+        menuItemName,
+        quantity: entity?.quantity,
+        orderId: entity?.order?.documentId,
+        orderNumber: entity?.order?.orderNumber
+      }
+    });
   }
 };

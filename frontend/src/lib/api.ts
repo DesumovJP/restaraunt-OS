@@ -221,37 +221,47 @@ export const analyticsApi = {
         {
           id: "avg-order-time",
           name: "Час прийому замовлення",
-          value: tableSessionEventsApi.formatDuration(sessionKPIs.avgTimeToTakeOrderMs),
-          trend: "neutral",
-          change: 0,
+          value: Math.round(sessionKPIs.avgTimeToTakeOrderMs / 1000),
+          previousValue: 0,
+          unit: "сек",
+          trend: "stable",
+          category: "performance",
         },
         {
           id: "avg-first-item",
           name: "Час до першої страви",
-          value: tableSessionEventsApi.formatDuration(sessionKPIs.avgTimeToFirstItemMs),
-          trend: "neutral",
-          change: 0,
+          value: Math.round(sessionKPIs.avgTimeToFirstItemMs / 1000),
+          previousValue: 0,
+          unit: "сек",
+          trend: "stable",
+          category: "performance",
         },
         {
           id: "avg-session",
           name: "Середня тривалість сесії",
-          value: tableSessionEventsApi.formatDuration(sessionKPIs.avgTotalSessionTimeMs),
-          trend: "neutral",
-          change: 0,
+          value: Math.round(sessionKPIs.avgTotalSessionTimeMs / 60000),
+          previousValue: 0,
+          unit: "хв",
+          trend: "stable",
+          category: "performance",
         },
         {
           id: "total-orders",
           name: "Замовлень сьогодні",
-          value: String(sessionKPIs.totalOrders),
+          value: sessionKPIs.totalOrders,
+          previousValue: 0,
+          unit: "",
           trend: "up",
-          change: 0,
+          category: "orders",
         },
         {
           id: "total-sessions",
           name: "Сесій сьогодні",
-          value: String(sessionKPIs.totalSessions),
-          trend: "neutral",
-          change: 0,
+          value: sessionKPIs.totalSessions,
+          previousValue: 0,
+          unit: "",
+          trend: "stable",
+          category: "orders",
         },
       ];
 
@@ -263,31 +273,66 @@ export const analyticsApi = {
   },
 
   /**
-   * Get system alerts (low stock, etc.)
-   * Uses real data from GraphQL
+   * Get system alerts - smart grouping, no spam
+   * Focuses on anomalies and actionable warnings
    */
   async getAlerts(): Promise<ApiResponse<Alert[]>> {
     try {
       const client = getUrqlClient();
-      const result = await client.query(GET_STOCK_ALERTS, {}).toPromise();
+      const alerts: Alert[] = [];
+      const today = new Date().toISOString().split('T')[0]; // For daily reset
 
-      if (result.error) {
-        throw new Error(result.error.message);
+      // Get read alerts from localStorage (reset daily)
+      const readAlertsKey = `read-alerts-${today}`;
+      let readAlerts: string[] = [];
+      if (typeof window !== 'undefined') {
+        readAlerts = JSON.parse(localStorage.getItem(readAlertsKey) || '[]');
       }
 
-      const ingredients = result.data?.ingredients || [];
+      // 1. Check low stock - GROUP into one alert
+      const stockResult = await client.query(GET_STOCK_ALERTS, {}).toPromise();
+      if (!stockResult.error) {
+        const ingredients = stockResult.data?.ingredients || [];
+        const lowStock = ingredients.filter((ing: any) => ing.currentStock < ing.minStock);
+        const criticalStock = lowStock.filter((ing: any) => ing.currentStock <= 0);
+        const warningStock = lowStock.filter((ing: any) => ing.currentStock > 0);
 
-      // Create alerts for low stock items
-      const alerts: Alert[] = ingredients
-        .filter((ing: any) => ing.currentStock < ing.minStock)
-        .map((ing: any) => ({
-          id: `low-stock-${ing.documentId}`,
-          type: "warning" as const,
-          message: `Низький запас: ${ing.nameUk || ing.name}`,
-          description: `Поточний: ${ing.currentStock} ${ing.unit}, мінімум: ${ing.minStock} ${ing.unit}`,
-          createdAt: new Date(),
-          isRead: false,
-        }));
+        // Critical: completely out of stock
+        if (criticalStock.length > 0) {
+          const names = criticalStock.slice(0, 3).map((i: any) => i.nameUk || i.name);
+          const moreCount = criticalStock.length > 3 ? ` (+${criticalStock.length - 3})` : '';
+          alerts.push({
+            id: 'critical-stock',
+            severity: 'critical',
+            category: 'inventory',
+            title: `Закінчились ${criticalStock.length} інгредієнтів`,
+            message: `${names.join(', ')}${moreCount}`,
+            createdAt: new Date(),
+            read: readAlerts.includes('critical-stock'),
+            actionUrl: '/storage',
+          });
+        }
+
+        // Warning: low but not zero - only if > 3 items
+        if (warningStock.length >= 3) {
+          alerts.push({
+            id: 'low-stock-summary',
+            severity: 'warning',
+            category: 'inventory',
+            title: `${warningStock.length} інгредієнтів на межі`,
+            message: 'Запаси нижче мінімуму, потрібне поповнення',
+            createdAt: new Date(),
+            read: readAlerts.includes('low-stock-summary'),
+            actionUrl: '/storage',
+          });
+        }
+      }
+
+      // 2. TODO: Add more smart alerts
+      // - Expiring batches (within 2 days)
+      // - Long cooking tickets (> 30 min)
+      // - Revenue anomalies
+      // - Unconfirmed reservations
 
       return { data: alerts, success: true };
     } catch (error) {
@@ -304,10 +349,20 @@ export const analyticsApi = {
   },
 
   /**
-   * Mark alert as read (local only for now)
+   * Mark alert as read - persists in localStorage (resets daily)
    */
   async markAlertRead(alertId: string): Promise<ApiResponse<Alert>> {
-    // Alerts are generated dynamically, no need to persist read status
-    return { data: { id: alertId, isRead: true } as Alert, success: true };
+    if (typeof window !== 'undefined') {
+      const today = new Date().toISOString().split('T')[0];
+      const readAlertsKey = `read-alerts-${today}`;
+      const readAlerts: string[] = JSON.parse(localStorage.getItem(readAlertsKey) || '[]');
+
+      if (!readAlerts.includes(alertId)) {
+        readAlerts.push(alertId);
+        localStorage.setItem(readAlertsKey, JSON.stringify(readAlerts));
+      }
+    }
+
+    return { data: { id: alertId, read: true } as unknown as Alert, success: true };
   },
 };

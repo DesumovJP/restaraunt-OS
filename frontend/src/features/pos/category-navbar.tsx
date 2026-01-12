@@ -74,7 +74,7 @@ export function CategoryNavbar({
         {categories.map((category) => {
           const count = menuItemCounts[category.id] || 0;
           const isActive = activeCategory === category.id;
-          const Icon = iconMap[category.icon] || Package;
+          const Icon = (category.icon && iconMap[category.icon]) || Package;
 
           return (
             <button

@@ -79,8 +79,7 @@ export function ScheduledOrderSaveDialog({
         menuItemId: item.menuItem.documentId || item.menuItem.id,
         menuItemName: item.menuItem.name,
         quantity: item.quantity,
-        unitPrice: item.menuItem.price,
-        totalPrice: item.menuItem.price * item.quantity,
+        price: item.menuItem.price,
         notes: item.notes || "",
         comment: itemComments[item.menuItem.id] || null,
       }));

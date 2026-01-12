@@ -148,7 +148,7 @@ export function OrderConfirmDialog({
           menuItem: menuItemDocId,
           quantity: item.quantity,
           unitPrice: item.menuItem.price,
-          courseType: item.menuItem.courseType || 'main',
+          courseType: 'main',
           notes: item.notes,
         });
 

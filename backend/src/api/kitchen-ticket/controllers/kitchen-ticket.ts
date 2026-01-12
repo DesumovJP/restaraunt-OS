@@ -1,4 +1,5 @@
 import { factories } from '@strapi/strapi';
+import { logAction } from '../../../utils/action-logger';
 
 // ============================================
 // LOGGING UTILITIES
@@ -46,13 +47,14 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       user: user?.username || 'anonymous',
     });
 
-    if (!user) {
-      logTicket('error', '✗ START failed: unauthorized', { ticketId: documentId });
-      return ctx.unauthorized('Authentication required');
-    }
+    // TODO: Re-enable auth check when login is implemented
+    // if (!user) {
+    //   logTicket('error', '✗ START failed: unauthorized', { ticketId: documentId });
+    //   return ctx.unauthorized('Authentication required');
+    // }
 
     const result = await strapi.service('api::kitchen-ticket.start-ticket')
-      .startTicket(documentId, user.documentId);
+      .startTicket(documentId, user?.documentId || 'anonymous');
 
     const duration = Date.now() - startTime;
 
@@ -175,6 +177,9 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       elapsedSeconds,
       orderReady,
     });
+
+    // Note: Individual ticket completion is NOT logged to action history
+    // All timing data is captured in the table session close log instead
 
     return ctx.send({ success: true, ticket: updatedTicket });
   },
@@ -375,6 +380,37 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       reason,
     });
 
+    // Log comprehensive action history
+    await logAction(strapi, {
+      action: 'cancel',
+      entityType: 'kitchen_ticket',
+      entityId: documentId,
+      entityName: ticket.ticketNumber,
+      description: `Cancelled ticket: ${ticket.orderItem?.menuItem?.name || 'Unknown dish'}`,
+      descriptionUk: `Скасовано тікет: ${ticket.orderItem?.menuItem?.name || 'Невідома страва'}`,
+      dataBefore: {
+        ticketStatus: ticket.status,
+        inventoryLocked: ticket.inventoryLocked,
+      },
+      dataAfter: {
+        ticketStatus: 'cancelled',
+        inventoryLocked: false,
+      },
+      metadata: {
+        ticketNumber: ticket.ticketNumber,
+        menuItemName: ticket.orderItem?.menuItem?.name,
+        orderNumber: (ticket as any).order?.orderNumber,
+        reason: reason || 'No reason provided',
+        inventoryReleased,
+        previousStatus: ticket.status,
+        processingTimeMs: duration,
+      },
+      module: 'kitchen',
+      severity: 'warning',
+      performedBy: user?.documentId,
+      performedByName: user?.username,
+    });
+
     return ctx.send({ success: true, ticket: updatedTicket });
   },
 
@@ -445,6 +481,38 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       duration,
       inventoryReleased,
       reason,
+    });
+
+    // Log comprehensive action history
+    await logAction(strapi, {
+      action: 'cancel',
+      entityType: 'kitchen_ticket',
+      entityId: documentId,
+      entityName: ticket.ticketNumber,
+      description: `Failed ticket: ${ticket.orderItem?.menuItem?.name || 'Unknown dish'}`,
+      descriptionUk: `Провалено тікет: ${ticket.orderItem?.menuItem?.name || 'Невідома страва'}`,
+      dataBefore: {
+        ticketStatus: ticket.status,
+        inventoryLocked: ticket.inventoryLocked,
+      },
+      dataAfter: {
+        ticketStatus: 'failed',
+        inventoryLocked: false,
+      },
+      metadata: {
+        ticketNumber: ticket.ticketNumber,
+        menuItemName: ticket.orderItem?.menuItem?.name,
+        orderNumber: (ticket as any).order?.orderNumber,
+        reason: reason || 'No reason provided',
+        inventoryReleased,
+        previousStatus: ticket.status,
+        processingTimeMs: duration,
+        isFailed: true,
+      },
+      module: 'kitchen',
+      severity: 'critical',
+      performedBy: user?.documentId,
+      performedByName: user?.username,
     });
 
     return ctx.send({ success: true, ticket: updatedTicket });
@@ -564,6 +632,9 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       pickupWaitSeconds,
       orderServed,
     });
+
+    // Note: Individual ticket serve is NOT logged to action history
+    // All timing data is captured in the table session close log instead
 
     return ctx.send({
       success: true,

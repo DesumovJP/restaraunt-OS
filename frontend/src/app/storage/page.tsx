@@ -14,12 +14,12 @@ import {
   AlertBanner,
   AlertIndicator,
   ProductPreview,
+  SupplyForm,
+  WriteOffForm,
 } from "@/features/storage/components";
 import { CategoryFilterMinimal } from "@/features/storage/components/category-filter-minimal";
 import { ProductList, ProductListSkeleton } from "@/features/storage/views";
-import { BatchesListOptimized } from "@/features/storage/batches-list-optimized";
-import { StorageHistoryOptimized } from "@/features/storage/storage-history-optimized";
-import { MOCK_BATCHES } from "@/features/storage/batches-list";
+import { MOCK_BATCHES } from "@/features/storage";
 
 // Stores
 import { useStorageUIStore } from "@/stores/storage-ui-store";
@@ -33,14 +33,13 @@ import {
   Search,
   Layers,
   Archive,
-  History,
   ArrowUpDown,
 } from "lucide-react";
 
 // Types
 import type { ExtendedProduct, StorageMainCategory, StorageSubCategory } from "@/types/extended";
 
-type StorageTab = "inventory" | "batches" | "history";
+type StorageTab = "inventory" | "batches";
 
 // ==========================================
 // MAIN PAGE COMPONENT
@@ -64,6 +63,9 @@ export default function StoragePage() {
 
   // Local state
   const [isScannerOpen, setIsScannerOpen] = React.useState(false);
+  const [isSupplyFormOpen, setIsSupplyFormOpen] = React.useState(false);
+  const [isWriteOffFormOpen, setIsWriteOffFormOpen] = React.useState(false);
+  const [writeOffBatch, setWriteOffBatch] = React.useState<any>(null);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedMainCategory, setSelectedMainCategory] = React.useState<StorageMainCategory | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = React.useState<StorageSubCategory | null>(null);
@@ -87,9 +89,9 @@ export default function StoragePage() {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (p) =>
-          p.name.toLowerCase().includes(query) ||
-          p.sku.toLowerCase().includes(query) ||
-          p.category.toLowerCase().includes(query)
+          (p.name || "").toLowerCase().includes(query) ||
+          (p.sku || "").toLowerCase().includes(query) ||
+          (p.category || "").toLowerCase().includes(query)
       );
     }
 
@@ -98,21 +100,21 @@ export default function StoragePage() {
       let comparison = 0;
       switch (sortBy) {
         case "name":
-          comparison = a.name.localeCompare(b.name);
+          comparison = (a.name || "").localeCompare(b.name || "");
           break;
         case "stock":
-          comparison = a.currentStock - b.currentStock;
+          comparison = (a.currentStock || 0) - (b.currentStock || 0);
           break;
         case "category":
-          comparison = a.category.localeCompare(b.category);
+          comparison = (a.category || "").localeCompare(b.category || "");
           break;
         case "updated":
-          comparison = new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime();
+          comparison = new Date(b.lastUpdated || 0).getTime() - new Date(a.lastUpdated || 0).getTime();
           break;
         case "status":
           const getStatusPriority = (p: ExtendedProduct) => {
-            if (p.currentStock === 0) return 0;
-            if (p.currentStock <= p.minStock) return 1;
+            if ((p.currentStock || 0) === 0) return 0;
+            if ((p.currentStock || 0) <= (p.minStock || 0)) return 1;
             return 2;
           };
           comparison = getStatusPriority(a) - getStatusPriority(b);
@@ -223,7 +225,11 @@ export default function StoragePage() {
             >
               <QrCode className="h-5 w-5" />
             </Button>
-            <Button size="icon" aria-label="Додати товар">
+            <Button
+              size="icon"
+              aria-label="Прийняти поставку"
+              onClick={() => setIsSupplyFormOpen(true)}
+            >
               <Plus className="h-5 w-5" />
             </Button>
           </div>
@@ -259,24 +265,12 @@ export default function StoragePage() {
             )}
           >
             <Archive className="h-4 w-4" />
-            Партії
+            Партії / Історія
             {todaysBatchesCount > 0 && (
               <Badge variant="default" className="h-5 px-1.5 text-xs">
                 +{todaysBatchesCount}
               </Badge>
             )}
-          </button>
-          <button
-            onClick={() => setActiveTab("history")}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
-              activeTab === "history"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            )}
-          >
-            <History className="h-4 w-4" />
-            Історія
           </button>
         </div>
       </header>
@@ -395,10 +389,10 @@ export default function StoragePage() {
         )}
 
         {activeTab === "batches" && (
-          <BatchesListOptimized onCloseShift={handleCloseShift} />
+          <div className="text-center text-muted-foreground py-8">
+            Партії та історія - в розробці
+          </div>
         )}
-
-        {activeTab === "history" && <StorageHistoryOptimized />}
       </main>
 
       {/* Product Preview Drawer */}
@@ -408,7 +402,29 @@ export default function StoragePage() {
         onClose={closePreview}
         onEdit={(p) => console.log("Edit", p)}
         onUse={(p) => console.log("Use", p)}
-        onWriteOff={(p) => console.log("Write off", p)}
+        onWriteOff={(p) => {
+          // Find a batch for this product to write off
+          const batch = MOCK_BATCHES.find(
+            (b) => b.productId === p.documentId && b.netAvailable > 0
+          );
+          if (batch) {
+            setWriteOffBatch({
+              documentId: batch.documentId,
+              batchNumber: batch.batchNumber,
+              netAvailable: batch.netAvailable,
+              wastedAmount: batch.wastedAmount,
+              unitCost: batch.unitCost,
+              expiryDate: batch.expiryDate,
+              ingredient: {
+                documentId: p.documentId,
+                name: p.name,
+                unit: p.unit,
+              },
+            });
+            setIsWriteOffFormOpen(true);
+            closePreview();
+          }
+        }}
       />
 
       {/* QR Scanner */}
@@ -416,6 +432,27 @@ export default function StoragePage() {
         open={isScannerOpen}
         onOpenChange={setIsScannerOpen}
         onScan={handleQRScan}
+      />
+
+      {/* Supply Form */}
+      <SupplyForm
+        open={isSupplyFormOpen}
+        onOpenChange={setIsSupplyFormOpen}
+        onSuccess={() => {
+          // Refetch products after supply
+          console.log("Supply created successfully");
+        }}
+      />
+
+      {/* Write-off Form */}
+      <WriteOffForm
+        batch={writeOffBatch}
+        open={isWriteOffFormOpen}
+        onOpenChange={setIsWriteOffFormOpen}
+        onSuccess={() => {
+          setWriteOffBatch(null);
+          console.log("Write-off completed successfully");
+        }}
       />
     </div>
   );

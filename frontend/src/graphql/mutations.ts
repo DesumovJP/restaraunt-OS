@@ -221,6 +221,19 @@ export const UPDATE_STOCK_BATCH_STATUS = gql`
   }
 `;
 
+// Update Stock Batch (for write-off)
+export const UPDATE_STOCK_BATCH = gql`
+  mutation UpdateStockBatch($documentId: ID!, $data: StockBatchInput!) {
+    updateStockBatch(documentId: $documentId, data: $data) {
+      documentId
+      netAvailable
+      wastedAmount
+      usedAmount
+      status
+    }
+  }
+`;
+
 // Create Inventory Movement (for adjustments)
 export const CREATE_INVENTORY_MOVEMENT = gql`
   mutation CreateInventoryMovement($data: InventoryMovementInput!) {

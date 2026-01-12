@@ -25,7 +25,11 @@ export type StationType =
   | 'cold'     // Холодний цех
   | 'pastry'   // Кондитерська
   | 'bar'      // Бар
-  | 'pass';    // Видача
+  | 'pass'     // Видача
+  | 'grill'    // Гриль
+  | 'fry'      // Фритюр
+  | 'saute'    // Соте
+  | 'plating'; // Сервірування
 
 export interface KitchenStation {
   documentId: string;

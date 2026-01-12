@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { TopNavbar } from "@/features/pos/top-navbar";
 import { LeftSidebar } from "@/features/pos/left-sidebar";
@@ -16,11 +17,23 @@ import { useScheduledOrderModeStore } from "@/stores/scheduled-order-mode-store"
 import { ordersApi } from "@/lib/api";
 import { useMenu } from "@/hooks/use-menu";
 import { DailiesView } from "@/features/dailies";
+import { WorkersChat } from "@/features/admin/workers-chat";
+import { WorkerProfileCard, type WorkerProfileData } from "@/features/profile";
+import { useAuthStore } from "@/stores/auth-store";
 import type { Category, MenuItem } from "@/types";
 
-export type WaiterView = 'menu' | 'dailies';
+export type WaiterView = 'tables' | 'menu' | 'calendar' | 'dailies' | 'chat' | 'schedule' | 'profile';
 
+// Wrapper component to handle Suspense for useSearchParams
 export default function WaiterPOSPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen items-center justify-center">Завантаження...</div>}>
+      <WaiterPOSContent />
+    </Suspense>
+  );
+}
+
+function WaiterPOSContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -198,6 +211,51 @@ export default function WaiterPOSPage() {
             <main className="flex-1 flex flex-col overflow-hidden">
               <DailiesView compact className="h-full" />
             </main>
+          ) : activeView === 'chat' ? (
+            /* Chat View */
+            <main className="flex-1 flex flex-col overflow-hidden p-4">
+              <WorkersChat />
+            </main>
+          ) : activeView === 'schedule' ? (
+            /* Schedule View - Read Only */
+            <main className="flex-1 flex flex-col overflow-hidden p-4">
+              <div className="h-full flex flex-col items-center justify-center text-center">
+                <div className="inline-flex items-center gap-2 bg-amber-100 border border-amber-300 text-amber-800 px-4 py-2 rounded-full shadow-sm mb-4">
+                  <span className="font-medium text-sm">В розробці</span>
+                </div>
+                <h2 className="text-xl font-semibold text-slate-900 mb-2">Графік змін</h2>
+                <p className="text-sm text-muted-foreground max-w-md">
+                  Тут ви зможете переглядати графік змін команди. Функція редагування доступна лише адміністраторам.
+                </p>
+              </div>
+            </main>
+          ) : activeView === 'profile' ? (
+            /* Profile View */
+            <main className="flex-1 flex flex-col overflow-y-auto p-4">
+              <div className="max-w-md mx-auto w-full">
+                <WorkerProfileCard
+                  worker={{
+                    documentId: 'waiter-1',
+                    name: 'Courtney Henry',
+                    role: 'waiter',
+                    department: 'service',
+                    status: 'active',
+                    phone: '+380 67 123 4567',
+                    email: 'courtney@restaurant.com',
+                    hoursThisWeek: 32,
+                    hoursThisMonth: 128,
+                    shiftsThisWeek: 4,
+                    shiftsThisMonth: 16,
+                    rating: 4.8,
+                    ordersServed: 156,
+                    avgTicketTime: 12,
+                  }}
+                  variant="full"
+                  onViewSchedule={() => setActiveView('schedule')}
+                  onLogout={() => router.push('/')}
+                />
+              </div>
+            </main>
           ) : (
             /* Menu View */
             <>
@@ -252,11 +310,7 @@ export default function WaiterPOSPage() {
       <OrderConfirmDialog
         open={isConfirmOpen}
         onOpenChange={setIsConfirmOpen}
-        items={cartItems}
-        tableNumber={tableNumber}
-        totalAmount={getTotalAmount()}
-        onConfirm={handleConfirmOrder}
-        onCancel={() => setIsConfirmOpen(false)}
+        onSuccess={handleConfirmOrder}
       />
     </div>
   );

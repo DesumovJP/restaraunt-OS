@@ -93,7 +93,7 @@ interface AlertItemProps {
 }
 
 function AlertItem({ alert, onMarkRead, onClick }: AlertItemProps) {
-  const config = severityConfig[alert.severity];
+  const config = severityConfig[alert.severity] ?? severityConfig.info;
   const Icon = config.icon;
 
   const handleClick = () => {

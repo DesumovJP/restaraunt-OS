@@ -76,7 +76,7 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
       const matchesSearch =
         !searchQuery ||
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchQuery.toLowerCase());
+        product.sku?.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesCategory =
         !categoryFilter || product.category === categoryFilter;
@@ -87,7 +87,7 @@ export const useInventoryStore = create<InventoryState>()((set, get) => ({
 
   getLowStockProducts: () => {
     return get().products.filter(
-      (product) => product.currentStock <= product.minStock
+      (product) => product.minStock !== undefined && product.currentStock <= product.minStock
     );
   },
 

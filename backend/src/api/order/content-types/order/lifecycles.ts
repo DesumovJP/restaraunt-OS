@@ -3,6 +3,8 @@
  * Validates status transitions according to FSM
  */
 
+import { logAction } from '../../../../utils/action-logger';
+
 const VALID_TRANSITIONS: Record<string, string[]> = {
   new: ['confirmed', 'cancelled'],
   confirmed: ['in_kitchen', 'cancelled'],
@@ -13,25 +15,40 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   paid: []
 };
 
+// Ukrainian status descriptions for action log
+const STATUS_DESCRIPTIONS_UK: Record<string, string> = {
+  confirmed: 'підтверджено',
+  in_kitchen: 'передано на кухню',
+  ready: 'готове до видачі',
+  served: 'подано',
+  paid: 'оплачено',
+  cancelled: 'скасовано',
+};
+
 export default {
   async beforeUpdate(event) {
     const { data, where } = event.params;
 
-    // Only validate if status is being changed
-    if (!data.status) return;
+    // Store original for action logging
+    if (where?.documentId) {
+      try {
+        const original = await strapi.documents('api::order.order').findOne({
+          documentId: where.documentId
+        });
+        event.state = { original };
 
-    const order = await strapi.documents('api::order.order').findOne({
-      documentId: where.documentId
-    });
-
-    if (!order) return;
-
-    const allowed = VALID_TRANSITIONS[order.status] || [];
-
-    if (!allowed.includes(data.status)) {
-      throw new Error(
-        `Invalid order transition: ${order.status} -> ${data.status}. Allowed: ${allowed.join(', ') || 'none'}`
-      );
+        // Validate status transition
+        if (data.status && original) {
+          const allowed = VALID_TRANSITIONS[original.status] || [];
+          if (!allowed.includes(data.status)) {
+            throw new Error(
+              `Invalid order transition: ${original.status} -> ${data.status}. Allowed: ${allowed.join(', ') || 'none'}`
+            );
+          }
+        }
+      } catch (e: any) {
+        if (e.message?.includes('Invalid order transition')) throw e;
+      }
     }
   },
 
@@ -51,6 +68,9 @@ export default {
         }
       });
     }
+
+    // Note: Order creation is NOT logged to action history
+    // All order info is shown in the table session close log instead
   },
 
   async afterUpdate(event) {
@@ -101,5 +121,60 @@ export default {
         });
       }
     }
+
+    // Note: Order status changes are NOT logged to action history individually
+    // All order info is shown in the table session close log instead
+    // Only log cancellations as they are important operational events
+    const original = event.state?.original;
+    const statusChanged = original && original.status !== result.status;
+
+    if (statusChanged && result.status === 'cancelled') {
+      await logAction(strapi, {
+        action: 'cancel',
+        entityType: 'order',
+        entityId: result.documentId,
+        entityName: result.orderNumber,
+        description: `Order ${result.orderNumber} cancelled`,
+        descriptionUk: `Замовлення ${result.orderNumber} скасовано`,
+        dataBefore: { status: original.status },
+        dataAfter: { status: result.status },
+        metadata: {
+          orderNumber: result.orderNumber,
+          tableNumber: result.table?.number,
+        },
+        module: 'pos',
+        severity: 'warning',
+      });
+    }
+  },
+
+  async beforeDelete(event) {
+    const { where } = event.params;
+    if (where?.documentId) {
+      try {
+        const entity = await strapi.documents('api::order.order').findOne({
+          documentId: where.documentId
+        });
+        event.state = { entity };
+      } catch (e) {
+        // Ignore
+      }
+    }
+  },
+
+  async afterDelete(event) {
+    const { state, params } = event;
+    const entity = state?.entity;
+
+    await logAction(strapi, {
+      action: 'delete',
+      entityType: 'order',
+      entityId: params.where?.documentId || 'unknown',
+      entityName: entity?.orderNumber,
+      description: `Deleted order: ${entity?.orderNumber || params.where?.documentId}`,
+      dataBefore: entity,
+      module: 'pos',
+      severity: 'warning',
+    });
   }
 };

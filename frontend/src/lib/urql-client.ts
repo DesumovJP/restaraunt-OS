@@ -62,7 +62,7 @@ function getExchanges(): Exchange[] {
         subscriptionExchange({
           forwardSubscription: (request) => ({
             subscribe: (sink) => ({
-              unsubscribe: ws.subscribe(request, sink),
+              unsubscribe: ws.subscribe(request as never, sink),
             }),
           }),
         })

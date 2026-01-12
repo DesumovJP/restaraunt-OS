@@ -15,8 +15,11 @@ export interface MenuItem {
   imageUrl?: string;
   available: boolean;
   preparationTime: number; // minutes
-  weight?: number; // weight in grams
+  weight?: number; // weight in grams (display)
   outputType?: OutputType;
+  portionSize?: number; // portion size for calculations
+  portionUnit?: 'g' | 'ml' | 'pcs';
+  portionsPerRecipe?: number;
   ingredients?: RecipeIngredient[];
 }
 
@@ -231,14 +234,40 @@ export interface Alert {
   actionUrl?: string;
 }
 
+export type ActionType =
+  | "create" | "update" | "delete"
+  | "start" | "complete" | "cancel"
+  | "receive" | "write_off" | "transfer"
+  | "login" | "logout"
+  | "approve" | "reject"
+  | "assign" | "unassign";
+
+export type EntityType =
+  | "order" | "order_item" | "kitchen_ticket"
+  | "menu_item" | "menu_category" | "ingredient"
+  | "stock_batch" | "inventory_movement" | "recipe"
+  | "table" | "reservation" | "scheduled_order"
+  | "daily_task" | "user" | "supplier" | "worker_performance";
+
 export interface ActionLog {
   id: string;
   userId: string;
   userName: string;
+  userRole?: string;
   action: string;
+  actionType: ActionType;
+  entityType: EntityType;
+  entityId: string;
+  entityName?: string;
   details: string;
+  descriptionUk?: string;
   timestamp: Date;
-  module: "pos" | "kitchen" | "storage" | "admin";
+  module: "pos" | "kitchen" | "storage" | "admin" | "reservations" | "system";
+  severity?: "info" | "warning" | "critical";
+  dataBefore?: Record<string, unknown>;
+  dataAfter?: Record<string, unknown>;
+  changedFields?: string[];
+  metadata?: Record<string, unknown>;
 }
 
 // ==========================================

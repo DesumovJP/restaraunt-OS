@@ -149,7 +149,7 @@ export function CategoryFilter({
             return (
               <div key={mainCat.id}>
                 <Button
-                  variant={isSelected ? "secondary" : "ghost"}
+                  variant={isSelected ? "outline" : "ghost"}
                   size="sm"
                   className={cn(
                     "w-full justify-start gap-2",
@@ -180,7 +180,7 @@ export function CategoryFilter({
                       return (
                         <Button
                           key={subCat.id}
-                          variant={isSubSelected ? "secondary" : "ghost"}
+                          variant={isSubSelected ? "outline" : "ghost"}
                           size="sm"
                           className={cn(
                             "w-full justify-start text-sm",
@@ -222,7 +222,7 @@ export function CategoryFilter({
           >
             Всі
             {Object.keys(categoryCounts).length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 px-1.5">
+              <Badge variant="outline" className="ml-2 h-5 px-1.5">
                 {Object.entries(categoryCounts)
                   .filter(([key]) => !key.includes(':'))
                   .reduce((sum, [, count]) => sum + count, 0)}
@@ -251,7 +251,7 @@ export function CategoryFilter({
                 {mainCat.label.uk}
                 {count > 0 && (
                   <Badge
-                    variant={isSelected ? "secondary" : "outline"}
+                    variant={isSelected ? "outline" : "outline"}
                     className="h-5 px-1.5"
                   >
                     {count}
@@ -269,7 +269,7 @@ export function CategoryFilter({
           <div className="flex gap-2 min-w-max">
             {/* All in category */}
             <Button
-              variant={!selectedSubCategory ? "secondary" : "ghost"}
+              variant={!selectedSubCategory ? "outline" : "ghost"}
               size="sm"
               className="shrink-0"
               onClick={() => onSubCategoryChange(null)}
@@ -285,7 +285,7 @@ export function CategoryFilter({
               return (
                 <Button
                   key={subCat.id}
-                  variant={isSelected ? "secondary" : "ghost"}
+                  variant={isSelected ? "outline" : "ghost"}
                   size="sm"
                   className={cn(
                     "shrink-0",
@@ -310,7 +310,7 @@ export function CategoryFilter({
       {hasActiveFilter && (
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Фільтр:</span>
-          <Badge variant="secondary" className="gap-1">
+          <Badge variant="outline" className="gap-1">
             {STORAGE_MAIN_CATEGORY_LABELS[selectedMainCategory].uk}
             {selectedSubCategory && (
               <>

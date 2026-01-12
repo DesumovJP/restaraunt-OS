@@ -357,7 +357,7 @@ export const migration005_yield_profiles: Migration = {
 
       table.index(['barcode'], 'idx_products_barcode');
       table.index(['yield_profile_id'], 'idx_products_yield');
-      table.index(['category_path'], 'idx_products_category', 'gin');
+      table.index(['category_path'], 'idx_products_category');
     });
   },
 

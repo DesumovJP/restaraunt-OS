@@ -48,7 +48,7 @@ export function PinnedTasksBar({
 
   // Sort: in_progress first, then by priority
   const sortedTasks = useMemo(() => {
-    const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+    const priorityOrder = { urgent: 0, high: 1, medium: 2, normal: 2, low: 3 };
     return [...activeTasks].sort((a, b) => {
       // In progress first
       if (a.status === "in_progress" && b.status !== "in_progress") return -1;

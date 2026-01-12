@@ -40,7 +40,7 @@ export function InventoryTable({
     return products.filter(
       (p) =>
         p.name.toLowerCase().includes(query) ||
-        p.sku.toLowerCase().includes(query)
+        p.sku?.toLowerCase().includes(query)
     );
   }, [products, searchQuery]);
 
@@ -87,11 +87,14 @@ interface ProductCardProps {
 }
 
 function ProductCard({ product, onSelect }: ProductCardProps) {
+  const maxStock = product.maxStock ?? 100;
+  const minStock = product.minStock ?? 0;
+  const currentStock = product.currentStock ?? 0;
   const stockPercentage = Math.min(
-    (product.currentStock / product.maxStock) * 100,
+    (currentStock / maxStock) * 100,
     100
   );
-  const isLowStock = product.currentStock <= product.minStock;
+  const isLowStock = currentStock <= minStock;
   const isExpiring =
     product.expiryDate &&
     new Date(product.expiryDate) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -190,7 +193,7 @@ function ProductCard({ product, onSelect }: ProductCardProps) {
 
             {/* Footer info */}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Оновлено: {formatRelativeTime(new Date(product.lastUpdated))}</span>
+              <span>Оновлено: {product.lastUpdated ? formatRelativeTime(new Date(product.lastUpdated)) : "—"}</span>
               {product.expiryDate && (
                 <span
                   className={cn(isExpiring && "text-danger font-medium")}

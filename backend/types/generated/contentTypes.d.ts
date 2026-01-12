@@ -107,43 +107,6 @@ export interface AdminApiTokenPermission extends Struct.CollectionTypeSchema {
   };
 }
 
-export interface AdminAuditLog extends Struct.CollectionTypeSchema {
-  collectionName: 'strapi_audit_logs';
-  info: {
-    displayName: 'Audit Log';
-    pluralName: 'audit-logs';
-    singularName: 'audit-log';
-  };
-  options: {
-    draftAndPublish: false;
-    timestamps: false;
-  };
-  pluginOptions: {
-    'content-manager': {
-      visible: false;
-    };
-    'content-type-builder': {
-      visible: false;
-    };
-  };
-  attributes: {
-    action: Schema.Attribute.String & Schema.Attribute.Required;
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    date: Schema.Attribute.DateTime & Schema.Attribute.Required;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<'oneToMany', 'admin::audit-log'> &
-      Schema.Attribute.Private;
-    payload: Schema.Attribute.JSON;
-    publishedAt: Schema.Attribute.DateTime;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    user: Schema.Attribute.Relation<'oneToOne', 'admin::user'>;
-  };
-}
-
 export interface AdminPermission extends Struct.CollectionTypeSchema {
   collectionName: 'admin_permissions';
   info: {
@@ -464,6 +427,97 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     username: Schema.Attribute.String;
+  };
+}
+
+export interface ApiActionHistoryActionHistory
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'action_histories';
+  info: {
+    displayName: 'Action History';
+    pluralName: 'action-histories';
+    singularName: 'action-history';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    action: Schema.Attribute.Enumeration<
+      [
+        'create',
+        'update',
+        'delete',
+        'start',
+        'complete',
+        'cancel',
+        'receive',
+        'write_off',
+        'transfer',
+        'login',
+        'logout',
+        'approve',
+        'reject',
+        'assign',
+        'unassign',
+      ]
+    > &
+      Schema.Attribute.Required;
+    changedFields: Schema.Attribute.JSON;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    dataAfter: Schema.Attribute.JSON;
+    dataBefore: Schema.Attribute.JSON;
+    description: Schema.Attribute.Text & Schema.Attribute.Required;
+    descriptionUk: Schema.Attribute.Text;
+    entityId: Schema.Attribute.String & Schema.Attribute.Required;
+    entityName: Schema.Attribute.String;
+    entityType: Schema.Attribute.Enumeration<
+      [
+        'order',
+        'order_item',
+        'kitchen_ticket',
+        'menu_item',
+        'menu_category',
+        'ingredient',
+        'stock_batch',
+        'inventory_movement',
+        'recipe',
+        'table',
+        'reservation',
+        'scheduled_order',
+        'daily_task',
+        'user',
+        'supplier',
+        'worker_performance',
+      ]
+    > &
+      Schema.Attribute.Required;
+    ipAddress: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::action-history.action-history'
+    > &
+      Schema.Attribute.Private;
+    metadata: Schema.Attribute.JSON;
+    module: Schema.Attribute.Enumeration<
+      ['pos', 'kitchen', 'storage', 'admin', 'reservations', 'system']
+    > &
+      Schema.Attribute.DefaultTo<'system'>;
+    performedBy: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    performedByName: Schema.Attribute.String;
+    performedByRole: Schema.Attribute.String;
+    publishedAt: Schema.Attribute.DateTime;
+    severity: Schema.Attribute.Enumeration<['info', 'warning', 'critical']> &
+      Schema.Attribute.DefaultTo<'info'>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    userAgent: Schema.Attribute.String;
   };
 }
 
@@ -860,6 +914,10 @@ export interface ApiMenuItemMenuItem extends Struct.CollectionTypeSchema {
       ['kitchen', 'bar', 'pastry', 'cold']
     > &
       Schema.Attribute.DefaultTo<'kitchen'>;
+    portionSize: Schema.Attribute.Decimal;
+    portionsPerRecipe: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<1>;
+    portionUnit: Schema.Attribute.Enumeration<['g', 'ml', 'pcs']> &
+      Schema.Attribute.DefaultTo<'g'>;
     preparationTime: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<15>;
     price: Schema.Attribute.Decimal & Schema.Attribute.Required;
     primaryStation: Schema.Attribute.Enumeration<
@@ -1434,6 +1492,132 @@ export interface ApiTicketEventTicketEvent extends Struct.CollectionTypeSchema {
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+  };
+}
+
+export interface ApiWorkerPerformanceWorkerPerformance
+  extends Struct.CollectionTypeSchema {
+  collectionName: 'worker_performances';
+  info: {
+    displayName: 'Worker Performance';
+    pluralName: 'worker-performances';
+    singularName: 'worker-performance';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    avgOrderTimeSeconds: Schema.Attribute.Integer;
+    avgTicketTimeSeconds: Schema.Attribute.Integer;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    date: Schema.Attribute.Date & Schema.Attribute.Required;
+    department: Schema.Attribute.Enumeration<
+      ['management', 'kitchen', 'service', 'bar', 'none']
+    >;
+    efficiencyScore: Schema.Attribute.Decimal;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::worker-performance.worker-performance'
+    > &
+      Schema.Attribute.Private;
+    ordersHandled: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    publishedAt: Schema.Attribute.DateTime;
+    station: Schema.Attribute.Enumeration<
+      [
+        'grill',
+        'fry',
+        'salad',
+        'hot',
+        'dessert',
+        'bar',
+        'pass',
+        'prep',
+        'front',
+        'back',
+      ]
+    >;
+    tasksCompleted: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    ticketsCompleted: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    totalActualMinutes: Schema.Attribute.Integer &
+      Schema.Attribute.DefaultTo<0>;
+    totalEstimatedMinutes: Schema.Attribute.Integer &
+      Schema.Attribute.DefaultTo<0>;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    worker: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+  };
+}
+
+export interface ApiWorkerShiftWorkerShift extends Struct.CollectionTypeSchema {
+  collectionName: 'worker_shifts';
+  info: {
+    displayName: 'Worker Shift';
+    pluralName: 'worker-shifts';
+    singularName: 'worker-shift';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  attributes: {
+    actualEndTime: Schema.Attribute.Time;
+    actualMinutes: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    actualStartTime: Schema.Attribute.Time;
+    approvedBy: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
+    breakMinutes: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    clockInLocation: Schema.Attribute.String;
+    clockOutLocation: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    date: Schema.Attribute.Date & Schema.Attribute.Required;
+    department: Schema.Attribute.Enumeration<
+      ['management', 'kitchen', 'service', 'bar', 'cleaning', 'none']
+    > &
+      Schema.Attribute.DefaultTo<'none'>;
+    endTime: Schema.Attribute.Time & Schema.Attribute.Required;
+    hourlyRate: Schema.Attribute.Decimal;
+    isHoliday: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::worker-shift.worker-shift'
+    > &
+      Schema.Attribute.Private;
+    notes: Schema.Attribute.Text;
+    overtimeMinutes: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    publishedAt: Schema.Attribute.DateTime;
+    scheduledMinutes: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    shiftType: Schema.Attribute.Enumeration<
+      ['morning', 'afternoon', 'evening', 'night', 'split']
+    > &
+      Schema.Attribute.DefaultTo<'morning'>;
+    startTime: Schema.Attribute.Time & Schema.Attribute.Required;
+    station: Schema.Attribute.Enumeration<
+      ['grill', 'fry', 'salad', 'hot', 'prep', 'dessert', 'bar', 'pass', 'none']
+    > &
+      Schema.Attribute.DefaultTo<'none'>;
+    status: Schema.Attribute.Enumeration<
+      ['scheduled', 'started', 'completed', 'missed', 'cancelled']
+    > &
+      Schema.Attribute.DefaultTo<'scheduled'>;
+    totalPay: Schema.Attribute.Decimal;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    worker: Schema.Attribute.Relation<
+      'manyToOne',
+      'plugin::users-permissions.user'
+    >;
   };
 }
 
@@ -2013,13 +2197,13 @@ declare module '@strapi/strapi' {
     export interface ContentTypeSchemas {
       'admin::api-token': AdminApiToken;
       'admin::api-token-permission': AdminApiTokenPermission;
-      'admin::audit-log': AdminAuditLog;
       'admin::permission': AdminPermission;
       'admin::role': AdminRole;
       'admin::session': AdminSession;
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
+      'api::action-history.action-history': ApiActionHistoryActionHistory;
       'api::daily-task.daily-task': ApiDailyTaskDailyTask;
       'api::ingredient.ingredient': ApiIngredientIngredient;
       'api::inventory-movement.inventory-movement': ApiInventoryMovementInventoryMovement;
@@ -2036,6 +2220,8 @@ declare module '@strapi/strapi' {
       'api::table-session-event.table-session-event': ApiTableSessionEventTableSessionEvent;
       'api::table.table': ApiTableTable;
       'api::ticket-event.ticket-event': ApiTicketEventTicketEvent;
+      'api::worker-performance.worker-performance': ApiWorkerPerformanceWorkerPerformance;
+      'api::worker-shift.worker-shift': ApiWorkerShiftWorkerShift;
       'api::yield-profile.yield-profile': ApiYieldProfileYieldProfile;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;

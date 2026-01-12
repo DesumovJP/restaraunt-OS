@@ -96,6 +96,21 @@ export interface BackendKitchenTicket {
   };
 }
 
+// Track recently removed tasks to prevent sync from re-adding them
+// Map of taskId -> removal timestamp
+const recentlyRemovedTasks = new Map<string, number>();
+const REMOVED_TASK_EXPIRY_MS = 120000; // 2 minutes - enough for backend to process and sync
+
+// Clean up expired entries periodically
+function cleanupRemovedTasks() {
+  const now = Date.now();
+  for (const [taskId, removedAt] of recentlyRemovedTasks.entries()) {
+    if (now - removedAt > REMOVED_TASK_EXPIRY_MS) {
+      recentlyRemovedTasks.delete(taskId);
+    }
+  }
+}
+
 interface KitchenStore {
   tasks: KitchenTask[];
   lastSyncedAt: string | null;
@@ -357,6 +372,10 @@ export const useKitchenStore = create<KitchenStore>()(
       },
 
       removeTask: (taskId) => {
+        // Track removal to prevent sync from re-adding
+        recentlyRemovedTasks.set(taskId, Date.now());
+        cleanupRemovedTasks();
+
         set((state) => ({
           tasks: state.tasks.filter((task) => task.documentId !== taskId),
         }));
@@ -377,45 +396,42 @@ export const useKitchenStore = create<KitchenStore>()(
         const now = Date.now();
         const RECENT_UPDATE_THRESHOLD_MS = 15000; // 15 seconds
 
+        // Clean up expired removed tasks
+        cleanupRemovedTasks();
+
         // Build a map of current tasks for quick lookup
         const currentTaskMap = new Map(currentTasks.map(t => [t.documentId, t]));
 
         const newTasks: KitchenTask[] = [];
 
         for (const ticket of tickets) {
+          // Skip recently removed tasks (prevents re-adding served items before backend syncs)
+          if (recentlyRemovedTasks.has(ticket.documentId)) {
+            console.log(`[Kitchen] Skipping recently removed task:`, ticket.documentId);
+            continue;
+          }
+
           const backendTask = convertTicketToTask(ticket);
           if (!backendTask) continue;
 
           const existingTask = currentTaskMap.get(backendTask.documentId);
 
-          // If task exists locally and has a more advanced status, keep local version
-          // This prevents backend sync from reverting optimistic UI updates
+          // IMPORTANT: Backend is the source of truth for multi-worker sync
+          // Always use backend status - don't preserve local "more advanced" status
+          // This ensures all workers see the same state
+
           if (existingTask) {
-            const statusOrder: Record<string, number> = { pending: 0, in_progress: 1, completed: 2 };
-            const existingOrder = statusOrder[existingTask.status] ?? 0;
-            const backendOrder = statusOrder[backendTask.status] ?? 0;
-
-            // Keep local task if it has more advanced status
-            // (local "in_progress" shouldn't be reverted to backend "pending")
-            if (existingOrder > backendOrder) {
-              console.log(`[Kitchen] Keeping local task (more advanced status):`, {
+            // Log if local status differs from backend (helps debug sync issues)
+            if (existingTask.status !== backendTask.status) {
+              console.log(`[Kitchen] Status sync: ${existingTask.status} → ${backendTask.status}`, {
                 id: existingTask.documentId,
-                localStatus: existingTask.status,
-                backendStatus: backendTask.status,
+                menuItem: backendTask.menuItemName,
               });
-              newTasks.push(existingTask);
-              continue;
             }
 
-            // Keep local timestamps if they exist and backend doesn't have them
-            if (existingTask.startedAt && !backendTask.startedAt) {
-              backendTask.startedAt = existingTask.startedAt;
-              backendTask.queueMs = existingTask.queueMs;
-            }
-            if (existingTask.readyAt && !backendTask.readyAt) {
-              backendTask.readyAt = existingTask.readyAt;
-              backendTask.cookMs = existingTask.cookMs;
-            }
+            // Preserve local UI-only data (like pickup timer) but use backend status
+            backendTask.pickupMs = existingTask.pickupMs || 0;
+            backendTask.isPickupOverdue = existingTask.isPickupOverdue || false;
           }
 
           newTasks.push(backendTask);
@@ -427,12 +443,6 @@ export const useKitchenStore = create<KitchenStore>()(
             return b.priorityScore - a.priorityScore;
           }
           return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-        });
-
-        console.log(`[Kitchen] Synced ${newTasks.length} tasks from backend`, {
-          pending: newTasks.filter(t => t.status === "pending").length,
-          inProgress: newTasks.filter(t => t.status === "in_progress").length,
-          completed: newTasks.filter(t => t.status === "completed").length,
         });
 
         set({
@@ -459,14 +469,33 @@ export const useKitchenStore = create<KitchenStore>()(
     }),
     {
       name: "kitchen-tasks-storage",
-      skipHydration: true, // Prevent hydration mismatch - hydrate on client only
+      skipHydration: true,
+      // Don't persist tasks - always fetch fresh from backend for multi-worker sync
+      partialize: (state) => ({
+        // Only persist non-task data if needed in the future
+        // Tasks are fetched from backend on each page load
+        lastSyncedAt: state.lastSyncedAt,
+      }),
     }
   )
 );
 
-// Hydrate store on client side
+// Clear any old persisted tasks on startup to ensure clean state
 if (typeof window !== "undefined") {
-  useKitchenStore.persist.rehydrate();
+  // Don't rehydrate tasks - we'll fetch from backend
+  // Just clear any stale data
+  try {
+    const stored = localStorage.getItem("kitchen-tasks-storage");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.state?.tasks?.length > 0) {
+        console.log("[Kitchen] Clearing persisted tasks - will fetch from backend");
+        localStorage.removeItem("kitchen-tasks-storage");
+      }
+    }
+  } catch (e) {
+    // Ignore parse errors
+  }
 }
 
 // Helper function to create kitchen tasks from cart items

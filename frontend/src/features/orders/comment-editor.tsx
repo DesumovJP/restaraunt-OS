@@ -120,7 +120,7 @@ export const COMMENT_PRESETS: CommentPreset[] = [
     documentId: "preset_spicy",
     slug: "spicy",
     key: "spicy",
-    category: "preference",
+    category: "modifier",
     label: { en: "Extra Spicy", uk: "Гостріше" },
     icon: "flame",
     severity: "normal",
@@ -131,7 +131,7 @@ export const COMMENT_PRESETS: CommentPreset[] = [
     documentId: "preset_mild",
     slug: "mild",
     key: "mild",
-    category: "preference",
+    category: "modifier",
     label: { en: "Mild", uk: "Не гостре" },
     icon: "snowflake",
     severity: "normal",
@@ -142,7 +142,7 @@ export const COMMENT_PRESETS: CommentPreset[] = [
     documentId: "preset_no_onion",
     slug: "no-onion",
     key: "no_onion",
-    category: "preference",
+    category: "modifier",
     label: { en: "No Onion", uk: "Без цибулі" },
     icon: "minus",
     severity: "normal",
@@ -153,7 +153,7 @@ export const COMMENT_PRESETS: CommentPreset[] = [
     documentId: "preset_no_garlic",
     slug: "no-garlic",
     key: "no_garlic",
-    category: "preference",
+    category: "modifier",
     label: { en: "No Garlic", uk: "Без часнику" },
     icon: "minus",
     severity: "normal",
@@ -164,7 +164,7 @@ export const COMMENT_PRESETS: CommentPreset[] = [
     documentId: "preset_well_done",
     slug: "well-done",
     key: "well_done",
-    category: "preference",
+    category: "modifier",
     label: { en: "Well Done", uk: "Добре просмажити" },
     icon: "flame",
     severity: "normal",
@@ -175,7 +175,7 @@ export const COMMENT_PRESETS: CommentPreset[] = [
     documentId: "preset_rare",
     slug: "rare",
     key: "rare",
-    category: "preference",
+    category: "modifier",
     label: { en: "Rare", uk: "З кров'ю" },
     icon: "droplet",
     severity: "normal",
@@ -187,8 +187,8 @@ export const COMMENT_PRESETS: CommentPreset[] = [
 const VISIBILITY_OPTIONS: { key: CommentVisibility; label: string; icon: React.ElementType }[] = [
   { key: "waiter", label: "Офіціант", icon: Eye },
   { key: "kitchen", label: "Кухня", icon: Eye },
-  { key: "bar", label: "Бар", icon: Eye },
-  { key: "all", label: "Всі", icon: Eye },
+  { key: "chef", label: "Шеф", icon: Eye },
+  { key: "manager", label: "Менеджер", icon: Eye },
 ];
 
 interface CommentEditorProps {
@@ -243,15 +243,10 @@ export function CommentEditor({
   };
 
   const toggleVisibility = (key: CommentVisibility) => {
-    if (key === "all") {
-      setVisibility(["all"]);
-      return;
-    }
     setVisibility((prev) => {
-      const filtered = prev.filter((v) => v !== "all");
-      return filtered.includes(key)
-        ? filtered.filter((v) => v !== key)
-        : [...filtered, key];
+      return prev.includes(key)
+        ? prev.filter((v) => v !== key)
+        : [...prev, key];
     });
   };
 

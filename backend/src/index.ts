@@ -1,6 +1,8 @@
 import type { Core } from '@strapi/strapi';
 import { seedUsersAndTasks, testUsers, sampleTasks } from './seed/seed-users-and-tasks';
 import { seedTasksOnly } from './seed/seed-tasks-only';
+import { seedRestaurantData } from './seed/seed-restaurant-data';
+import { setupPublicPermissions } from './seed/setup-permissions';
 
 export default {
   /**
@@ -106,6 +108,18 @@ export default {
             await seedTasksOnly(strapi);
           }
         }
+
+        // Always check and seed restaurant data (categories, menu items, ingredients, tables)
+        const existingCategories = await strapi.db.query('api::menu-category.menu-category').findMany({ limit: 1 });
+        if (existingCategories.length === 0) {
+          console.log('\n🍽️  No restaurant data found, running restaurant seed...\n');
+          await seedRestaurantData(strapi);
+        } else {
+          console.log('✅ Restaurant data already exists');
+        }
+
+        // Setup public permissions for REST API access
+        await setupPublicPermissions(strapi);
       } catch (error) {
         console.error('Seed error:', error);
       }

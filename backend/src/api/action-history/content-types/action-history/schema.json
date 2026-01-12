@@ -1,0 +1,111 @@
+{
+  "kind": "collectionType",
+  "collectionName": "action_histories",
+  "info": {
+    "singularName": "action-history",
+    "pluralName": "action-histories",
+    "displayName": "Action History"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "action": {
+      "type": "enumeration",
+      "enum": [
+        "create",
+        "update",
+        "delete",
+        "start",
+        "complete",
+        "cancel",
+        "receive",
+        "write_off",
+        "transfer",
+        "login",
+        "logout",
+        "approve",
+        "reject",
+        "assign",
+        "unassign"
+      ],
+      "required": true
+    },
+    "entityType": {
+      "type": "enumeration",
+      "enum": [
+        "order",
+        "order_item",
+        "kitchen_ticket",
+        "menu_item",
+        "menu_category",
+        "ingredient",
+        "stock_batch",
+        "inventory_movement",
+        "recipe",
+        "table",
+        "reservation",
+        "scheduled_order",
+        "daily_task",
+        "user",
+        "supplier",
+        "worker_performance"
+      ],
+      "required": true
+    },
+    "entityId": {
+      "type": "string",
+      "required": true
+    },
+    "entityName": {
+      "type": "string"
+    },
+    "description": {
+      "type": "text",
+      "required": true
+    },
+    "descriptionUk": {
+      "type": "text"
+    },
+    "dataBefore": {
+      "type": "json"
+    },
+    "dataAfter": {
+      "type": "json"
+    },
+    "changedFields": {
+      "type": "json"
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "performedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "performedByName": {
+      "type": "string"
+    },
+    "performedByRole": {
+      "type": "string"
+    },
+    "ipAddress": {
+      "type": "string"
+    },
+    "userAgent": {
+      "type": "string"
+    },
+    "module": {
+      "type": "enumeration",
+      "enum": ["pos", "kitchen", "storage", "admin", "reservations", "system"],
+      "default": "system"
+    },
+    "severity": {
+      "type": "enumeration",
+      "enum": ["info", "warning", "critical"],
+      "default": "info"
+    }
+  }
+}

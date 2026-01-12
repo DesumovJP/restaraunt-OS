@@ -1,0 +1,61 @@
+{
+  "kind": "collectionType",
+  "collectionName": "worker_performances",
+  "info": {
+    "singularName": "worker-performance",
+    "pluralName": "worker-performances",
+    "displayName": "Worker Performance"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "worker": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "tasksCompleted": {
+      "type": "integer",
+      "default": 0
+    },
+    "totalEstimatedMinutes": {
+      "type": "integer",
+      "default": 0
+    },
+    "totalActualMinutes": {
+      "type": "integer",
+      "default": 0
+    },
+    "ticketsCompleted": {
+      "type": "integer",
+      "default": 0
+    },
+    "avgTicketTimeSeconds": {
+      "type": "integer"
+    },
+    "ordersHandled": {
+      "type": "integer",
+      "default": 0
+    },
+    "avgOrderTimeSeconds": {
+      "type": "integer"
+    },
+    "efficiencyScore": {
+      "type": "decimal"
+    },
+    "department": {
+      "type": "enumeration",
+      "enum": ["management", "kitchen", "service", "bar", "none"]
+    },
+    "station": {
+      "type": "enumeration",
+      "enum": ["grill", "fry", "salad", "hot", "dessert", "bar", "pass", "prep", "front", "back"]
+    }
+  }
+}

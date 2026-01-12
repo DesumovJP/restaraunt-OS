@@ -54,6 +54,9 @@ interface DailyTasksState {
   getMyPendingCount: () => number;
   getOverdueTasks: () => DailyTask[];
   getTaskById: (documentId: string) => DailyTask | undefined;
+
+  // Internal
+  updateStatsFromTasks: (tasks: DailyTask[]) => void;
 }
 
 const initialStats: TaskStats = {

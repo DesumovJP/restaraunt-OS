@@ -143,13 +143,9 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       chefId: chefDocumentId,
     });
 
-    // Use Strapi's transaction support
-    const knex = strapi.db.connection;
-
     try {
-      return await knex.transaction(async (trx) => {
-        // 1. Load ticket with relations
-        const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
+      // 1. Load ticket with relations
+      const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
           documentId: ticketDocumentId,
           populate: {
             orderItem: {
@@ -210,24 +206,27 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
             ticketId: ticketDocumentId,
           });
 
+          // Only set assignedChef if it's a valid documentId (not 'anonymous')
+          const assignedChefValue = chefDocumentId && chefDocumentId !== 'anonymous' ? chefDocumentId : undefined;
+
           const updatedTicket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').update({
             documentId: ticketDocumentId,
             data: {
               status: 'started',
               startedAt: new Date().toISOString(),
-              assignedChef: chefDocumentId,
+              assignedChef: assignedChefValue,
               inventoryLocked: true
             }
           });
 
-          // Create event
+          // Create event (actor can be undefined if anonymous)
           await strapi.documents('api::ticket-event.ticket-event').create({
             data: {
               kitchenTicket: ticketDocumentId,
               eventType: 'started',
               previousStatus: 'queued',
               newStatus: 'started',
-              actor: chefDocumentId,
+              actor: assignedChefValue,
               metadata: { noIngredients: true }
             }
           });
@@ -420,12 +419,15 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
         }
 
         // 5. Update ticket status
+        // Only set assignedChef if it's a valid documentId (not 'anonymous')
+        const assignedChefValue = chefDocumentId && chefDocumentId !== 'anonymous' ? chefDocumentId : undefined;
+
         const updatedTicket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').update({
           documentId: ticketDocumentId,
           data: {
             status: 'started',
             startedAt: new Date().toISOString(),
-            assignedChef: chefDocumentId,
+            assignedChef: assignedChefValue,
             inventoryLocked: true
           }
         });
@@ -437,7 +439,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
             eventType: 'started',
             previousStatus: 'queued',
             newStatus: 'started',
-            actor: chefDocumentId,
+            actor: assignedChefValue,
             metadata: {
               consumedBatches: consumedBatches.map(c => ({
                 batchDocumentId: c.batch.documentId,
@@ -476,24 +478,26 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
           totalCost: totalCost.toFixed(2),
         });
 
-        return {
-          success: true,
-          ticket: updatedTicket,
-          inventoryMovements,
-          consumedBatches: consumedBatches.map(c => ({
-            batchDocumentId: c.batch.documentId,
-            ingredientDocumentId: c.ingredientDocumentId,
-            grossQuantity: c.grossQuantity,
-            netQuantity: c.netQuantity,
-            cost: c.cost
-          }))
-        };
-      });
+        // Note: Individual ticket start is NOT logged to action history
+        // Inventory consumption is tracked via inventory_movement records
+        // All timing data is captured in the table session close log instead
+
+      return {
+        success: true,
+        ticket: updatedTicket,
+        inventoryMovements,
+        consumedBatches: consumedBatches.map(c => ({
+          batchDocumentId: c.batch.documentId,
+          ingredientDocumentId: c.ingredientDocumentId,
+          grossQuantity: c.grossQuantity,
+          netQuantity: c.netQuantity,
+          cost: c.cost
+        }))
+      };
 
     } catch (error: any) {
       const duration = Date.now() - startTime;
-      // Transaction will auto-rollback on error
-      logInventory('error', '✗ Start ticket failed (transaction rolled back)', {
+      logInventory('error', '✗ Start ticket failed', {
         ticketId: ticketDocumentId,
         duration,
         errorCode: error.code,
@@ -630,5 +634,8 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
       ingredientsRestored: restoredIngredients,
       reason,
     });
+
+    // Note: Inventory release is NOT logged to action history separately
+    // The ticket cancel/fail log in the controller includes this information
   }
 });

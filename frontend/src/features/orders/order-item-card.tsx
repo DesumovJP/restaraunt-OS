@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   GripVertical,
   MoreHorizontal,
+  RotateCcw,
 } from "lucide-react";
 import type { OrderItemStatus, CourseType, ItemComment } from "@/types/extended";
 import { CourseBadge } from "./course-selector";
@@ -33,32 +34,25 @@ interface StatusConfig {
 }
 
 const STATUS_CONFIGS: Record<OrderItemStatus, StatusConfig> = {
-  pending: {
-    label: "Очікує",
+  queued: {
+    label: "В черзі",
     icon: Clock,
     color: "text-muted-foreground",
     bgColor: "bg-muted border-muted",
-    canTransitionTo: ["sent", "cancelled"],
+    canTransitionTo: ["pending", "cancelled"],
   },
-  sent: {
-    label: "Відправлено",
+  pending: {
+    label: "Очікує",
     icon: Send,
     color: "text-info",
     bgColor: "bg-info/10 border-info/30",
-    canTransitionTo: ["cooking", "cancelled"],
+    canTransitionTo: ["in_progress", "cancelled"],
   },
-  cooking: {
+  in_progress: {
     label: "Готується",
     icon: UtensilsCrossed,
     color: "text-warning",
     bgColor: "bg-warning/10 border-warning/30",
-    canTransitionTo: ["plating"],
-  },
-  plating: {
-    label: "Сервірується",
-    icon: UtensilsCrossed,
-    color: "text-orange-500",
-    bgColor: "bg-orange-50 border-orange-200",
     canTransitionTo: ["ready"],
   },
   ready: {
@@ -74,6 +68,13 @@ const STATUS_CONFIGS: Record<OrderItemStatus, StatusConfig> = {
     color: "text-success",
     bgColor: "bg-success/5 border-success/20",
     canTransitionTo: [],
+  },
+  returned: {
+    label: "Повернено",
+    icon: RotateCcw,
+    color: "text-orange-500",
+    bgColor: "bg-orange-50 border-orange-200",
+    canTransitionTo: ["in_progress"],
   },
   cancelled: {
     label: "Скасовано",
@@ -163,17 +164,15 @@ export function OrderItemCard({
     : null;
 
   // Check if can undo
-  const canUndo = ["sent", "cooking", "plating", "ready"].includes(status);
+  const canUndo = ["pending", "in_progress", "ready"].includes(status);
   const undoTargetStatus: OrderItemStatus =
-    status === "sent"
-      ? "pending"
-      : status === "cooking"
-        ? "sent"
-        : status === "plating"
-          ? "cooking"
-          : status === "ready"
-            ? "plating"
-            : "pending";
+    status === "pending"
+      ? "queued"
+      : status === "in_progress"
+        ? "pending"
+        : status === "ready"
+          ? "in_progress"
+          : "queued";
 
   const hasAllergen = comment?.presets.some((preset) =>
     ["gluten_free", "dairy_free", "nut_free", "shellfish_free"].includes(preset)

@@ -1,0 +1,103 @@
+{
+  "kind": "collectionType",
+  "collectionName": "worker_shifts",
+  "info": {
+    "singularName": "worker-shift",
+    "pluralName": "worker-shifts",
+    "displayName": "Worker Shift"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "worker": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "date": {
+      "type": "date",
+      "required": true
+    },
+    "startTime": {
+      "type": "time",
+      "required": true
+    },
+    "endTime": {
+      "type": "time",
+      "required": true
+    },
+    "shiftType": {
+      "type": "enumeration",
+      "enum": ["morning", "afternoon", "evening", "night", "split"],
+      "default": "morning"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": ["scheduled", "started", "completed", "missed", "cancelled"],
+      "default": "scheduled"
+    },
+    "actualStartTime": {
+      "type": "time"
+    },
+    "actualEndTime": {
+      "type": "time"
+    },
+    "scheduledMinutes": {
+      "type": "integer",
+      "default": 0
+    },
+    "actualMinutes": {
+      "type": "integer",
+      "default": 0
+    },
+    "overtimeMinutes": {
+      "type": "integer",
+      "default": 0
+    },
+    "breakMinutes": {
+      "type": "integer",
+      "default": 0
+    },
+    "department": {
+      "type": "enumeration",
+      "enum": ["management", "kitchen", "service", "bar", "cleaning", "none"],
+      "default": "none"
+    },
+    "station": {
+      "type": "enumeration",
+      "enum": ["grill", "fry", "salad", "hot", "prep", "dessert", "bar", "pass", "none"],
+      "default": "none"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "clockInLocation": {
+      "type": "string"
+    },
+    "clockOutLocation": {
+      "type": "string"
+    },
+    "createdBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "approvedBy": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "isHoliday": {
+      "type": "boolean",
+      "default": false
+    },
+    "hourlyRate": {
+      "type": "decimal"
+    },
+    "totalPay": {
+      "type": "decimal"
+    }
+  }
+}

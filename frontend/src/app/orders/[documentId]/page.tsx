@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   ArrowLeft,
   Clock,
@@ -17,8 +19,22 @@ import {
   Printer,
   MessageSquare,
   CheckCircle2,
+  DoorOpen,
+  CreditCard,
+  Banknote,
+  Loader2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { authFetch } from "@/stores/auth-store";
 import { OrderProvider, useOrderContext, useCourseTimings } from "@/hooks/use-order";
+import { useOrderDetails } from "@/hooks/use-graphql-orders";
 import { useTableEvents } from "@/hooks/use-websocket";
 import { OrderItemCard, OrderItemsList } from "@/features/orders/order-item-card";
 import { CourseSelector, CourseBadge } from "@/features/orders/course-selector";
@@ -30,6 +46,9 @@ import type { UndoReasonCode } from "@/types/fsm";
 
 function OrderDetailContent() {
   const router = useRouter();
+  const params = useParams();
+  const documentId = params.documentId as string;
+
   const {
     order,
     isLoading,
@@ -41,10 +60,21 @@ function OrderDetailContent() {
     submitOrder,
   } = useOrderContext();
 
+  // Get tableDocumentId from GraphQL (extended order doesn't have it)
+  const { order: graphqlOrder } = useOrderDetails(documentId);
+  const tableDocumentId = graphqlOrder?.table?.documentId;
+
   // Comment editor state
   const [editingCommentItemId, setEditingCommentItemId] = React.useState<string | null>(null);
   const [courseEditorItemId, setCourseEditorItemId] = React.useState<string | null>(null);
   const [showBillSplit, setShowBillSplit] = React.useState(false);
+
+  // Close table state
+  const [showCloseDialog, setShowCloseDialog] = React.useState(false);
+  const [closingTable, setClosingTable] = React.useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = React.useState<"cash" | "card">("cash");
+  const [tipAmount, setTipAmount] = React.useState<string>("");
+  const [closeError, setCloseError] = React.useState<string | null>(null);
 
   // Course timings
   const courseTimings = useCourseTimings(
@@ -124,6 +154,49 @@ function OrderDetailContent() {
     // Would save to API
   };
 
+  // Close table handler
+  const handleCloseTable = async () => {
+    if (!tableDocumentId) {
+      setCloseError("Не вдалося знайти столик");
+      return;
+    }
+
+    setClosingTable(true);
+    setCloseError(null);
+
+    try {
+      const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL || "http://localhost:1337";
+      const response = await authFetch(`${STRAPI_URL}/api/tables/${tableDocumentId}/close`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          paymentMethod: selectedPaymentMethod,
+          tipAmount: tipAmount ? parseFloat(tipAmount) : 0,
+          notes: null,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error?.message || "Не вдалося закрити столик");
+      }
+
+      const data = await response.json();
+      console.log("[Order] Table closed:", data);
+
+      // Navigate back to tables view
+      setShowCloseDialog(false);
+      router.push("/pos/waiter");
+    } catch (err) {
+      console.error("[Order] Failed to close table:", err);
+      setCloseError(err instanceof Error ? err.message : "Не вдалося закрити столик");
+    } finally {
+      setClosingTable(false);
+    }
+  };
+
   // Loading state
   if (isLoading) {
     return (
@@ -161,7 +234,7 @@ function OrderDetailContent() {
 
   // Calculate totals
   const subtotal = order.items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + item.menuItem.price * item.quantity,
     0
   );
   const taxRate = 0.2; // 20% VAT
@@ -171,8 +244,8 @@ function OrderDetailContent() {
   // Items for bill split
   const billSplitItems = order.items.map((item) => ({
     documentId: item.documentId,
-    name: item.menuItemName,
-    price: item.price,
+    name: item.menuItem.name,
+    price: item.menuItem.price,
     quantity: item.quantity,
   }));
 
@@ -189,20 +262,24 @@ function OrderDetailContent() {
               Стіл {order.tableNumber}
               <Badge
                 variant={
-                  order.status === "submitted"
+                  order.status === "preparing"
                     ? "default"
-                    : order.status === "completed"
+                    : order.status === "served"
                       ? "secondary"
                       : "outline"
                 }
               >
-                {order.status === "draft"
-                  ? "Чернетка"
-                  : order.status === "submitted"
-                    ? "В роботі"
-                    : order.status === "completed"
-                      ? "Завершено"
-                      : "Скасовано"}
+                {order.status === "pending"
+                  ? "Очікує"
+                  : order.status === "confirmed"
+                    ? "Підтверджено"
+                    : order.status === "preparing"
+                      ? "Готується"
+                      : order.status === "ready"
+                        ? "Готово"
+                        : order.status === "served"
+                          ? "Подано"
+                          : "Скасовано"}
               </Badge>
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -224,10 +301,22 @@ function OrderDetailContent() {
             <Split className="h-4 w-4 mr-1.5" />
             Розділити
           </Button>
-          {order.status === "draft" && (
+          {order.status === "pending" && (
             <Button onClick={submitOrder}>
               <Send className="h-4 w-4 mr-1.5" />
               Відправити на кухню
+            </Button>
+          )}
+          {/* Close table button - show when order can be closed */}
+          {order.status !== "pending" && order.status !== "cancelled" && tableDocumentId && (
+            <Button
+              variant="default"
+              size="sm"
+              className="bg-success hover:bg-success/90"
+              onClick={() => setShowCloseDialog(true)}
+            >
+              <DoorOpen className="h-4 w-4 mr-1.5" />
+              Закрити стіл
             </Button>
           )}
         </div>
@@ -257,7 +346,7 @@ function OrderDetailContent() {
                   />
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Users className="h-4 w-4" />
-                    {order.guestCount || 2} гостей
+                    {order.items.length} позицій
                   </div>
                 </div>
                 <CourseTimeline
@@ -275,6 +364,9 @@ function OrderDetailContent() {
           <OrderItemsList
             items={order.items.map((item) => ({
               ...item,
+              menuItemName: item.menuItem.name,
+              price: item.menuItem.price,
+              comment: item.comment ?? null,
               prepElapsedMs: item.prepStartAt
                 ? Date.now() - new Date(item.prepStartAt).getTime()
                 : 0,
@@ -327,8 +419,8 @@ function OrderDetailContent() {
                   <Users className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="font-medium">{order.waiterName}</p>
-                  <p className="text-xs text-muted-foreground">Офіціант</p>
+                  <p className="font-medium">Офіціант #{order.waiterId}</p>
+                  <p className="text-xs text-muted-foreground">Обслуговуючий персонал</p>
                 </div>
               </div>
             </CardContent>
@@ -385,10 +477,10 @@ function OrderDetailContent() {
       {/* Comment editor modal */}
       {editingItem && (
         <CommentEditor
-          value={editingItem.comment}
+          value={editingItem.comment ?? null}
           onChange={handleCommentSave}
-          menuItemName={editingItem.menuItemName}
-          tableAllergens={order.tableAllergens || []}
+          menuItemName={editingItem.menuItem.name}
+          tableAllergens={[]}
           isOpen={!!editingCommentItemId}
           onClose={() => setEditingCommentItemId(null)}
         />
@@ -401,7 +493,7 @@ function OrderDetailContent() {
             <CardHeader>
               <CardTitle>Змінити курс</CardTitle>
               <p className="text-sm text-muted-foreground">
-                {courseEditItem.menuItemName}
+                {courseEditItem.menuItem.name}
               </p>
             </CardHeader>
             <CardContent>
@@ -433,6 +525,128 @@ function OrderDetailContent() {
         onClose={() => setShowBillSplit(false)}
         onConfirm={handleBillSplitConfirm}
       />
+
+      {/* Close table dialog */}
+      <Dialog open={showCloseDialog} onOpenChange={(open) => {
+        setShowCloseDialog(open);
+        if (!open) {
+          setTipAmount("");
+          setCloseError(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DoorOpen className="h-5 w-5" />
+              Закрити стіл {order.tableNumber}
+            </DialogTitle>
+            <DialogDescription>
+              Оберіть спосіб оплати та підтвердіть закриття столу.
+              Всі замовлення будуть позначені як оплачені.
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Order summary */}
+          <div className="space-y-4">
+            <div className="p-4 bg-muted rounded-lg space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Позицій:</span>
+                <span>{order.items.length}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Підсумок:</span>
+                <span>{formatPrice(subtotal)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">ПДВ (20%):</span>
+                <span>{formatPrice(tax)}</span>
+              </div>
+              <div className="flex justify-between font-semibold pt-2 border-t">
+                <span>До сплати:</span>
+                <span className="text-primary">{formatPrice(total)}</span>
+              </div>
+            </div>
+
+            {/* Payment method selector */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Спосіб оплати:</p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={selectedPaymentMethod === "cash" ? "default" : "outline"}
+                  className="w-full justify-start"
+                  onClick={() => setSelectedPaymentMethod("cash")}
+                >
+                  <Banknote className="h-4 w-4 mr-2" />
+                  Готівка
+                </Button>
+                <Button
+                  variant={selectedPaymentMethod === "card" ? "default" : "outline"}
+                  className="w-full justify-start"
+                  onClick={() => setSelectedPaymentMethod("card")}
+                >
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Картка
+                </Button>
+              </div>
+            </div>
+
+            {/* Tip amount input */}
+            <div className="space-y-2">
+              <Label htmlFor="tipAmount" className="text-sm font-medium">
+                Чайові (₴)
+              </Label>
+              <Input
+                id="tipAmount"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="0"
+                value={tipAmount}
+                onChange={(e) => setTipAmount(e.target.value)}
+                className="text-lg"
+              />
+              {tipAmount && parseFloat(tipAmount) > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Загалом з чайовими: {formatPrice(total + parseFloat(tipAmount))}
+                </p>
+              )}
+            </div>
+
+            {closeError && (
+              <div className="p-3 bg-danger/10 text-danger text-sm rounded-lg">
+                {closeError}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowCloseDialog(false)}
+              disabled={closingTable}
+            >
+              Скасувати
+            </Button>
+            <Button
+              onClick={handleCloseTable}
+              disabled={closingTable}
+              className="bg-success hover:bg-success/90"
+            >
+              {closingTable ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Закриваю...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Підтвердити оплату
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

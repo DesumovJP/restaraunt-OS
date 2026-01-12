@@ -28,6 +28,8 @@ import { ChefLeftSidebar, type ChefView } from "@/features/kitchen/chef-left-sid
 import { ChefRecipesView } from "@/features/kitchen/chef-recipes-view";
 import { PlannedOrdersView } from "@/features/orders/planned-orders-view";
 import { DailiesView } from "@/features/dailies";
+import { WorkersChat } from "@/features/admin/workers-chat";
+import { WorkerProfileCard } from "@/features/profile";
 import { useStationEvents } from "@/hooks/use-websocket";
 import { useKitchenStore, onTaskStarted, type KitchenTask, type BackendKitchenTicket } from "@/stores/kitchen-store";
 import { useInventoryDeduction, storageHistoryApi } from "@/hooks/use-inventory-deduction";
@@ -39,18 +41,7 @@ import {
   useKitchenQueue,
 } from "@/hooks/use-graphql-kitchen";
 import type { StationType, StationSubTaskStatus } from "@/types/station";
-
-// Station configuration
-const STATION_CONFIGS: Array<{
-  type: StationType;
-  maxCapacity: number;
-}> = [
-  { type: "hot", maxCapacity: 8 },
-  { type: "cold", maxCapacity: 6 },
-  { type: "pastry", maxCapacity: 4 },
-  { type: "bar", maxCapacity: 8 },
-  { type: "pass", maxCapacity: 10 },
-];
+import { STATION_CAPACITY_CONFIGS } from "@/lib/config/station-config";
 
 export default function KitchenDisplayPage() {
   const [selectedStation, setSelectedStation] = React.useState<StationType | "all">("all");
@@ -125,7 +116,6 @@ export default function KitchenDisplayPage() {
   // Sync backend tickets to store on initial load and when data changes
   React.useEffect(() => {
     if (!loadingTickets && backendTickets && backendTickets.length > 0) {
-      console.log("[Kitchen] Syncing from backend:", backendTickets.length, "tickets");
       syncFromBackend(backendTickets as BackendKitchenTicket[]);
     }
   }, [backendTickets, loadingTickets, syncFromBackend]);
@@ -133,7 +123,6 @@ export default function KitchenDisplayPage() {
   // Periodic polling every 10 seconds to keep data fresh
   React.useEffect(() => {
     const pollInterval = setInterval(() => {
-      console.log("[Kitchen] Polling for updates...");
       refetchTickets({ requestPolicy: "network-only" });
     }, 10000);
 
@@ -149,6 +138,9 @@ export default function KitchenDisplayPage() {
   // Error state for showing notifications
   const [ticketError, setTicketError] = React.useState<string | null>(null);
 
+  // Loading state - track which specific ticket is being processed
+  const [loadingTaskId, setLoadingTaskId] = React.useState<string | null>(null);
+
   // User info - в реальному додатку це буде з контексту або API
   const currentUser = {
     name: "Олексій Петренко",
@@ -159,7 +151,7 @@ export default function KitchenDisplayPage() {
   // Build tasks by station from store - only after hydration to prevent mismatch
   const tasksByStation: Record<StationType, KitchenTask[]> = React.useMemo(() => {
     if (!isHydrated) {
-      return { hot: [], cold: [], pastry: [], bar: [], pass: [] };
+      return { hot: [], cold: [], pastry: [], bar: [], pass: [], grill: [], fry: [], saute: [], plating: [] };
     }
     return {
       hot: getTasksByStation("hot"),
@@ -167,12 +159,16 @@ export default function KitchenDisplayPage() {
       pastry: getTasksByStation("pastry"),
       bar: getTasksByStation("bar"),
       pass: allTasks.filter((t) => t.status === "completed"), // Pass shows completed items
+      grill: getTasksByStation("grill"),
+      fry: getTasksByStation("fry"),
+      saute: getTasksByStation("saute"),
+      plating: getTasksByStation("plating"),
     };
   }, [allTasks, getTasksByStation, isHydrated]);
 
   // Build stations data from tasks
   const stations = React.useMemo(() => {
-    return STATION_CONFIGS.map((config) => {
+    return STATION_CAPACITY_CONFIGS.map((config) => {
       const stationTasks = tasksByStation[config.type];
       const activeTasks = stationTasks.filter((t) => t.status === "in_progress");
       const overdueTasks = stationTasks.filter((t) => t.isOverdue);
@@ -211,12 +207,17 @@ export default function KitchenDisplayPage() {
 
   // Handlers
   const handleTaskStart = async (taskDocumentId: string) => {
-    setTicketError(null);
-    let backendTimestamps: { startedAt?: string } | undefined;
+    // Prevent double-clicks
+    if (loadingTaskId) return;
 
-    // Try backend mutation first (triggers inventory deduction)
+    setTicketError(null);
+    setLoadingTaskId(taskDocumentId);
+    console.log("[Kitchen] Starting task:", taskDocumentId);
+
+    // Call backend FIRST - backend is source of truth
     try {
       const result = await startTicket(taskDocumentId);
+      console.log("[Kitchen] Start result:", JSON.stringify(result, null, 2));
 
       if (result.success) {
         console.log("[Kitchen] Ticket started via backend:", {
@@ -225,10 +226,11 @@ export default function KitchenDisplayPage() {
           startedAt: result.ticket?.startedAt,
         });
 
-        // Use backend timestamp for multi-user sync
-        if (result.ticket?.startedAt) {
-          backendTimestamps = { startedAt: result.ticket.startedAt };
-        }
+        // Update local store only after backend confirms success
+        const backendTimestamps = result.ticket?.startedAt
+          ? { startedAt: result.ticket.startedAt }
+          : undefined;
+        updateTaskStatus(taskDocumentId, "in_progress", currentUser.name, backendTimestamps);
 
         // Log consumed batches for analytics
         if (result.consumedBatches && result.consumedBatches.length > 0) {
@@ -237,52 +239,56 @@ export default function KitchenDisplayPage() {
             totalCost: result.consumedBatches.reduce((sum, b) => sum + b.cost, 0),
           });
         }
-
-        // Note: Don't refetch immediately - let polling sync data
-        // Immediate refetch can return stale cached data and overwrite local state
-      } else if (result.error?.code === "INSUFFICIENT_STOCK") {
-        // Handle insufficient stock error
-        setTicketError(`Недостатньо інгредієнтів: ${result.error.message}`);
-        console.warn("[Kitchen] Insufficient stock:", result.error);
-        // Don't update local store if inventory check failed
-        return;
       } else {
-        // Other backend errors - log and continue with local
-        console.warn("[Kitchen] Backend mutation failed, using local:", result.error);
+        // Backend error - show to user, don't update local
+        console.error("[Kitchen] Start failed:", result.error);
+        const errorMsg = result.error?.message || "Помилка при запуску";
+        setTicketError(errorMsg);
       }
     } catch (err) {
-      // Backend unavailable - continue with local store
-      console.warn("[Kitchen] Backend unavailable, using local store:", err);
+      console.error("[Kitchen] Start error:", err);
+      setTicketError(`Помилка: ${err instanceof Error ? err.message : "Невідома помилка"}`);
+    } finally {
+      setLoadingTaskId(null);
     }
-
-    // Update local store for UI with backend timestamps for sync
-    updateTaskStatus(taskDocumentId, "in_progress", currentUser.name, backendTimestamps);
   };
 
   const handleTaskComplete = async (taskDocumentId: string) => {
-    setTicketError(null);
-    let backendTimestamps: { completedAt?: string } | undefined;
+    // Prevent double-clicks
+    if (loadingTaskId) return;
 
-    // Try backend mutation
+    setTicketError(null);
+    setLoadingTaskId(taskDocumentId);
+    console.log("[Kitchen] Completing task:", taskDocumentId);
+
+    // Call backend FIRST - backend is source of truth
     try {
       const result = await completeTicket(taskDocumentId);
-      console.log("[Kitchen] Ticket completed via backend:", {
-        ticketId: taskDocumentId,
-        completedAt: result.ticket?.completedAt,
-      });
+      console.log("[Kitchen] Complete result:", JSON.stringify(result, null, 2));
 
-      // Use backend timestamp for multi-user sync
-      if (result.ticket?.completedAt) {
-        backendTimestamps = { completedAt: result.ticket.completedAt };
+      if (result.success) {
+        console.log("[Kitchen] Ticket completed via backend:", {
+          ticketId: taskDocumentId,
+          completedAt: result.ticket?.completedAt,
+        });
+
+        // Update local store only after backend confirms success
+        const backendTimestamps = result.ticket?.completedAt
+          ? { completedAt: result.ticket.completedAt }
+          : undefined;
+        updateTaskStatus(taskDocumentId, "completed", undefined, backendTimestamps);
+      } else {
+        // Backend error - show to user, don't update local
+        console.error("[Kitchen] Complete failed:", result.error);
+        const errorMsg = result.error?.message || "Помилка при завершенні";
+        setTicketError(errorMsg);
       }
-
-      // Note: Don't refetch immediately - let polling sync data
     } catch (err) {
-      console.warn("[Kitchen] Backend complete failed, using local:", err);
+      console.error("[Kitchen] Complete error:", err);
+      setTicketError(`Помилка: ${err instanceof Error ? err.message : "Невідома помилка"}`);
+    } finally {
+      setLoadingTaskId(null);
     }
-
-    // Update local store with backend timestamps for sync
-    updateTaskStatus(taskDocumentId, "completed", undefined, backendTimestamps);
   };
 
   const handleTaskPass = async (taskDocumentId: string) => {
@@ -290,29 +296,59 @@ export default function KitchenDisplayPage() {
     await handleTaskComplete(taskDocumentId);
   };
 
-  const handleTaskReturn = (taskDocumentId: string) => {
+  const handleTaskReturn = async (taskDocumentId: string) => {
     // Return task from pass station back to in_progress (send back to chef)
-    // Note: This is a UI-only operation, no backend call needed
+    console.log("[Kitchen] Returning task to in_progress:", taskDocumentId);
+
+    // Update local store immediately for UI feedback
     updateTaskStatus(taskDocumentId, "in_progress");
+
+    // TODO: Add backend endpoint for "return" action to update Strapi
+    // For now, this is UI-only which may cause sync issues between workers
+    // The ticket will revert to "ready" on next poll from Strapi
   };
 
   const handleTaskServed = async (taskDocumentId: string) => {
-    // Remove from local store first for instant UI feedback
-    removeTask(taskDocumentId);
-    console.log("[Kitchen] Task served and removed:", taskDocumentId);
+    // Prevent double-clicks
+    if (loadingTaskId) return;
 
-    // Call backend to mark as served (updates statistics)
+    setLoadingTaskId(taskDocumentId);
+    console.log("[Kitchen] Serving task:", taskDocumentId);
+
+    // Call backend FIRST to mark as served - this updates Strapi
     try {
       const result = await serveTicket(taskDocumentId);
+      console.log("[Kitchen] Serve result:", JSON.stringify(result, null, 2));
+
       if (result.success) {
         console.log("[Kitchen] Task served via backend:", {
           ticketId: taskDocumentId,
           pickupWaitSeconds: (result as any).pickupWaitSeconds,
+          orderServed: (result as any).orderServed,
         });
-        // Note: Don't refetch immediately - let polling sync data
+
+        // Only remove from local store after backend confirms success
+        removeTask(taskDocumentId);
+        console.log("[Kitchen] Task removed from local store:", taskDocumentId);
+
+        // Force refetch after a delay to sync the new state
+        setTimeout(() => {
+          refetchTickets({ requestPolicy: "network-only" });
+        }, 500);
+      } else {
+        // Log full result for debugging
+        console.error("[Kitchen] Backend serve failed - full result:", result);
+        const errorMsg = result.error?.message
+          || result.error?.details?.error?.message
+          || (typeof result.error === 'string' ? result.error : null)
+          || 'Невідома помилка. Можливо тікет вже видано або має невірний статус.';
+        setTicketError(`Помилка при видачі: ${errorMsg}`);
       }
     } catch (err) {
-      console.warn("[Kitchen] Backend serve failed:", err);
+      console.error("[Kitchen] Backend serve error:", err);
+      setTicketError(`Помилка при видачі: ${err instanceof Error ? err.message : 'Невідома помилка'}`);
+    } finally {
+      setLoadingTaskId(null);
     }
   };
 
@@ -354,7 +390,7 @@ export default function KitchenDisplayPage() {
 
   const currentStation = selectedStation === "all" ? null : stations.find((s) => s.type === selectedStation);
 
-  // Navigation items for kitchen page
+  // Navigation items for kitchen page (chat and schedule are added by sidebar's additionalViewItems)
   const kitchenNavigationItems = [
     { id: 'stations' as ChefView, icon: Flame, label: 'Станції' },
     { id: 'calendar' as ChefView, icon: Calendar, label: 'Заплановані' },
@@ -384,6 +420,44 @@ export default function KitchenDisplayPage() {
           <PlannedOrdersView variant="kitchen" />
         ) : activeView === "dailies" ? (
           <DailiesView compact className="h-full" />
+        ) : activeView === "chat" ? (
+          <div className="flex-1 overflow-hidden p-4">
+            <WorkersChat />
+          </div>
+        ) : activeView === "schedule" ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+            <div className="inline-flex items-center gap-2 bg-amber-100 border border-amber-300 text-amber-800 px-4 py-2 rounded-full shadow-sm mb-4">
+              <span className="font-medium text-sm">В розробці</span>
+            </div>
+            <h2 className="text-xl font-semibold text-slate-900 mb-2">Графік змін</h2>
+            <p className="text-sm text-muted-foreground max-w-md">
+              Тут ви зможете переглядати графік змін команди. Функція редагування доступна лише адміністраторам.
+            </p>
+          </div>
+        ) : activeView === "profile" ? (
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="max-w-md mx-auto w-full">
+              <WorkerProfileCard
+                worker={{
+                  documentId: 'chef-1',
+                  name: 'Олександр Петренко',
+                  role: 'chef',
+                  department: 'kitchen',
+                  status: 'active',
+                  phone: '+380 67 987 6543',
+                  email: 'chef@restaurant.com',
+                  hoursThisWeek: 40,
+                  hoursThisMonth: 160,
+                  shiftsThisWeek: 5,
+                  shiftsThisMonth: 20,
+                  rating: 4.9,
+                  avgTicketTime: 8,
+                }}
+                variant="full"
+                onViewSchedule={() => setActiveView('schedule')}
+              />
+            </div>
+          </div>
         ) : (
           <>
             {/* Stations View - Header */}
@@ -630,6 +704,7 @@ export default function KitchenDisplayPage() {
                   {selectedStation === "all" ? (
                     <AllKitchenView
                       tasksByStation={tasksByStation}
+                      loadingTaskId={loadingTaskId}
                       onTaskStart={handleTaskStart}
                       onTaskComplete={handleTaskComplete}
                       onTaskPass={handleTaskPass}
@@ -644,6 +719,7 @@ export default function KitchenDisplayPage() {
                       currentLoad={currentStation?.currentLoad || 0}
                       maxCapacity={currentStation?.maxCapacity || 6}
                       isPaused={currentStation?.isPaused || false}
+                      loadingTaskId={loadingTaskId}
                       onTaskStart={handleTaskStart}
                       onTaskComplete={handleTaskComplete}
                       onTaskPass={handleTaskPass}

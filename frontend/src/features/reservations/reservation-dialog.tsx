@@ -42,7 +42,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useTableStore } from "@/stores/table-store";
-import { useCreateReservation, useReservationsForDate } from "@/hooks/use-graphql-scheduled-orders";
+import { useCreateReservation, useReservationsForDate, type Reservation } from "@/hooks/use-graphql-scheduled-orders";
 
 // ==========================================
 // TYPES
@@ -333,8 +333,8 @@ export function ReservationDialog({
     const slots: string[] = [];
 
     reservations
-      .filter((r) => r.tableId === tableId)
-      .forEach((r) => {
+      .filter((r: Reservation) => r.tableId === tableId)
+      .forEach((r: Reservation) => {
         const startTime = r.startTime.slice(0, 5);
         const endTime = r.endTime.slice(0, 5);
 

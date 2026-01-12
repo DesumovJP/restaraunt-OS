@@ -10,13 +10,15 @@ import {
   Grid3X3,
   ListTodo,
   CalendarCheck,
+  MessageSquare,
+  CalendarDays,
 } from 'lucide-react';
 import {
   Drawer,
   DrawerContent,
 } from '@/components/ui/drawer';
 
-export type WaiterNavView = 'tables' | 'menu' | 'calendar' | 'dailies';
+export type WaiterNavView = 'tables' | 'menu' | 'calendar' | 'dailies' | 'chat' | 'schedule' | 'profile';
 
 // Навігаційні елементи - сторінки
 const pageNavigationItems = [
@@ -28,6 +30,8 @@ const pageNavigationItems = [
 // Вкладки всередині сторінки меню
 const viewNavigationItems = [
   { id: 'dailies' as const, icon: ListTodo, label: 'Завдання' },
+  { id: 'chat' as const, icon: MessageSquare, label: 'Чат' },
+  { id: 'schedule' as const, icon: CalendarDays, label: 'Графік змін' },
 ];
 
 interface LeftSidebarProps {
@@ -75,7 +79,7 @@ export function LeftSidebar({
   };
 
   const handleNavigation = (path: string) => {
-    router.push(path);
+    router.push(path as never);
     // Close drawer on mobile after navigation
     if (isMobile) {
       handleOpenChange(false);
@@ -154,9 +158,18 @@ export function LeftSidebar({
       </div>
 
       {/* Profile - компактний */}
-      <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center" title={`${userName} • ${userRole}`}>
-        <User className="w-5 h-5 text-slate-600" />
-      </div>
+      <button
+        onClick={() => handleViewChange('profile')}
+        className={cn(
+          'w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-150',
+          activeView === 'profile'
+            ? 'bg-slate-900 text-white'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+        )}
+        title={`${userName} • ${userRole}`}
+      >
+        <User className="w-5 h-5" />
+      </button>
     </>
   );
 
@@ -168,8 +181,8 @@ export function LeftSidebar({
       </aside>
 
       {/* Mobile Drawer */}
-      <Drawer open={isMobileOpen} onOpenChange={handleOpenChange} side="left">
-        <DrawerContent className="flex flex-col h-full p-0 w-64">
+      <Drawer open={isMobileOpen} onOpenChange={handleOpenChange}>
+        <DrawerContent side="left" className="flex flex-col h-full p-0 w-64">
           <div className="flex flex-col px-4 py-4 h-full bg-white">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
@@ -241,15 +254,26 @@ export function LeftSidebar({
             </div>
 
             {/* Profile */}
-            <div className="flex items-center gap-3 px-4 py-3 bg-slate-50 rounded-lg">
-              <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-                <User className="w-5 h-5 text-slate-600" />
+            <button
+              onClick={() => handleViewChange('profile')}
+              className={cn(
+                "flex items-center gap-3 px-4 py-3 rounded-lg w-full transition-colors",
+                activeView === 'profile'
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-50 hover:bg-slate-100"
+              )}
+            >
+              <div className={cn(
+                "w-10 h-10 rounded-full flex items-center justify-center",
+                activeView === 'profile' ? "bg-white/20" : "bg-slate-200"
+              )}>
+                <User className="w-5 h-5" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-slate-900">{userName}</p>
-                <p className="text-xs text-slate-500">{userRole}</p>
+              <div className="text-left">
+                <p className={cn("text-sm font-medium", activeView === 'profile' ? "text-white" : "text-slate-900")}>{userName}</p>
+                <p className={cn("text-xs", activeView === 'profile' ? "text-white/70" : "text-slate-500")}>{userRole}</p>
               </div>
-            </div>
+            </button>
           </div>
         </DrawerContent>
       </Drawer>

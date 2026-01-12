@@ -8,7 +8,8 @@ const VALID_TRANSITIONS: Record<string, string[]> = {
   started: ['paused', 'ready', 'failed', 'cancelled'],
   paused: ['resumed', 'cancelled'],
   resumed: ['paused', 'ready', 'failed', 'cancelled'],
-  ready: [],
+  ready: ['served'],
+  served: [],
   failed: [],
   cancelled: []
 };
@@ -17,35 +18,42 @@ export default {
   async beforeUpdate(event) {
     const { data, where } = event.params;
 
-    // Only validate if status is being changed
-    if (!data.status) return;
+    // Store original for action logging
+    if (where?.documentId) {
+      try {
+        const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
+          documentId: where.documentId
+        });
+        event.state = { original: ticket };
 
-    const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
-      documentId: where.documentId
-    });
+        if (!ticket) return;
 
-    if (!ticket) return;
+        // Validate status transition if status is being changed
+        if (data.status) {
+          const allowed = VALID_TRANSITIONS[ticket.status] || [];
+          if (!allowed.includes(data.status)) {
+            throw new Error(
+              `Invalid ticket transition: ${ticket.status} -> ${data.status}. Allowed: ${allowed.join(', ') || 'none'}`
+            );
+          }
+        }
 
-    const allowed = VALID_TRANSITIONS[ticket.status] || [];
+        // Auto-set timestamps based on status
+        if (data.status === 'started' && !data.startedAt) {
+          data.startedAt = new Date().toISOString();
+        }
 
-    if (!allowed.includes(data.status)) {
-      throw new Error(
-        `Invalid ticket transition: ${ticket.status} -> ${data.status}. Allowed: ${allowed.join(', ') || 'none'}`
-      );
-    }
+        if (data.status === 'ready' && !data.completedAt) {
+          data.completedAt = new Date().toISOString();
 
-    // Auto-set timestamps based on status
-    if (data.status === 'started' && !data.startedAt) {
-      data.startedAt = new Date().toISOString();
-    }
-
-    if (data.status === 'ready' && !data.completedAt) {
-      data.completedAt = new Date().toISOString();
-
-      // Calculate elapsed seconds
-      if (ticket.startedAt) {
-        const startedAt = new Date(ticket.startedAt);
-        data.elapsedSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+          // Calculate elapsed seconds
+          if (ticket.startedAt) {
+            const startedAt = new Date(ticket.startedAt);
+            data.elapsedSeconds = Math.floor((Date.now() - startedAt.getTime()) / 1000);
+          }
+        }
+      } catch (e: any) {
+        if (e.message?.includes('Invalid ticket transition')) throw e;
       }
     }
   },
@@ -82,5 +90,12 @@ export default {
         }
       }
     });
-  }
+
+    // Note: Kitchen ticket creation is NOT logged to action history
+    // All ticket info is shown in the table session close log instead
+  },
+
+  // Note: Kitchen ticket updates are NOT logged to action history
+  // All timing/status info is captured in the table session close log
+  // Cancel/fail are logged by the controller with more context
 };

@@ -62,10 +62,10 @@ export const fontFamily = {
 // =============================================================================
 
 export const fontWeight = {
-  regular: 400,
-  medium: 500,
-  semibold: 600,
-  bold: 700,
+  regular: "400",
+  medium: "500",
+  semibold: "600",
+  bold: "700",
 } as const;
 
 // =============================================================================
@@ -112,12 +112,12 @@ export const fontSize = {
 // =============================================================================
 
 export const lineHeight = {
-  none: 1,
-  tight: 1.2,       // Заголовки
-  snug: 1.35,       // Підзаголовки
-  normal: 1.5,      // Основний текст
-  relaxed: 1.625,   // Довгі тексти
-  loose: 1.75,      // Максимальна читабельність
+  none: "1",
+  tight: "1.2",       // Заголовки
+  snug: "1.35",       // Підзаголовки
+  normal: "1.5",      // Основний текст
+  relaxed: "1.625",   // Довгі тексти
+  loose: "1.75",      // Максимальна читабельність
 } as const;
 
 // =============================================================================
@@ -140,7 +140,7 @@ export const letterSpacing = {
 export const textStyles = {
   // Display styles
   displayLarge: {
-    fontSize: fontSize.display["2xl"],
+    fontSize: fontSize.display.xl,
     fontWeight: fontWeight.bold,
     lineHeight: lineHeight.tight,
     letterSpacing: letterSpacing.tight,

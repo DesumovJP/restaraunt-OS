@@ -9,7 +9,7 @@
 'use client';
 
 import { useQuery } from 'urql';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTicketsStore } from '@/stores/tickets-store';
 import { GET_KITCHEN_QUEUE } from '@/graphql/queries';
 import { authFetch } from '@/stores/auth-store';
@@ -144,20 +144,46 @@ async function kitchenTicketAction(
         ticketId: documentId,
         action,
         status: response.status,
+        statusText: response.statusText,
         duration,
         error: errorData,
+        rawError: JSON.stringify(errorData),
       });
+      // Strapi error format can be: {error: {message, ...}} or {data: null, error: {...}}
+      const errorMessage =
+        errorData?.error?.message ||
+        errorData?.message ||
+        errorData?.data?.error?.message ||
+        `Failed to ${action} ticket (HTTP ${response.status})`;
       return {
         success: false,
         error: {
           code: `HTTP_${response.status}`,
-          message: errorData.error?.message || `Failed to ${action} ticket`,
+          message: errorMessage,
           details: errorData,
         },
       };
     }
 
     const data = await response.json();
+
+    // Check if backend returned success: false even with 200 status
+    if (data.success === false) {
+      logKitchen('error', `✗ ${action.toUpperCase()} returned success:false`, {
+        ticketId: documentId,
+        action,
+        duration,
+        data,
+      });
+      return {
+        success: false,
+        error: {
+          code: 'BACKEND_ERROR',
+          message: data.error?.message || data.message || `${action} failed`,
+          details: data,
+        },
+      };
+    }
 
     logKitchen('success', `✓ ${action.toUpperCase()} completed`, {
       ticketId: documentId,
@@ -166,6 +192,11 @@ async function kitchenTicketAction(
       newStatus: data.ticket?.status,
       consumedBatches: data.consumedBatches?.length,
     });
+
+    // Ensure success field is set (backend should return it, but just in case)
+    if (data.success === undefined) {
+      data.success = true;
+    }
 
     return data;
   } catch (err) {
@@ -204,6 +235,9 @@ export function useKitchenQueue(station?: string) {
   const setTickets = useTicketsStore((state) => state.setTickets);
   const storeTickets = useTicketsStore((state) => state.tickets);
 
+  // Track last logged count to avoid spam
+  const lastLoggedCount = useRef<number | null>(null);
+
   const [{ data, fetching, error }, reexecuteQuery] = useQuery({
     query: GET_KITCHEN_QUEUE,
     variables: {
@@ -224,8 +258,9 @@ export function useKitchenQueue(station?: string) {
     paused: tickets.filter(t => t.status === 'paused').length,
   };
 
-  // Log queue updates
-  if (data && !fetching) {
+  // Log queue updates only when count changes (not on every re-render)
+  if (data && !fetching && lastLoggedCount.current !== tickets.length) {
+    lastLoggedCount.current = tickets.length;
     logKitchen('info', `Queue loaded: ${tickets.length} tickets`, {
       station: station || 'all',
       counts,

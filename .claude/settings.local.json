@@ -48,7 +48,23 @@
       "Bash(npm run:*)",
       "Bash(npx eslint:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git stash:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(ls:*)",
+      "Bash(yarn develop)",
+      "Bash(find:*)",
+      "Bash(sort:*)",
+      "Bash(cd:*)",
+      "Bash(yarn build)",
+      "Bash(yarn tsc:*)",
+      "Bash(for file in src/hooks/use-storage.tsx src/hooks/use-order.tsx src/stores/orders-store.ts)",
+      "Bash(do)",
+      "Bash(if ! head -1 \"$file\")",
+      "Bash(yarn dev)",
+      "Bash(yarn dev:*)",
+      "Bash(yarn add:*)"
     ]
   }
 }

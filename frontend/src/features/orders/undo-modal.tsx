@@ -39,67 +39,67 @@ interface ReasonConfig {
 
 export const UNDO_REASONS: ReasonConfig[] = [
   {
-    code: "guest_changed_mind",
+    code: "CUSTOMER_REFUSED",
     label: "Гість передумав",
     description: "Гість змінив своє замовлення",
     icon: UserX,
     severity: "low",
     requiresApproval: false,
-    allowedFromStatuses: ["pending", "sent", "cooking"],
+    allowedFromStatuses: ["pending", "in_progress"],
   },
   {
-    code: "kitchen_issue",
+    code: "WRONG_PREPARATION",
     label: "Проблема на кухні",
     description: "Нестача інгредієнтів або обладнання",
     icon: ChefHat,
     severity: "medium",
     requiresApproval: false,
-    allowedFromStatuses: ["sent", "cooking", "plating"],
+    allowedFromStatuses: ["pending", "in_progress", "ready"],
   },
   {
-    code: "quality_issue",
+    code: "QUALITY_ISSUE",
     label: "Проблема якості",
     description: "Страва не відповідає стандартам",
     icon: AlertCircle,
     severity: "medium",
     requiresApproval: false,
-    allowedFromStatuses: ["plating", "ready", "served"],
+    allowedFromStatuses: ["ready", "served"],
   },
   {
-    code: "wrong_item",
+    code: "WRONG_ORDER",
     label: "Помилка в замовленні",
     description: "Замовлено не ту страву",
     icon: Bug,
     severity: "low",
     requiresApproval: false,
-    allowedFromStatuses: ["pending", "sent", "cooking", "plating"],
+    allowedFromStatuses: ["pending", "in_progress", "ready"],
   },
   {
-    code: "burned",
+    code: "TEMPERATURE_ISSUE",
     label: "Страва підгоріла",
     description: "Потрібно готувати заново",
     icon: Flame,
     severity: "high",
     requiresApproval: true,
-    allowedFromStatuses: ["cooking", "plating"],
+    allowedFromStatuses: ["in_progress", "ready"],
   },
   {
-    code: "allergy_detected",
+    code: "ALLERGY_CONCERN",
     label: "Виявлено алерген",
     description: "Конфлікт з алергіями гостя",
     icon: AlertTriangle,
     severity: "high",
     requiresApproval: true,
-    allowedFromStatuses: ["pending", "sent", "cooking", "plating", "ready"],
+    allowedFromStatuses: ["pending", "in_progress", "ready"],
   },
   {
-    code: "other",
+    code: "OTHER",
     label: "Інша причина",
     description: "Потрібно вказати причину",
     icon: HelpCircle,
     severity: "medium",
     requiresApproval: true,
-    allowedFromStatuses: ["pending", "sent", "cooking", "plating", "ready", "served"],
+    allowedFromStatuses: ["pending", "in_progress", "ready", "served"],
   },
 ];
 
@@ -151,7 +151,7 @@ export function UndoModal({
 
   const canSubmit =
     selectedReason !== null &&
-    (selectedReason !== "other" || customReason.trim().length > 0);
+    (selectedReason !== "OTHER" || customReason.trim().length > 0);
 
   const handleConfirm = async () => {
     if (!selectedReason || !canSubmit) return;
@@ -163,7 +163,7 @@ export function UndoModal({
 
     onConfirm(
       selectedReason,
-      selectedReason === "other" ? customReason.trim() : undefined
+      selectedReason === "OTHER" ? customReason.trim() : undefined
     );
 
     setIsSubmitting(false);
@@ -172,12 +172,12 @@ export function UndoModal({
 
   const getStatusLabel = (status: string): string => {
     const labels: Record<string, string> = {
+      queued: "В черзі",
       pending: "Очікує",
-      sent: "Відправлено",
-      cooking: "Готується",
-      plating: "Сервірується",
+      in_progress: "Готується",
       ready: "Готово",
       served: "Подано",
+      returned: "Повернено",
       cancelled: "Скасовано",
     };
     return labels[status] || status;
@@ -279,7 +279,7 @@ export function UndoModal({
           </div>
 
           {/* Custom reason input */}
-          {selectedReason === "other" && (
+          {selectedReason === "OTHER" && (
             <div>
               <label className="text-sm font-medium mb-1.5 block">
                 Вкажіть причину
@@ -415,12 +415,12 @@ export function UndoHistory({ history, className }: UndoHistoryProps) {
 
   const getStatusLabel = (status: string): string => {
     const labels: Record<string, string> = {
+      queued: "В черзі",
       pending: "Очікує",
-      sent: "Відправлено",
-      cooking: "Готується",
-      plating: "Сервірується",
+      in_progress: "Готується",
       ready: "Готово",
       served: "Подано",
+      returned: "Повернено",
       cancelled: "Скасовано",
     };
     return labels[status] || status;

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { useTableStore } from '@/stores/table-store';
 import { useSyncTables } from '@/hooks/use-sync-tables';
+import { useUpdateTableStatus } from '@/hooks/use-graphql-orders';
 import { TableGrid } from '@/features/tables/table-grid';
 import { LeftSidebar } from '@/features/pos/left-sidebar';
 import { Button } from '@/components/ui/button';
@@ -15,31 +16,49 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { RotateCcw, AlertTriangle, Menu, CalendarPlus } from 'lucide-react';
+import { RotateCcw, AlertTriangle, Menu, CalendarPlus, Loader2 } from 'lucide-react';
 import type { Table } from '@/types/table';
 import { ReservationDialog } from '@/features/reservations';
 
 export default function TableSelectionPage() {
   const router = useRouter();
   const selectTable = useTableStore((state) => state.selectTable);
-  const updateTableStatus = useTableStore((state) => state.updateTableStatus);
+  const updateLocalTableStatus = useTableStore((state) => state.updateTableStatus);
   const resetAllTables = useTableStore((state) => state.resetAllTables);
   const [showResetDialog, setShowResetDialog] = React.useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const [isReservationDialogOpen, setIsReservationDialogOpen] = React.useState(false);
+  const [isUpdating, setIsUpdating] = React.useState(false);
 
-  // Sync tables from Strapi to get documentId for GraphQL mutations
-  useSyncTables();
+  // Sync tables from Strapi - source of truth for all workers
+  const { refetch } = useSyncTables();
 
-  const handleTableSelect = (table: Table) => {
-    // Select the table
-    selectTable(table);
+  // GraphQL mutation to update table status in Strapi
+  const { updateTableStatus: updateStrapiTableStatus } = useUpdateTableStatus();
 
-    // Якщо стіл вільний, позначаємо його як зайнятий
-    // Якщо вже зайнятий або заброньований, просто вибираємо для обслуговування
-    if (table.status === 'free') {
-      updateTableStatus(table.id, 'occupied');
+  const handleTableSelect = async (table: Table) => {
+    // Якщо стіл вільний, спочатку оновлюємо статус в Strapi
+    if (table.status === 'free' && table.documentId) {
+      setIsUpdating(true);
+      try {
+        await updateStrapiTableStatus(table.documentId, 'occupied');
+        // Оновлюємо локальний стан після успіху в Strapi
+        updateLocalTableStatus(table.id, 'occupied');
+        console.log('[Tables] Table status updated in Strapi:', table.number);
+      } catch (error) {
+        console.error('[Tables] Failed to update table status:', error);
+        // Продовжуємо навіть при помилці, щоб не блокувати роботу
+      } finally {
+        setIsUpdating(false);
+      }
     }
+
+    // Select the table for current session
+    selectTable({
+      ...table,
+      status: table.status === 'free' ? 'occupied' : table.status,
+      occupiedAt: table.status === 'free' ? new Date() : table.occupiedAt,
+    });
 
     // Navigate to the POS screen
     router.push('/pos/waiter');

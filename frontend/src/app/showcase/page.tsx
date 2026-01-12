@@ -416,7 +416,7 @@ export default function ShowcasePage() {
                     <TableHead sortable>Назва</TableHead>
                     <TableHead>Категорія</TableHead>
                     <TableHead>Статус</TableHead>
-                    <TableHead align="right" mono>Ціна</TableHead>
+                    <TableHead align="right">Ціна</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
