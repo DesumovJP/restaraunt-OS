@@ -17,8 +17,36 @@ export default ({ env }) => ({
   'users-permissions': {
     config: {
       jwt: {
-        expiresIn: '7d', // Token valid for 7 days (default is 30 days but sometimes shorter)
+        expiresIn: '7d',
       },
     },
   },
+  // Upload provider configuration for DigitalOcean Spaces
+  // Only enabled when DO_SPACE_ACCESS_KEY is set
+  ...(env('DO_SPACE_ACCESS_KEY') && {
+    upload: {
+      config: {
+        provider: 'aws-s3',
+        providerOptions: {
+          s3Options: {
+            credentials: {
+              accessKeyId: env('DO_SPACE_ACCESS_KEY'),
+              secretAccessKey: env('DO_SPACE_SECRET_KEY'),
+            },
+            endpoint: `https://${env('DO_SPACE_ENDPOINT')}`,
+            region: env('DO_SPACE_REGION', 'nyc3'),
+            params: {
+              Bucket: env('DO_SPACE_BUCKET'),
+            },
+            forcePathStyle: false,
+          },
+        },
+        actionOptions: {
+          upload: {},
+          uploadStream: {},
+          delete: {},
+        },
+      },
+    },
+  }),
 });

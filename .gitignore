@@ -47,3 +47,13 @@ next-env.d.ts
 Thumbs.db
 .DS_Store
 nul
+
+# Strapi
+backend/.tmp/
+backend/.cache/
+backend/build/
+backend/dist/
+backend/exports/
+
+# Claude temp files
+tmpclaude-*
