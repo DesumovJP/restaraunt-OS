@@ -15,7 +15,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build Strapi
+# Build Strapi (compiles TypeScript to dist/)
 RUN npm run build
 
 # Production image
@@ -29,13 +29,13 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 strapi
 
-# Copy built assets from builder
+# Copy built application from builder
 COPY --from=builder --chown=strapi:nodejs /app/dist ./dist
 COPY --from=builder --chown=strapi:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=strapi:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=strapi:nodejs /app/public ./public
 COPY --from=builder --chown=strapi:nodejs /app/config ./config
-COPY --from=builder --chown=strapi:nodejs /app/src ./src
+COPY --from=builder --chown=strapi:nodejs /app/favicon.png ./favicon.png
 
 # Create uploads directory
 RUN mkdir -p /app/public/uploads && chown -R strapi:nodejs /app/public/uploads
@@ -43,9 +43,5 @@ RUN mkdir -p /app/public/uploads && chown -R strapi:nodejs /app/public/uploads
 USER strapi
 
 EXPOSE 1337
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:1337/_health || exit 1
 
 CMD ["npm", "start"]
