@@ -17,7 +17,6 @@ import {
   SupplyForm,
   WriteOffForm,
 } from "@/features/storage/components";
-import { CategoryFilterMinimal } from "@/features/storage/components/category-filter-minimal";
 import { ProductList, ProductListSkeleton } from "@/features/storage/views";
 import { MOCK_BATCHES } from "@/features/storage";
 
@@ -112,7 +111,7 @@ export default function StoragePage() {
         case "updated":
           comparison = new Date(b.lastUpdated || 0).getTime() - new Date(a.lastUpdated || 0).getTime();
           break;
-        case "status":
+        case "status": {
           const getStatusPriority = (p: ExtendedProduct) => {
             if ((p.currentStock || 0) === 0) return 0;
             if ((p.currentStock || 0) <= (p.minStock || 0)) return 1;
@@ -120,6 +119,7 @@ export default function StoragePage() {
           };
           comparison = getStatusPriority(a) - getStatusPriority(b);
           break;
+        }
       }
       return sortOrder === "asc" ? comparison : -comparison;
     });
@@ -309,26 +309,64 @@ export default function StoragePage() {
               />
             )}
 
-            {/* Toolbar: Search + Filters */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
+            {/* Toolbar: Search (compact) */}
+            <div className="flex items-center gap-3">
+              <div className="relative w-full max-w-xs">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Пошук по назві або SKU..."
+                  placeholder="Пошук..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-11 sm:h-10 rounded-xl text-sm"
+                  className="pl-9 h-10 rounded-xl text-sm"
                   aria-label="Пошук товарів"
                 />
               </div>
-              <CategoryFilterMinimal
-                selectedMainCategory={selectedMainCategory}
-                selectedSubCategory={selectedSubCategory}
-                onMainCategoryChange={setSelectedMainCategory}
-                onSubCategoryChange={setSelectedSubCategory}
-                categoryCounts={categoryCounts}
-              />
+            </div>
+
+            {/* Category chips - horizontal scrollable */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+              <button
+                onClick={() => {
+                  setSelectedMainCategory(null);
+                  setSelectedSubCategory(null);
+                }}
+                className={cn(
+                  "shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                  !selectedMainCategory
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                )}
+              >
+                Всі
+                <span className="ml-1.5 text-xs opacity-70">{products.length}</span>
+              </button>
+              {Object.entries(categoryCounts?.main || {}).map(([category, count]) => (
+                <button
+                  key={category}
+                  onClick={() => {
+                    setSelectedMainCategory(category as StorageMainCategory);
+                    setSelectedSubCategory(null);
+                  }}
+                  className={cn(
+                    "shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+                    selectedMainCategory === category
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  )}
+                >
+                  {category === "raw" && "Сировина"}
+                  {category === "prep" && "Заготовки"}
+                  {category === "dry" && "Бакалія"}
+                  {category === "seasonings" && "Приправи"}
+                  {category === "oils" && "Олії"}
+                  {category === "dairy" && "Молочні"}
+                  {category === "beverages" && "Напої"}
+                  {category === "frozen" && "Заморожені"}
+                  {category === "ready" && "Готові"}
+                  <span className="ml-1.5 text-xs opacity-70">{count}</span>
+                </button>
+              ))}
             </div>
 
             {/* Results info */}
@@ -392,7 +430,7 @@ export default function StoragePage() {
         )}
 
         {activeTab === "batches" && (
-          <div className="space-y-4">
+          <div className="space-y-6 max-w-5xl">
             {/* Development Banner */}
             <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
               <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
@@ -412,7 +450,7 @@ export default function StoragePage() {
                 <span>Сьогоднішні поставки</span>
                 <Badge variant="secondary" className="text-xs">{todaysBatchesCount}</Badge>
               </h3>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {MOCK_BATCHES
                   .filter((b) => {
                     const todayStart = new Date();
@@ -422,26 +460,26 @@ export default function StoragePage() {
                   .map((batch) => (
                     <div
                       key={batch.documentId}
-                      className="flex items-center gap-4 p-4 bg-white border rounded-xl hover:shadow-sm transition-shadow"
+                      className="flex items-start gap-3 p-4 bg-white border rounded-xl hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer"
                     >
                       <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
                         <Package className="h-5 w-5 text-emerald-600" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-slate-900 truncate">{batch.productName}</p>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
-                          <span>Партія: {batch.batchNumber}</span>
-                          <span>•</span>
-                          <span>Накладна: {batch.invoiceNumber}</span>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 mt-1">
+                          <span>#{batch.batchNumber}</span>
+                          <span className="text-slate-300">•</span>
+                          <span>{batch.invoiceNumber}</span>
                         </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-semibold text-slate-900 tabular-nums">
-                          {batch.grossIn} кг
-                        </p>
-                        <p className="text-xs text-slate-500 tabular-nums">
-                          {batch.totalCost.toLocaleString()} ₴
-                        </p>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                            {batch.grossIn} кг
+                          </span>
+                          <span className="text-sm text-slate-600 tabular-nums">
+                            {batch.totalCost.toLocaleString()} ₴
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -451,7 +489,7 @@ export default function StoragePage() {
             {/* Previous deliveries */}
             <div>
               <h3 className="text-sm font-semibold text-slate-700 mb-3">Попередні партії</h3>
-              <div className="space-y-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
                 {MOCK_BATCHES
                   .filter((b) => {
                     const todayStart = new Date();
@@ -461,28 +499,32 @@ export default function StoragePage() {
                   .map((batch) => (
                     <div
                       key={batch.documentId}
-                      className="flex items-center gap-4 p-4 bg-white border rounded-xl opacity-75 hover:opacity-100 transition-opacity"
+                      className="flex items-start gap-3 p-4 bg-white border rounded-xl hover:shadow-md transition-all cursor-pointer group"
                     >
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center flex-shrink-0 transition-colors">
                         <Package className="h-5 w-5 text-slate-500" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-slate-900 truncate">{batch.productName}</p>
-                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
-                          <span>{batch.batchNumber}</span>
-                          <span>•</span>
-                          <span className={batch.status === "in_use" ? "text-amber-600" : "text-emerald-600"}>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 mt-1">
+                          <span>#{batch.batchNumber}</span>
+                          <span className={cn(
+                            "px-1.5 py-0.5 rounded-full text-[10px] font-medium",
+                            batch.status === "in_use"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          )}>
                             {batch.status === "in_use" ? "В роботі" : "Доступно"}
                           </span>
                         </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="font-semibold text-slate-900 tabular-nums">
-                          {batch.netAvailable} кг
-                        </p>
-                        <p className="text-xs text-slate-400">
-                          з {batch.grossIn} кг
-                        </p>
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
+                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
+                            {batch.netAvailable} кг
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            з {batch.grossIn} кг
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -493,7 +535,7 @@ export default function StoragePage() {
             <Button
               variant="outline"
               onClick={handleCloseShift}
-              className="w-full h-12 rounded-xl"
+              className="w-full max-w-xs h-11 rounded-xl"
             >
               Експортувати звіт за зміну
             </Button>

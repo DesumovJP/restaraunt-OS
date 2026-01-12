@@ -59,6 +59,7 @@ export interface PlannedOrder {
 export interface PlannedOrdersViewProps {
   variant?: "kitchen" | "waiter";
   className?: string;
+  onOpenSidebar?: () => void;
 }
 
 export interface OrderCardProps {

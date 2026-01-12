@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   CalendarDays,
@@ -13,6 +14,13 @@ import {
   Search,
   Plus,
   PartyPopper,
+  ChevronLeft,
+  ChevronRight,
+  CalendarCheck,
+  Loader2,
+  Filter,
+  X,
+  Menu,
 } from "lucide-react";
 import { useScheduledOrdersStore } from "@/stores/scheduled-orders-store";
 import { useScheduledOrderMonitor } from "@/hooks/use-scheduled-order-monitor";
@@ -50,15 +58,20 @@ export type { PlannedOrder, PlannedOrderItem } from "./components/planned-orders
 export function PlannedOrdersView({
   variant = "kitchen",
   className,
+  onOpenSidebar,
 }: PlannedOrdersViewProps) {
   const [selectedDate, setSelectedDate] = React.useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState<string>("all");
   const [expandedOrders, setExpandedOrders] = React.useState<Set<string>>(new Set());
+  const [showFilters, setShowFilters] = React.useState(false);
 
   // Dialog state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = React.useState(false);
   const [viewOrderId, setViewOrderId] = React.useState<string | null>(null);
+
+  // Scroll ref for date selector
+  const dateScrollRef = React.useRef<HTMLDivElement>(null);
 
   // Local store (fallback)
   const localOrders = useScheduledOrdersStore((state) => state.orders);
@@ -68,11 +81,24 @@ export function PlannedOrdersView({
 
   // GraphQL hooks
   const dateStr = selectedDate.toISOString().split("T")[0];
-  const { orders: graphqlOrders, refetch } = useScheduledOrders({
+  const { orders: graphqlOrders, isLoading, refetch } = useScheduledOrders({
     fromDate: `${dateStr}T00:00:00.000Z`,
     toDate: `${dateStr}T23:59:59.999Z`,
   });
   const { updateStatus: updateGraphQLStatus } = useUpdateScheduledOrderStatus();
+
+  // Date navigation helpers
+  const goToToday = () => setSelectedDate(new Date());
+  const goToPrevDay = () => {
+    const prev = new Date(selectedDate);
+    prev.setDate(prev.getDate() - 1);
+    setSelectedDate(prev);
+  };
+  const goToNextDay = () => {
+    const next = new Date(selectedDate);
+    next.setDate(next.getDate() + 1);
+    setSelectedDate(next);
+  };
 
   // Merge GraphQL with local store
   const scheduledOrders = React.useMemo(() => {
@@ -206,39 +232,73 @@ export function PlannedOrdersView({
   const dayStats = React.useMemo(() => calculateDayStats(orders), [orders]);
   const isToday = isSameDay(selectedDate, new Date());
 
+  // Active filters count
+  const activeFiltersCount = (statusFilter !== "all" ? 1 : 0) + (searchQuery ? 1 : 0);
+
   return (
-    <div className={cn("flex flex-col h-full", className)}>
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-background border-b px-3 sm:px-4 py-3 safe-top">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <CalendarDays
-              className={cn(
-                "h-5 w-5",
-                variant === "kitchen" ? "text-orange-600" : "text-blue-600"
-              )}
-            />
-            <h1 className="text-lg sm:text-xl font-bold">Заплановані</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1 hidden sm:flex">
-              <Users className="h-3 w-3" />
-              {dayStats.totalGuests} гостей
-            </Badge>
-            {dayStats.events > 0 && (
-              <Badge variant="secondary" className="hidden sm:flex gap-1">
-                <PartyPopper className="h-3 w-3" />
-                {dayStats.events} подій
-              </Badge>
+    <div className={cn("flex flex-col h-full bg-muted/30", className)}>
+      {/* Header - Compact design */}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b safe-top">
+        {/* Top bar with title and actions */}
+        <div className="flex items-center justify-between px-3 sm:px-4 py-2.5">
+          <div className="flex items-center gap-2.5">
+            {/* Mobile menu button */}
+            {onOpenSidebar && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden h-9 w-9 shrink-0"
+                onClick={onOpenSidebar}
+                aria-label="Меню"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
             )}
-            <Badge variant="secondary" className="hidden sm:flex">
-              {dayStats.total} замовл.
+            <div className={cn(
+              "w-9 h-9 rounded-xl flex items-center justify-center",
+              variant === "kitchen"
+                ? "bg-gradient-to-br from-orange-500 to-amber-500"
+                : "bg-gradient-to-br from-blue-500 to-indigo-500"
+            )}>
+              <CalendarDays className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-base sm:text-lg font-bold leading-tight">Заплановані</h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                {dayStats.total} замовлень · {dayStats.totalGuests} гостей
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Mobile stats badge */}
+            <Badge variant="secondary" className="sm:hidden text-xs">
+              {dayStats.total}
             </Badge>
+
+            {/* Filter toggle button */}
+            <Button
+              variant={showFilters || activeFiltersCount > 0 ? "outline" : "ghost"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className="h-9 gap-1.5"
+            >
+              <Filter className="h-4 w-4" />
+              {activeFiltersCount > 0 && (
+                <Badge variant="default" className="h-5 w-5 p-0 text-xs">
+                  {activeFiltersCount}
+                </Badge>
+              )}
+            </Button>
+
             {variant === "waiter" && (
               <Button
                 size="sm"
                 onClick={() => setIsCreateDialogOpen(true)}
-                className="gap-1.5 bg-purple-600 hover:bg-purple-700"
+                className={cn(
+                  "h-9 gap-1.5",
+                  "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
+                )}
               >
                 <Plus className="h-4 w-4" />
                 <span className="hidden sm:inline">Створити</span>
@@ -247,19 +307,70 @@ export function PlannedOrdersView({
           </div>
         </div>
 
-        {/* Date selector */}
-        <div className="mb-3">
+        {/* Date navigation - Improved */}
+        <div className="px-3 sm:px-4 pb-2.5">
           <div className="flex items-center gap-2 mb-2">
-            <span className="text-sm font-medium text-muted-foreground">
-              {formatDateFull(selectedDate)}
-            </span>
-            {isToday && (
-              <Badge variant="success" className="text-xs">
-                Сьогодні
+            {/* Navigation buttons */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={goToPrevDay}
+              className="h-8 w-8 shrink-0"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            {/* Current date display */}
+            <button
+              onClick={goToToday}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all",
+                isToday
+                  ? "bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300"
+                  : "hover:bg-muted"
+              )}
+            >
+              <span className="font-semibold text-sm">
+                {formatDateFull(selectedDate)}
+              </span>
+              {isToday ? (
+                <Badge variant="success" className="text-[10px] px-1.5 h-5">
+                  Сьогодні
+                </Badge>
+              ) : (
+                <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={goToNextDay}
+              className="h-8 w-8 shrink-0"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+
+            {/* Desktop stats */}
+            <div className="hidden sm:flex items-center gap-2 ml-auto">
+              {dayStats.events > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  <PartyPopper className="h-3 w-3" />
+                  {dayStats.events} подій
+                </Badge>
+              )}
+              <Badge variant="outline" className="gap-1">
+                <Users className="h-3 w-3" />
+                {dayStats.totalGuests}
               </Badge>
-            )}
+            </div>
           </div>
-          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
+
+          {/* Date carousel */}
+          <div
+            ref={dateScrollRef}
+            className="flex gap-1 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0 scrollbar-hide scroll-smooth"
+          >
             {availableDates.slice(0, 14).map((date) => {
               const isSelected = isSameDay(date, selectedDate);
               const dateIsToday = isSameDay(date, new Date());
@@ -274,152 +385,219 @@ export function PlannedOrdersView({
                   key={date.toISOString()}
                   onClick={() => setSelectedDate(date)}
                   className={cn(
-                    "flex flex-col items-center min-w-[52px] px-2 py-1.5 rounded-lg transition-all relative",
+                    "flex flex-col items-center min-w-[48px] px-1.5 py-1.5 rounded-xl transition-all relative",
+                    "touch-manipulation active:scale-95",
                     isSelected
                       ? variant === "kitchen"
-                        ? "bg-orange-600 text-white"
-                        : "bg-blue-600 text-white"
-                      : "bg-muted hover:bg-muted/80",
-                    dateIsToday &&
-                      !isSelected &&
-                      "ring-2 ring-offset-1 ring-orange-300"
+                        ? "bg-gradient-to-b from-orange-500 to-orange-600 text-white shadow-md"
+                        : "bg-gradient-to-b from-blue-500 to-blue-600 text-white shadow-md"
+                      : "bg-background hover:bg-muted border border-transparent",
+                    dateIsToday && !isSelected && "border-orange-300 bg-orange-50 dark:bg-orange-950/30"
                   )}
                 >
-                  <span
-                    className={cn(
-                      "text-[10px] uppercase font-medium",
-                      isSelected ? "text-white/80" : "text-muted-foreground"
-                    )}
-                  >
+                  <span className={cn(
+                    "text-[10px] uppercase font-medium leading-none",
+                    isSelected ? "text-white/80" : dateIsToday ? "text-orange-600" : "text-muted-foreground"
+                  )}>
                     {date.toLocaleDateString("uk-UA", { weekday: "short" })}
                   </span>
-                  <span className="text-lg font-bold">{date.getDate()}</span>
-                  {hasEvents && (
-                    <div
-                      className={cn(
-                        "absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full",
+                  <span className={cn(
+                    "text-lg font-bold leading-tight",
+                    dateIsToday && !isSelected && "text-orange-600"
+                  )}>
+                    {date.getDate()}
+                  </span>
+                  {/* Order count / Event indicator */}
+                  <div className="flex items-center gap-0.5 h-4">
+                    {hasEvents && (
+                      <div className={cn(
+                        "w-1.5 h-1.5 rounded-full",
                         isSelected ? "bg-white" : "bg-pink-500"
-                      )}
-                    />
-                  )}
-                  {dateOrders.length > 0 && (
-                    <span
-                      className={cn(
-                        "text-[9px]",
-                        isSelected ? "text-white/70" : "text-muted-foreground"
-                      )}
-                    >
-                      {dateOrders.length}
-                    </span>
-                  )}
+                      )} />
+                    )}
+                    {dateOrders.length > 0 && (
+                      <span className={cn(
+                        "text-[9px] font-medium",
+                        isSelected ? "text-white/80" : "text-muted-foreground"
+                      )}>
+                        {dateOrders.length}
+                      </span>
+                    )}
+                  </div>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Пошук за столиком, подією, контактом..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 sm:h-10"
-          />
-        </div>
-
-        {/* Status filter */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
-          {[
-            { value: "all", label: "Всі", count: dayStats.total },
-            { value: "scheduled", label: "Заплановано", count: dayStats.scheduled },
-            { value: "activated", label: "На кухні", count: dayStats.activated },
-            { value: "completed", label: "Виконано", count: dayStats.completed },
-          ].map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setStatusFilter(option.value)}
-              className={cn(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap",
-                statusFilter === option.value
-                  ? variant === "kitchen"
-                    ? "bg-orange-600 text-white"
-                    : "bg-blue-600 text-white"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+        {/* Collapsible filters section */}
+        {showFilters && (
+          <div className="px-3 sm:px-4 pb-3 space-y-2.5 border-t bg-muted/50 animate-in slide-in-from-top-2 duration-200">
+            <div className="pt-2.5" />
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Пошук за столиком, подією, контактом..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-10 bg-background"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
               )}
-            >
-              {option.label}
-              <span
-                className={cn(
-                  "text-xs px-1.5 rounded-full",
-                  statusFilter === option.value ? "bg-white/20" : "bg-background"
-                )}
-              >
-                {option.count}
-              </span>
-            </button>
-          ))}
-        </div>
+            </div>
+
+            {/* Status filter */}
+            <div className="flex gap-1.5 flex-wrap">
+              {[
+                { value: "all", label: "Всі", count: dayStats.total },
+                { value: "scheduled", label: "Заплановано", count: dayStats.scheduled },
+                { value: "activated", label: "На кухні", count: dayStats.activated },
+                { value: "completed", label: "Виконано", count: dayStats.completed },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setStatusFilter(option.value)}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all",
+                    "touch-manipulation active:scale-95",
+                    statusFilter === option.value
+                      ? variant === "kitchen"
+                        ? "bg-orange-600 text-white shadow-sm"
+                        : "bg-blue-600 text-white shadow-sm"
+                      : "bg-background text-muted-foreground hover:text-foreground border"
+                  )}
+                >
+                  {option.label}
+                  <span className={cn(
+                    "text-xs px-1.5 py-0.5 rounded-md min-w-[20px] text-center",
+                    statusFilter === option.value
+                      ? "bg-white/20"
+                      : "bg-muted"
+                  )}>
+                    {option.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content */}
       <div className={cn(
         "flex-1 overflow-y-auto p-3 sm:p-4",
-        groupedOrders.length === 0 && "flex flex-col"
+        (isLoading || groupedOrders.length === 0) && "flex flex-col"
       )}>
-        {groupedOrders.length === 0 ? (
-          <EmptyState
-            type={searchQuery ? "search" : "orders"}
-            title={
-              searchQuery ? "Нічого не знайдено" : "Немає запланованих замовлень"
-            }
-            description={
-              searchQuery
-                ? "Спробуйте інший пошуковий запит"
-                : "Заплановані замовлення та події з'являться тут"
-            }
-          />
+        {/* Loading state */}
+        {isLoading ? (
+          <div className="space-y-4 animate-in fade-in duration-300">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-2 w-2 rounded-full" />
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-5 w-8 rounded-full" />
+                </div>
+                <Skeleton className="h-20 w-full rounded-xl" />
+                <Skeleton className="h-20 w-full rounded-xl" />
+              </div>
+            ))}
+          </div>
+        ) : groupedOrders.length === 0 ? (
+          <div className="flex-1 flex items-center justify-center">
+            <EmptyState
+              type={searchQuery ? "search" : "orders"}
+              title={
+                searchQuery ? "Нічого не знайдено" : "Немає запланованих замовлень"
+              }
+              description={
+                searchQuery
+                  ? "Спробуйте інший пошуковий запит"
+                  : "Заплановані замовлення та події з'являться тут"
+              }
+            />
+          </div>
         ) : (
-          <div className="space-y-6">
-            {groupedOrders.map((group) => (
-              <div key={group.label} className={cn(group.isPast && "opacity-60")}>
-                {/* Time group header */}
-                <div className="flex items-center gap-2 mb-3">
-                  <div
-                    className={cn(
+          <div className="space-y-5">
+            {groupedOrders.map((group, groupIndex) => (
+              <div
+                key={group.label}
+                className={cn(
+                  "animate-in fade-in slide-in-from-bottom-2 duration-300",
+                  group.isPast && "opacity-60"
+                )}
+                style={{ animationDelay: `${groupIndex * 50}ms` }}
+              >
+                {/* Time group header - Enhanced */}
+                <div className="flex items-center gap-2 mb-2.5 sticky top-0 bg-muted/30 backdrop-blur-sm py-1 -mx-1 px-1 rounded-lg z-10">
+                  <div className={cn(
+                    "flex items-center justify-center w-6 h-6 rounded-lg",
+                    group.label === "Потребує активації"
+                      ? "bg-red-100 dark:bg-red-950"
+                      : group.isPast
+                        ? "bg-gray-100 dark:bg-gray-900"
+                        : "bg-green-100 dark:bg-green-950"
+                  )}>
+                    <div className={cn(
                       "h-2 w-2 rounded-full",
                       group.label === "Потребує активації"
                         ? "bg-red-500 animate-pulse"
                         : group.isPast
                           ? "bg-gray-400"
                           : "bg-green-500"
-                    )}
-                  />
-                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                  <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-                    {group.label}
-                  </h2>
-                  <Badge variant="outline" className="h-5 text-xs">
+                    )} />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className={cn(
+                      "h-3.5 w-3.5",
+                      group.label === "Потребує активації"
+                        ? "text-red-500"
+                        : "text-muted-foreground"
+                    )} />
+                    <h2 className={cn(
+                      "text-sm font-semibold uppercase tracking-wide",
+                      group.label === "Потребує активації"
+                        ? "text-red-600"
+                        : "text-muted-foreground"
+                    )}>
+                      {group.label}
+                    </h2>
+                  </div>
+                  <Badge
+                    variant={group.label === "Потребує активації" ? "destructive" : "outline"}
+                    className="h-5 text-xs ml-auto"
+                  >
                     {group.orders.length}
                   </Badge>
                 </div>
 
                 {/* Orders */}
                 <div className="space-y-2">
-                  {group.orders.map((order) => (
-                    <OrderCard
+                  {group.orders.map((order, orderIndex) => (
+                    <div
                       key={order.id}
-                      order={order}
-                      variant={variant}
-                      isExpanded={expandedOrders.has(order.id)}
-                      onToggleExpand={() => toggleExpand(order.id)}
-                      onActivate={activateNow}
-                      onComplete={(id) => updateOrderStatus(id, "completed")}
-                      onViewDetails={setViewOrderId}
-                      onDelete={removeOrder}
-                    />
+                      className="animate-in fade-in slide-in-from-left-2 duration-200"
+                      style={{ animationDelay: `${orderIndex * 30}ms` }}
+                    >
+                      <OrderCard
+                        order={order}
+                        variant={variant}
+                        isExpanded={expandedOrders.has(order.id)}
+                        onToggleExpand={() => toggleExpand(order.id)}
+                        onActivate={activateNow}
+                        onComplete={(id) => updateOrderStatus(id, "completed")}
+                        onViewDetails={setViewOrderId}
+                        onDelete={removeOrder}
+                      />
+                    </div>
                   ))}
                 </div>
               </div>

@@ -18,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   Plus,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
@@ -32,6 +31,7 @@ import {
   ClipboardList,
   Users,
   User,
+  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -44,20 +44,26 @@ interface DailiesViewProps {
   hideDateNav?: boolean;
   /** Hide stats bar */
   hideStats?: boolean;
+  /** Callback to open sidebar */
+  onOpenSidebar?: () => void;
+  /** Color variant */
+  variant?: "default" | "kitchen" | "waiter";
 }
 
 // Priority colors for card pins
-const PRIORITY_COLORS = {
+const PRIORITY_COLORS: Record<string, string> = {
   urgent: "bg-red-500",
   high: "bg-amber-500",
   medium: "bg-blue-500",
+  normal: "bg-blue-500",
   low: "bg-slate-400",
 };
 
-const PRIORITY_BG = {
+const PRIORITY_BG: Record<string, string> = {
   urgent: "bg-gradient-to-br from-red-50 to-red-100/50 border-red-200 hover:border-red-300",
   high: "bg-gradient-to-br from-amber-50 to-amber-100/50 border-amber-200 hover:border-amber-300",
   medium: "bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200 hover:border-blue-300",
+  normal: "bg-gradient-to-br from-blue-50 to-blue-100/50 border-blue-200 hover:border-blue-300",
   low: "bg-gradient-to-br from-slate-50 to-slate-100/50 border-slate-200 hover:border-slate-300",
 };
 
@@ -153,10 +159,10 @@ function TaskCardBoard({ task, onStart, onComplete, onEdit, loading, showAssigne
               {formatTaskTime(task.estimatedMinutes)}
             </span>
           )}
-          {showAssignee && task.assigneeName && (
+          {showAssignee && task.assignee && (
             <span className="flex items-center gap-1">
               <User className="w-3.5 h-3.5" />
-              {task.assigneeName}
+              {task.assignee.firstName || task.assignee.username}
             </span>
           )}
         </div>
@@ -205,7 +211,27 @@ export function DailiesView({
   className,
   hideDateNav = false,
   hideStats = false,
+  onOpenSidebar,
+  variant = "default",
 }: DailiesViewProps) {
+  // Color scheme based on variant
+  const colorScheme = variant === "kitchen"
+    ? {
+        iconBg: "bg-gradient-to-br from-orange-500 to-amber-500",
+        activeTabBg: "bg-orange-100 text-orange-700",
+        pendingTabBg: "bg-amber-100 text-amber-700",
+      }
+    : variant === "waiter"
+    ? {
+        iconBg: "bg-gradient-to-br from-slate-700 to-slate-900",
+        activeTabBg: "bg-slate-100 text-slate-700",
+        pendingTabBg: "bg-amber-100 text-amber-700",
+      }
+    : {
+        iconBg: "bg-gradient-to-br from-indigo-500 to-purple-500",
+        activeTabBg: "bg-blue-100 text-blue-700",
+        pendingTabBg: "bg-amber-100 text-amber-700",
+      };
   const user = useAuthStore((state) => state.user);
   const { stats, selectedDate, setSelectedDate } = useDailyTasksStore();
 
@@ -214,8 +240,8 @@ export function DailiesView({
   const { tasks: teamTasks, loading: loadingTeamTasks, refetch: refetchTeamTasks } = useTeamTasks();
 
   // Mutations
-  const { startTask, loading: startingTask } = useStartTask();
-  const { completeTask, loading: completingTask } = useCompleteTask();
+  const { startTask } = useStartTask();
+  const { completeTask } = useCompleteTask();
   const { createTask, loading: creating } = useCreateTask();
   const { updateTask, loading: updating } = useUpdateTask();
 
@@ -328,28 +354,98 @@ export function DailiesView({
 
   return (
     <div className={cn("flex flex-col h-full bg-slate-50", className)}>
-      {/* Toolbar */}
-      <div className={cn(
-        "flex items-center justify-between gap-4 px-4 py-3 border-b bg-white shadow-sm",
-        compact && "py-2"
-      )}>
-        <div className="flex items-center gap-3">
-          {/* View toggle */}
-          {canViewTeam && (
-            <div className="flex items-center rounded-lg border bg-slate-100 p-1">
+      {/* Header */}
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b shadow-sm">
+        {/* Row 1: Logo, Title, Actions */}
+        <div className={cn(
+          "flex items-center justify-between gap-2 px-3 sm:px-4 py-2",
+          compact && "py-1.5"
+        )}>
+          <div className="flex items-center gap-3">
+            {/* Mobile menu button */}
+            {onOpenSidebar && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden h-9 w-9"
+                onClick={onOpenSidebar}
+                aria-label="Меню"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
+            <div className="flex items-center gap-3">
+              <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center", colorScheme.iconBg)}>
+                <ClipboardList className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h1 className="text-base sm:text-lg font-bold leading-tight">Завдання</h1>
+                {!hideDateNav && (
+                  <p className="text-xs text-muted-foreground">{formatDisplayDate(selectedDate)}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Date navigation */}
+            {!hideDateNav && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => changeDate(-1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => changeDate(1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+
+            {/* Refresh */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 sm:h-9 sm:w-9"
+              onClick={handleRefresh}
+              disabled={isLoading}
+            >
+              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            </Button>
+
+            {/* New task */}
+            <Button size="sm" onClick={() => setFormOpen(true)} className="gap-1 h-8 sm:h-9 px-2 sm:px-3">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Нове</span>
+            </Button>
+          </div>
+        </div>
+
+        {/* Row 2: View toggle (only if team view available) */}
+        {canViewTeam && (
+          <div className="flex items-center gap-2 px-3 sm:px-4 pb-2">
+            <div className="flex items-center rounded-lg border bg-slate-100 p-0.5">
               <button
                 onClick={() => setViewMode("my")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+                  "flex items-center gap-1 px-2 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all",
                   viewMode === "my"
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
                 )}
               >
-                <User className="h-4 w-4" />
-                Мої
+                <User className="h-3.5 w-3.5" />
+                <span>Мої</span>
                 {pendingCount > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs">
+                  <Badge variant="secondary" className="h-4 min-w-[16px] px-1 text-[10px]">
                     {pendingCount}
                   </Badge>
                 )}
@@ -357,84 +453,29 @@ export function DailiesView({
               <button
                 onClick={() => setViewMode("team")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
+                  "flex items-center gap-1 px-2 py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all",
                   viewMode === "team"
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-600 hover:text-slate-900"
                 )}
               >
-                <Users className="h-4 w-4" />
-                Команда
+                <Users className="h-3.5 w-3.5" />
+                <span>Команда</span>
               </button>
             </div>
-          )}
 
-          {/* Date navigation */}
-          {!hideDateNav && (
-            <div className="flex items-center gap-1 rounded-lg border bg-white p-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => changeDate(-1)}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-
-              <button
-                className="flex items-center gap-2 px-2 py-1 text-sm font-medium hover:bg-slate-100 rounded transition-colors"
-                onClick={() => setSelectedDate(today)}
-              >
-                <Calendar className="h-4 w-4 text-slate-500" />
-                <span>{formatDisplayDate(selectedDate)}</span>
-              </button>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => changeDate(1)}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Stats */}
-          {!hideStats && (
-            <div className="hidden md:flex items-center gap-3 text-sm mr-2">
-              <span className="text-slate-500">{stats.total} всього</span>
-              <span className="text-emerald-600 font-medium">{stats.completed} виконано</span>
-              {stats.overdue > 0 && (
-                <span className="text-red-600 font-medium">{stats.overdue} прострочено</span>
-              )}
-            </div>
-          )}
-
-          {/* Refresh */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={handleRefresh}
-            disabled={isLoading}
-          >
-            <RefreshCw
-              className={cn(
-                "h-4 w-4",
-                isLoading && "animate-spin"
-              )}
-            />
-          </Button>
-
-          {/* New task */}
-          <Button size={compact ? "sm" : "default"} onClick={() => setFormOpen(true)} className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Нове завдання</span>
-          </Button>
-        </div>
+            {/* Stats - desktop only */}
+            {!hideStats && (
+              <div className="hidden md:flex items-center gap-3 text-sm ml-auto">
+                <span className="text-slate-500">{stats.total} всього</span>
+                <span className="text-emerald-600 font-medium">{stats.completed} виконано</span>
+                {stats.overdue > 0 && (
+                  <span className="text-red-600 font-medium">{stats.overdue} прострочено</span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tab Switcher */}
@@ -497,17 +538,17 @@ export function DailiesView({
           </div>
         ) : !hasAnyTasks ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-20 h-20 rounded-2xl bg-slate-100 flex items-center justify-center mb-6">
-              <ClipboardList className="h-10 w-10 text-slate-400" />
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+              <ClipboardList className="h-8 w-8 text-slate-400" />
             </div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-1">
               {isToday ? "Немає завдань на сьогодні" : `Немає завдань на ${formatDisplayDate(selectedDate)}`}
             </h3>
-            <p className="text-slate-500 text-sm max-w-sm mb-6">
+            <p className="text-sm text-slate-500 text-center max-w-xs mb-4">
               Створіть завдання, щоб організувати свій робочий день
             </p>
-            <Button onClick={() => setFormOpen(true)} size="lg" className="gap-2">
-              <Plus className="h-5 w-5" />
+            <Button onClick={() => setFormOpen(true)} className="gap-2 rounded-xl shadow-sm">
+              <Plus className="h-4 w-4" />
               Створити завдання
             </Button>
           </div>
@@ -639,10 +680,10 @@ export function DailiesView({
                             {formatTaskTime(task.estimatedMinutes)}
                           </span>
                         )}
-                        {viewMode === "team" && task.assigneeName && (
+                        {viewMode === "team" && task.assignee && (
                           <span className="flex items-center gap-1">
                             <User className="w-3 h-3" />
-                            {task.assigneeName}
+                            {task.assignee.firstName || task.assignee.username}
                           </span>
                         )}
                       </div>

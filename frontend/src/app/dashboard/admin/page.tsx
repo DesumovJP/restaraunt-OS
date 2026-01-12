@@ -6,6 +6,8 @@ import { KPIGrid } from "@/features/kpi/kpi-card";
 import { AlertsList } from "@/features/alerts/alerts-list";
 import { ActionLogView } from "@/features/kpi/action-log";
 import { WorkersChat } from "@/features/admin/workers-chat";
+import { WorkerProfileCard } from "@/features/profile";
+import { useAuthStore } from "@/stores/auth-store";
 import { AdminLeftSidebar, type AdminView } from "@/features/admin/admin-left-sidebar";
 import { Button } from "@/components/ui/button";
 import { SkeletonKPI } from "@/components/ui/skeleton";
@@ -149,6 +151,7 @@ export default function AdminDashboardPage() {
     analytics: 'Аналітика',
     workers: 'Робітники',
     chat: 'Чат',
+    profile: 'Профіль',
   };
 
   return (
@@ -243,13 +246,38 @@ export default function AdminDashboardPage() {
           {activeView === 'chat' && (
             <WorkersChat />
           )}
+          {activeView === 'profile' && (
+            <div className="max-w-md mx-auto">
+              <WorkerProfileCard
+                worker={{
+                  documentId: 'admin-1',
+                  name: 'Адміністратор',
+                  role: 'admin',
+                  department: 'management',
+                  status: 'active',
+                  phone: '+380 67 123 4567',
+                  email: 'admin@restaurant.com',
+                  hoursThisWeek: 40,
+                  hoursThisMonth: 160,
+                  shiftsThisWeek: 5,
+                  shiftsThisMonth: 20,
+                  rating: 5.0,
+                }}
+                variant="full"
+                onLogout={() => {
+                  useAuthStore.getState().logout();
+                  window.location.href = '/';
+                }}
+              />
+            </div>
+          )}
         </main>
       </div>
     </div>
   );
 }
 
-// Overview View - KPIs, Alerts, Recent Activity
+// Overview View - KPIs, Alerts, Recent Activity (Production Level UI/UX)
 interface OverviewViewProps {
   kpis: KPI[];
   alerts: Alert[];
@@ -269,77 +297,142 @@ function OverviewView({
   onKPIClick,
   onMarkAlertRead,
 }: OverviewViewProps) {
+  // Calculate summary from KPIs
+  const todayRevenue = kpis.find(k => k.id === 'revenue')?.value || 0;
+  const ordersCount = kpis.find(k => k.id === 'orders')?.value || 0;
+  const avgCheck = kpis.find(k => k.id === 'avg-check')?.value || 0;
+  const unreadAlerts = alerts.filter(a => !a.read).length;
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* KPI Section */}
-      <section aria-labelledby="kpi-heading">
-        <h2 id="kpi-heading" className="typo-h4 mb-2 sm:mb-3">
-          Ключові показники
-        </h2>
-        {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <SkeletonKPI key={i} />
-            ))}
+    <div className="space-y-4">
+      {/* Compact Metrics Bar */}
+      <section className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 sm:p-4 bg-slate-50 rounded-xl border">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border">
+          <TrendingUp className="w-4 h-4 text-blue-500" />
+          <span className="text-sm text-muted-foreground">Виручка</span>
+          <span className="font-semibold tabular-nums">
+            {typeof todayRevenue === 'number' ? todayRevenue.toLocaleString('uk-UA') : todayRevenue} ₴
+          </span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          <span className="text-sm text-muted-foreground">Замовлень</span>
+          <span className="font-semibold tabular-nums">
+            {typeof ordersCount === 'number' ? ordersCount.toLocaleString('uk-UA') : ordersCount}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border">
+          <BarChartIcon className="w-4 h-4 text-violet-500" />
+          <span className="text-sm text-muted-foreground">Сер. чек</span>
+          <span className="font-semibold tabular-nums">
+            {typeof avgCheck === 'number' ? avgCheck.toLocaleString('uk-UA') : avgCheck} ₴
+          </span>
+        </div>
+        {unreadAlerts > 0 && (
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-200">
+            <Clock className="w-4 h-4 text-amber-500" />
+            <span className="text-sm text-amber-700 font-medium">{unreadAlerts} сповіщень</span>
           </div>
-        ) : (
-          <KPIGrid kpis={kpis} onKPIClick={onKPIClick} />
         )}
       </section>
 
-      {/* Alerts and Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Alerts */}
-        <section aria-labelledby="alerts-heading">
-          <AlertsList
-            alerts={alerts}
-            onMarkRead={onMarkAlertRead}
-            onAlertClick={(alert) => {
-              if (alert.actionUrl) {
-                console.log("Navigate to:", alert.actionUrl);
-              }
-            }}
-          />
-        </section>
-
-        {/* Activity Log - limit to recent 10 */}
-        <section aria-labelledby="activity-heading">
-          <ActionLogView logs={actionLogs.slice(0, 10)} isLoading={actionsFetching} />
-        </section>
-      </div>
-
-      {/* Quick Stats */}
-      <section aria-labelledby="stats-heading">
-        <h2 id="stats-heading" className="typo-h4 mb-2 sm:mb-3">
-          Статистика за сьогодні
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-          <QuickStatCard
-            title="Середній час готування"
-            value="12.5 хв"
-            subtext="Норма: 15 хв"
-            status="good"
-          />
-          <QuickStatCard
-            title="Завантаженість кухні"
-            value="67%"
-            subtext="8 активних тікетів"
-            status="normal"
-          />
-          <QuickStatCard
-            title="Відхилень у замовленнях"
-            value="2"
-            subtext="0.4% від загальної кількості"
-            status="good"
-          />
-          <QuickStatCard
-            title="Товарів потребують поповнення"
-            value="3"
-            subtext="Потребують уваги"
-            status="warning"
-          />
-        </div>
+      {/* Alerts */}
+      <section aria-labelledby="alerts-heading">
+        <AlertsList
+          alerts={alerts}
+          onMarkRead={onMarkAlertRead}
+          onAlertClick={(alert) => {
+            if (alert.actionUrl) {
+              console.log("Navigate to:", alert.actionUrl);
+            }
+          }}
+        />
       </section>
+    </div>
+  );
+}
+
+// Enhanced Quick Stat Card with progress
+interface QuickStatCardEnhancedProps {
+  title: string;
+  value: string;
+  unit: string;
+  target: number;
+  current: number;
+  status: "good" | "normal" | "warning" | "danger";
+  icon: React.ReactNode;
+  description: string;
+}
+
+function QuickStatCardEnhanced({
+  title,
+  value,
+  unit,
+  target,
+  current,
+  status,
+  icon,
+  description,
+}: QuickStatCardEnhancedProps) {
+  const statusConfig = {
+    good: {
+      bg: "bg-emerald-50",
+      border: "border-emerald-100",
+      icon: "bg-emerald-100 text-emerald-600",
+      progress: "bg-emerald-500",
+      text: "text-emerald-700",
+    },
+    normal: {
+      bg: "bg-blue-50",
+      border: "border-blue-100",
+      icon: "bg-blue-100 text-blue-600",
+      progress: "bg-blue-500",
+      text: "text-blue-700",
+    },
+    warning: {
+      bg: "bg-amber-50",
+      border: "border-amber-100",
+      icon: "bg-amber-100 text-amber-600",
+      progress: "bg-amber-500",
+      text: "text-amber-700",
+    },
+    danger: {
+      bg: "bg-red-50",
+      border: "border-red-100",
+      icon: "bg-red-100 text-red-600",
+      progress: "bg-red-500",
+      text: "text-red-700",
+    },
+  };
+
+  const config = statusConfig[status];
+  const progress = target > 0 ? Math.min((current / target) * 100, 100) : 0;
+
+  return (
+    <div className={`rounded-xl border ${config.border} ${config.bg} p-4 transition-all hover:shadow-md`}>
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-9 h-9 rounded-lg ${config.icon} flex items-center justify-center`}>
+          {icon}
+        </div>
+        <span className={`text-xs font-medium ${config.text} px-2 py-0.5 rounded-full ${config.bg} border ${config.border}`}>
+          {status === "good" ? "Добре" : status === "normal" ? "Норма" : status === "warning" ? "Увага" : "Критично"}
+        </span>
+      </div>
+      <p className="text-xs text-muted-foreground mb-1">{title}</p>
+      <p className="text-2xl font-bold text-slate-900 tabular-nums">
+        {value}<span className="text-base font-normal text-muted-foreground ml-0.5">{unit}</span>
+      </p>
+      {target > 0 && (
+        <div className="mt-3">
+          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full ${config.progress} rounded-full transition-all duration-500`}
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground mt-2">{description}</p>
     </div>
   );
 }
@@ -523,8 +616,8 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
                   <XAxis dataKey="hour" tick={{ fontSize: 10 }} stroke="#9ca3af" />
                   <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
                   <Tooltip
-                    formatter={(value: number, name: string) => [
-                      name === "orders" ? value : `${value.toLocaleString()} ₴`,
+                    formatter={(value, name) => [
+                      name === "orders" ? value : `${Number(value).toLocaleString()} ₴`,
                       name === "orders" ? "Замовлень" : "Виручка"
                     ]}
                     contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
@@ -595,7 +688,7 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => [`${value}%`, "Частка"]}
+                    formatter={(value) => [`${value}%`, "Частка"]}
                     contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
                   />
                 </PieChart>
@@ -673,8 +766,8 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
                   <XAxis type="number" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                   <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} stroke="#9ca3af" width={60} />
                   <Tooltip
-                    formatter={(value: number, name: string) => [
-                      name === "orders" ? value : `${value.toLocaleString()} ₴`,
+                    formatter={(value, name) => [
+                      name === "orders" ? value : `${Number(value).toLocaleString()} ₴`,
                       name === "orders" ? "Замовлень" : "Виручка"
                     ]}
                     contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
@@ -701,8 +794,8 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
                 <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
                 <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                 <Tooltip
-                  formatter={(value: number, name: string) => [
-                    name === "revenue" ? `${value.toLocaleString()} ₴` : value,
+                  formatter={(value, name) => [
+                    name === "revenue" ? `${Number(value).toLocaleString()} ₴` : value,
                     name === "revenue" ? "Виручка" : "Замовлень"
                   ]}
                   contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}

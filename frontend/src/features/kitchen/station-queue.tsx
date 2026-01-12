@@ -419,7 +419,7 @@ export function StationOverview({
 
       {/* Individual stations - Horizontal scroll on mobile, grid on desktop */}
       <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-1 scrollbar-hide">
-        <div className="flex sm:grid sm:grid-cols-3 lg:grid-cols-5 gap-2 min-w-max sm:min-w-0">
+        <div className="flex sm:grid sm:grid-cols-3 gap-2 min-w-max sm:min-w-0">
           {stations.map((station) => {
             const config = STATION_DISPLAY_CONFIGS[station.type];
             const Icon = config.icon;

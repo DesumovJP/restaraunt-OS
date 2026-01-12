@@ -44,8 +44,18 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%]",
+        // Base positioning - centered with safe margins on mobile
+        "fixed z-50 grid w-[calc(100%-2rem)] sm:w-full",
+        "left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]",
+        // Default max-width with responsive sizing
+        "max-w-lg",
+        // Max height to prevent overflow on small screens
+        "max-h-[calc(100vh-2rem)] sm:max-h-[90vh]",
+        // Visual styling
         "rounded-2xl bg-white border border-slate-200/80 shadow-2xl",
+        // Overflow handling
+        "overflow-hidden",
+        // Animations
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
@@ -58,7 +68,7 @@ const DialogContent = React.forwardRef<
     >
       {children}
       {!hideCloseButton && (
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-xl p-2 opacity-70 transition-all duration-200 hover:opacity-100 hover:bg-slate-100 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:pointer-events-none z-10">
+        <DialogPrimitive.Close className="absolute right-3 top-3 sm:right-4 sm:top-4 rounded-xl p-2 opacity-70 transition-all duration-200 hover:opacity-100 hover:bg-slate-100 active:scale-95 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 disabled:pointer-events-none z-10">
           <X className="h-5 w-5 text-slate-500" />
           <span className="sr-only">Закрити</span>
         </DialogPrimitive.Close>
@@ -75,6 +85,8 @@ const DialogHeader = ({
   <div
     className={cn(
       "flex flex-col space-y-1.5 text-center sm:text-left",
+      "px-4 pt-4 sm:px-6 sm:pt-6",
+      "pr-12 sm:pr-14", // Space for close button
       className
     )}
     {...props}
@@ -89,6 +101,8 @@ const DialogFooter = ({
   <div
     className={cn(
       "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+      "px-4 pb-4 pt-4 sm:px-6 sm:pb-6",
+      "border-t border-slate-100 bg-slate-50/50",
       className
     )}
     {...props}
@@ -103,7 +117,7 @@ const DialogTitle = React.forwardRef<
   <DialogPrimitive.Title
     ref={ref}
     className={cn(
-      "text-2xl font-semibold leading-tight text-navy-950",
+      "text-lg sm:text-xl font-semibold leading-tight text-slate-900",
       className
     )}
     {...props}
@@ -117,11 +131,30 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-base text-slate-600", className)}
+    className={cn("text-sm sm:text-base text-slate-600", className)}
     {...props}
   />
 ));
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
+
+/**
+ * DialogBody - Container for dialog content with consistent padding and scroll handling
+ */
+const DialogBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "px-4 py-4 sm:px-6 sm:py-5",
+      "overflow-y-auto",
+      "flex-1", // Takes remaining space in flex container
+      className
+    )}
+    {...props}
+  />
+);
+DialogBody.displayName = "DialogBody";
 
 export {
   Dialog,
@@ -131,6 +164,7 @@ export {
   DialogTrigger,
   DialogContent,
   DialogHeader,
+  DialogBody,
   DialogFooter,
   DialogTitle,
   DialogDescription,

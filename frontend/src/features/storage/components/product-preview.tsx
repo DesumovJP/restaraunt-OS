@@ -589,7 +589,7 @@ export function ProductPreview({
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={(o) => !o && onClose()}>
-        <DrawerContent side="bottom" className="h-[85vh] rounded-t-[20px] p-0">
+        <DrawerContent side="bottom" className="max-h-[90vh] rounded-t-[20px] p-0">
           {/* Drag handle */}
           <div className="flex justify-center pt-3 pb-1">
             <div className="w-10 h-1 bg-slate-300 rounded-full" />

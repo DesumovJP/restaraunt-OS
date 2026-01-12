@@ -288,7 +288,7 @@ export function CommentEditor({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
         <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />

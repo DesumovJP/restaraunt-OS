@@ -69,11 +69,12 @@ function formatKPIValue(value: number, format: KPIData["format"], prefix?: strin
     case "percent":
       formatted = `${value.toFixed(1)}%`;
       break;
-    case "duration":
+    case "duration": {
       const mins = Math.floor(value);
       const secs = Math.round((value - mins) * 60);
       formatted = `${mins}:${secs.toString().padStart(2, "0")}`;
       break;
+    }
     default:
       formatted = value.toLocaleString("uk-UA");
   }

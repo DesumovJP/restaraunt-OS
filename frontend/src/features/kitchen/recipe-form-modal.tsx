@@ -311,11 +311,11 @@ export function RecipeFormModal({
         </DialogHeader>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-8 px-4 sm:px-6">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-        <div className="space-y-6 py-4">
+        <div className="space-y-6 py-4 px-4 sm:px-6">
           {/* Recipe Name */}
           <div className="space-y-2">
             <Label htmlFor="recipeName">Назва рецепту *</Label>

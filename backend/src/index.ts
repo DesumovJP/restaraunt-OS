@@ -2,6 +2,8 @@ import type { Core } from '@strapi/strapi';
 import { seedUsersAndTasks, testUsers, sampleTasks } from './seed/seed-users-and-tasks';
 import { seedTasksOnly } from './seed/seed-tasks-only';
 import { seedRestaurantData } from './seed/seed-restaurant-data';
+import { seedRecipes } from './seed/seed-recipes';
+import { seedStockBatches } from './seed/seed-stock-batches';
 import { setupPublicPermissions } from './seed/setup-permissions';
 
 export default {
@@ -116,6 +118,24 @@ export default {
           await seedRestaurantData(strapi);
         } else {
           console.log('✅ Restaurant data already exists');
+        }
+
+        // Check and seed recipes
+        const existingRecipes = await strapi.db.query('api::recipe.recipe').findMany({ limit: 1 });
+        if (existingRecipes.length === 0) {
+          console.log('\n📖 No recipes found, running recipe seed...\n');
+          await seedRecipes(strapi);
+        } else {
+          console.log('✅ Recipes already exist');
+        }
+
+        // Check and seed stock batches
+        const existingBatches = await strapi.db.query('api::stock-batch.stock-batch').findMany({ limit: 1 });
+        if (existingBatches.length === 0) {
+          console.log('\n📦 No stock batches found, running stock seed...\n');
+          await seedStockBatches(strapi);
+        } else {
+          console.log('✅ Stock batches already exist');
         }
 
         // Setup public permissions for REST API access

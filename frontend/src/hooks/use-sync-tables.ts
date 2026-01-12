@@ -18,7 +18,7 @@ import { useEffect, useCallback } from 'react';
 import { useQuery } from 'urql';
 import { GET_TABLES } from '@/graphql/queries';
 import { useTableStore } from '@/stores/table-store';
-import type { Table, TableStatus } from '@/types/table';
+import type { Table, TableStatus, TableZone } from '@/types/table';
 
 interface StrapiTable {
   documentId: string;
@@ -91,7 +91,7 @@ export function useSyncTables() {
       occupiedAt: st.occupiedAt ? new Date(st.occupiedAt) : undefined,
       reservedBy: st.reservedBy,
       reservedAt: st.reservedAt ? new Date(st.reservedAt) : undefined,
-      zone: st.zone,
+      zone: st.zone as TableZone | undefined,
     }));
   }, []);
 

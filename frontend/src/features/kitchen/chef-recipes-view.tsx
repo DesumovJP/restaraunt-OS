@@ -19,6 +19,7 @@ import {
   Snowflake,
   X,
   Loader2,
+  Menu,
 } from "lucide-react";
 import type { Recipe, OutputType } from "@/types";
 
@@ -38,7 +39,11 @@ const OUTPUT_TYPE_LABELS: Record<OutputType, string> = {
 };
 
 
-export function ChefRecipesView() {
+interface ChefRecipesViewProps {
+  onOpenSidebar?: () => void;
+}
+
+export function ChefRecipesView({ onOpenSidebar }: ChefRecipesViewProps = {}) {
   // Fetch recipes from GraphQL
   const { recipes: fetchedRecipes, isLoading } = useRecipes();
   const [recipes, setRecipes] = React.useState<Recipe[]>([]);
@@ -150,15 +155,29 @@ export function ChefRecipesView() {
         {/* Top row - Title and action */}
         <div className="px-3 sm:px-4 pt-3 pb-2 safe-top">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-sm">
-                <ChefHat className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-lg sm:text-xl font-bold text-slate-900">Рецепти</h1>
-                <p className="text-[11px] sm:text-xs text-slate-500">
-                  {recipes.length} {recipes.length === 1 ? "рецепт" : recipes.length < 5 ? "рецепти" : "рецептів"}
-                </p>
+            <div className="flex items-center gap-3">
+              {/* Mobile menu button */}
+              {onOpenSidebar && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="lg:hidden h-9 w-9"
+                  onClick={onOpenSidebar}
+                  aria-label="Меню"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              )}
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                  <ChefHat className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-base sm:text-lg font-bold leading-tight">Рецепти</h1>
+                  <p className="text-xs text-muted-foreground">
+                    {recipes.length} {recipes.length === 1 ? "рецепт" : recipes.length < 5 ? "рецепти" : "рецептів"}
+                  </p>
+                </div>
               </div>
             </div>
             <Button

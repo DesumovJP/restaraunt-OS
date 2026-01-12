@@ -129,6 +129,10 @@ interface ShiftScheduleViewProps {
 export function ShiftScheduleView({ className, compact = false }: ShiftScheduleViewProps) {
   const [currentDate, setCurrentDate] = React.useState(new Date());
   const [department, setDepartment] = React.useState("all");
+  const [selectedDayIndex, setSelectedDayIndex] = React.useState(() => {
+    const today = new Date().getDay();
+    return today === 0 ? 6 : today - 1; // Convert to Mon=0, Sun=6
+  });
 
   const weekDates = React.useMemo(() => getWeekDates(currentDate), [currentDate]);
 
@@ -289,7 +293,7 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
       </div>
 
       {/* Schedule Content */}
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-3 sm:p-4">
         {scheduleFetching && !scheduleData ? (
           <div className="flex justify-center items-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
@@ -307,107 +311,201 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
             </p>
           </div>
         ) : (
-          <Card className="overflow-hidden">
-            <CardContent className="p-0 overflow-x-auto">
-              <table className="w-full min-w-[600px]">
-                <thead>
-                  <tr className="border-b bg-slate-50">
-                    <th className="p-3 text-left font-medium text-sm w-[140px]">
-                      <div className="flex items-center gap-2">
-                        <Users className="h-4 w-4 text-slate-400" />
-                        Працівник
-                      </div>
-                    </th>
-                    {weekDates.map((date, i) => {
-                      const today = isToday(date);
-                      return (
-                        <th
-                          key={i}
-                          className={cn(
-                            "p-2 text-center font-medium text-sm",
-                            today && "bg-blue-50"
-                          )}
-                        >
-                          <div className={cn(
-                            "text-xs",
-                            today ? "text-blue-600 font-bold" : "text-slate-500"
-                          )}>
-                            {DAYS_UK[i]}
-                          </div>
-                          <div className={cn(
-                            "text-sm",
-                            today ? "text-blue-700 font-bold" : "text-slate-700"
-                          )}>
-                            {date.getDate()}
-                          </div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredWorkers.map((worker) => (
-                    <tr key={worker.documentId} className="border-b hover:bg-slate-50/50">
-                      <td className="p-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600">
-                            {worker.firstName?.[0] || worker.username?.[0] || "?"}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm truncate text-slate-900">
-                              {worker.firstName || worker.username}
-                            </p>
-                            <span className={cn(
-                              "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
-                              ROLE_COLORS[worker.systemRole || "viewer"]
-                            )}>
-                              {ROLE_LABELS[worker.systemRole || "viewer"]}
-                            </span>
-                          </div>
-                        </div>
-                      </td>
-                      {weekDates.map((date, i) => {
-                        const dateStr = date.toISOString().split("T")[0];
-                        const workerShifts = scheduleByDateWorker[dateStr]?.[worker.documentId] || [];
-                        const today = isToday(date);
+          <>
+            {/* Mobile: Day selector + cards */}
+            <div className="md:hidden">
+              {/* Day tabs */}
+              <div className="flex gap-1 mb-3 overflow-x-auto pb-1 -mx-1 px-1">
+                {weekDates.map((date, i) => {
+                  const today = isToday(date);
+                  const isSelected = selectedDayIndex === i;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedDayIndex(i)}
+                      className={cn(
+                        "flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-xl transition-all",
+                        isSelected
+                          ? "bg-blue-500 text-white shadow-md"
+                          : today
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-white border text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      <span className="text-[10px] font-medium uppercase">{DAYS_UK[i]}</span>
+                      <span className="text-lg font-bold">{date.getDate()}</span>
+                    </button>
+                  );
+                })}
+              </div>
 
+              {/* Selected day header */}
+              <div className="mb-3">
+                <p className="text-sm text-muted-foreground">
+                  {weekDates[selectedDayIndex].toLocaleDateString("uk-UA", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })}
+                </p>
+              </div>
+
+              {/* Worker cards for selected day */}
+              <div className="space-y-2">
+                {filteredWorkers.map((worker) => {
+                  const dateStr = weekDates[selectedDayIndex].toISOString().split("T")[0];
+                  const workerShifts = scheduleByDateWorker[dateStr]?.[worker.documentId] || [];
+
+                  return (
+                    <div
+                      key={worker.documentId}
+                      className="flex items-center gap-3 p-3 bg-white rounded-xl border"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-sm font-semibold text-slate-600">
+                        {worker.firstName?.[0] || worker.username?.[0] || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">
+                          {worker.firstName} {worker.lastName?.[0] ? `${worker.lastName[0]}.` : ""}
+                        </p>
+                        <span className={cn(
+                          "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                          ROLE_COLORS[worker.systemRole || "viewer"]
+                        )}>
+                          {ROLE_LABELS[worker.systemRole || "viewer"]}
+                        </span>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {workerShifts.length > 0 ? (
+                          <div className="space-y-1">
+                            {workerShifts.map((shift) => (
+                              <div
+                                key={shift.documentId}
+                                className={cn(
+                                  "text-xs px-2 py-1 rounded-lg border-l-2",
+                                  SHIFT_TYPE_COLORS[shift.shiftType],
+                                  STATUS_COLORS[shift.status]
+                                )}
+                              >
+                                <span className="font-mono font-medium">
+                                  {formatTime(shift.startTime)}-{formatTime(shift.endTime)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 bg-slate-100 px-2 py-1 rounded">Вихідний</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Desktop: Week table */}
+            <Card className="overflow-hidden hidden md:block">
+              <CardContent className="p-0 overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-slate-50">
+                      <th className="p-3 text-left font-medium text-sm w-[160px]">
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 text-slate-400" />
+                          Працівник
+                        </div>
+                      </th>
+                      {weekDates.map((date, i) => {
+                        const today = isToday(date);
                         return (
-                          <td
+                          <th
                             key={i}
                             className={cn(
-                              "p-1.5 text-center",
-                              today && "bg-blue-50/50"
+                              "p-2 text-center font-medium text-sm",
+                              today && "bg-blue-50"
                             )}
                           >
-                            {workerShifts.length > 0 ? (
-                              <div className="space-y-1">
-                                {workerShifts.map((shift) => (
-                                  <div
-                                    key={shift.documentId}
-                                    className={cn(
-                                      "text-xs p-1.5 rounded-lg border-l-2",
-                                      SHIFT_TYPE_COLORS[shift.shiftType],
-                                      STATUS_COLORS[shift.status]
-                                    )}
-                                  >
-                                    <div className="font-mono font-medium text-[10px]">
-                                      {formatTime(shift.startTime)}-{formatTime(shift.endTime)}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-slate-300">—</span>
-                            )}
-                          </td>
+                            <div className={cn(
+                              "text-xs",
+                              today ? "text-blue-600 font-bold" : "text-slate-500"
+                            )}>
+                              {DAYS_UK[i]}
+                            </div>
+                            <div className={cn(
+                              "text-sm",
+                              today ? "text-blue-700 font-bold" : "text-slate-700"
+                            )}>
+                              {date.getDate()}
+                            </div>
+                          </th>
                         );
                       })}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
+                  </thead>
+                  <tbody>
+                    {filteredWorkers.map((worker) => (
+                      <tr key={worker.documentId} className="border-b hover:bg-slate-50/50">
+                        <td className="p-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-semibold text-slate-600">
+                              {worker.firstName?.[0] || worker.username?.[0] || "?"}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate text-slate-900">
+                                {worker.firstName || worker.username}
+                              </p>
+                              <span className={cn(
+                                "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                                ROLE_COLORS[worker.systemRole || "viewer"]
+                              )}>
+                                {ROLE_LABELS[worker.systemRole || "viewer"]}
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                        {weekDates.map((date, i) => {
+                          const dateStr = date.toISOString().split("T")[0];
+                          const workerShifts = scheduleByDateWorker[dateStr]?.[worker.documentId] || [];
+                          const today = isToday(date);
+
+                          return (
+                            <td
+                              key={i}
+                              className={cn(
+                                "p-1.5 text-center",
+                                today && "bg-blue-50/50"
+                              )}
+                            >
+                              {workerShifts.length > 0 ? (
+                                <div className="space-y-1">
+                                  {workerShifts.map((shift) => (
+                                    <div
+                                      key={shift.documentId}
+                                      className={cn(
+                                        "text-xs p-1.5 rounded-lg border-l-2",
+                                        SHIFT_TYPE_COLORS[shift.shiftType],
+                                        STATUS_COLORS[shift.status]
+                                      )}
+                                    >
+                                      <div className="font-mono font-medium text-[10px]">
+                                        {formatTime(shift.startTime)}-{formatTime(shift.endTime)}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-300">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {/* Legend */}

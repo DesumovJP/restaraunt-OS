@@ -19,7 +19,15 @@ import {
   Menu,
   Calendar,
   ListTodo,
+  ChevronDown,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StationQueue, StationOverview, AllKitchenView } from "@/features/kitchen/station-queue";
 import { ChefLeftSidebar, type ChefView } from "@/features/kitchen/chef-left-sidebar";
 import { ChefRecipesView } from "@/features/kitchen/chef-recipes-view";
@@ -39,7 +47,7 @@ import {
   useKitchenQueue,
 } from "@/hooks/use-graphql-kitchen";
 import type { StationType, StationSubTaskStatus } from "@/types/station";
-import { STATION_CAPACITY_CONFIGS } from "@/lib/config/station-config";
+import { STATION_CAPACITY_CONFIGS, STATION_DISPLAY_CONFIGS } from "@/lib/config/station-config";
 
 export default function KitchenDisplayPage() {
   const [selectedStation, setSelectedStation] = React.useState<StationType | "all">("all");
@@ -408,21 +416,59 @@ export default function KitchenDisplayPage() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Shared Header for views that don't have their own */}
+        {(activeView === "chat" || activeView === "schedule" || activeView === "profile") && (
+          <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b safe-top">
+            <div className="px-3 sm:px-4 py-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {/* Mobile menu button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden h-9 w-9"
+                    onClick={() => setIsSidebarOpen(true)}
+                    aria-label="Меню"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                      <ChefHat className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h1 className="text-base sm:text-lg font-bold leading-tight">
+                        {activeView === "chat" ? "Чат команди" : activeView === "schedule" ? "Графік змін" : "Профіль"}
+                      </h1>
+                      <p className="text-xs text-muted-foreground hidden sm:block">Кухня</p>
+                    </div>
+                  </div>
+                </div>
+                {isHydrated && currentTime && (
+                  <Badge variant="outline" className="text-sm">
+                    {currentTime}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </header>
+        )}
+
         {/* View Switcher */}
         {activeView === "recipes" ? (
-          <ChefRecipesView />
+          <ChefRecipesView onOpenSidebar={() => setIsSidebarOpen(true)} />
         ) : activeView === "calendar" ? (
-          <PlannedOrdersView variant="kitchen" />
+          <PlannedOrdersView variant="kitchen" onOpenSidebar={() => setIsSidebarOpen(true)} />
         ) : activeView === "dailies" ? (
-          <DailiesView compact className="h-full" />
+          <DailiesView compact className="h-full" variant="kitchen" onOpenSidebar={() => setIsSidebarOpen(true)} />
         ) : activeView === "chat" ? (
-          <div className="flex-1 overflow-hidden p-4">
+          <div className="flex-1 overflow-hidden p-3 sm:p-4">
             <WorkersChat />
           </div>
         ) : activeView === "schedule" ? (
           <ShiftScheduleView compact className="flex-1" />
         ) : activeView === "profile" ? (
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4">
             <div className="max-w-md mx-auto w-full">
               <WorkerProfileCard
                 worker={{
@@ -448,8 +494,8 @@ export default function KitchenDisplayPage() {
         ) : (
           <>
             {/* Stations View - Header */}
-            <header className="sticky top-0 z-40 bg-background border-b safe-top">
-              <div className="px-3 sm:px-4 py-3">
+            <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b safe-top">
+              <div className="px-3 sm:px-4 py-2.5">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     {/* Mobile menu button */}
@@ -462,16 +508,16 @@ export default function KitchenDisplayPage() {
                     >
                       <Menu className="h-5 w-5" />
                     </Button>
-                    <div className="flex items-center gap-4">
-                      <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2">
-                        <ChefHat className="h-5 w-5 sm:h-6 sm:w-6" />
-                        Кухня
-                      </h1>
-                      {isHydrated && currentTime && (
-                        <Badge variant="outline" className="text-sm">
-                          {currentTime}
-                        </Badge>
-                      )}
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                        <ChefHat className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <h1 className="text-base sm:text-lg font-bold leading-tight">Кухня</h1>
+                        {isHydrated && currentTime && (
+                          <p className="text-xs text-muted-foreground">{currentTime}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -538,9 +584,101 @@ export default function KitchenDisplayPage() {
 
             {/* Main content */}
             <main className="flex-1 overflow-y-auto p-3 sm:p-4 scroll-container">
+              {/* Mobile: Compact dropdowns */}
+              <div className="flex gap-2 mb-3 md:hidden">
+                {/* Station selector */}
+                <Select
+                  value={selectedStation}
+                  onValueChange={(value) => setSelectedStation(value as StationType | "all")}
+                >
+                  <SelectTrigger className="flex-1 h-10">
+                    <div className="flex items-center gap-2">
+                      <Flame className="h-4 w-4 text-orange-500" />
+                      <SelectValue placeholder="Станція" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">
+                      <div className="flex items-center gap-2">
+                        <ChefHat className="h-4 w-4 text-orange-500" />
+                        <span>Вся кухня</span>
+                        <Badge variant="secondary" className="ml-auto text-xs h-5 px-1.5">
+                          {stations.reduce((sum, s) => sum + s.taskCount, 0)}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                    {stations.map((station) => {
+                      const config = STATION_DISPLAY_CONFIGS[station.type];
+                      const Icon = config.icon;
+                      return (
+                        <SelectItem key={station.type} value={station.type}>
+                          <div className="flex items-center gap-2">
+                            <Icon className={cn("h-4 w-4", config.color)} />
+                            <span>{config.nameUk}</span>
+                            {station.taskCount > 0 && (
+                              <Badge variant="secondary" className="ml-auto text-xs h-5 px-1.5">
+                                {station.taskCount}
+                              </Badge>
+                            )}
+                            {station.overdueCount > 0 && (
+                              <Badge variant="destructive" className="text-xs h-5 px-1.5">
+                                {station.overdueCount}!
+                              </Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+
+                {/* Alerts dropdown */}
+                <Select value="alerts">
+                  <SelectTrigger className="flex-1 h-10">
+                    <div className="flex items-center gap-2">
+                      <Bell className={cn("h-4 w-4", overdueTasks > 0 ? "text-red-500" : "text-muted-foreground")} />
+                      <span className="text-sm">Сповіщення</span>
+                      {overdueTasks > 0 && (
+                        <Badge variant="destructive" className="ml-auto text-xs h-5 px-1.5">
+                          {overdueTasks}
+                        </Badge>
+                      )}
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {overdueTasks > 0 && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-red-50 text-sm mx-1 mb-1">
+                        <AlertTriangle className="h-4 w-4 text-red-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-red-700">{overdueTasks} прострочених</p>
+                          <p className="text-xs text-red-600">Потрібна увага</p>
+                        </div>
+                      </div>
+                    )}
+                    {stations.some((s) => s.isPaused) && (
+                      <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-50 text-sm mx-1 mb-1">
+                        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-amber-700">Станція на паузі</p>
+                          <p className="text-xs text-amber-600">
+                            {stations.filter((s) => s.isPaused).map((s) => STATION_DISPLAY_CONFIGS[s.type].nameUk).join(", ")}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    {overdueTasks === 0 && !stations.some((s) => s.isPaused) && (
+                      <div className="flex items-center gap-2 p-2 text-sm text-muted-foreground mx-1">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        Все працює нормально
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                {/* Station overview */}
-                <div className="lg:col-span-1">
+                {/* Station overview - Desktop only */}
+                <div className="hidden md:block lg:col-span-1">
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base">Станції</CardTitle>
@@ -555,7 +693,7 @@ export default function KitchenDisplayPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Alerts */}
+                  {/* Alerts - Desktop only */}
                   <Card className="mt-4">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-base flex items-center gap-2">

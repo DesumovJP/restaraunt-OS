@@ -173,7 +173,7 @@ export function calculateProcessYield(
         details: { yieldRatio: processYield.yieldRatio },
       };
 
-    case 'boiling':
+    case 'boiling': {
       const boilResult = calculateBoilingYield(
         netIn,
         processYield.moistureLoss ?? 0
@@ -185,8 +185,9 @@ export function calculateProcessYield(
           moistureLost: boilResult.moistureLost,
         },
       };
+    }
 
-    case 'frying':
+    case 'frying': {
       const fryResult = calculateFryingYield(
         netIn,
         processYield.moistureLoss ?? 0,
@@ -201,8 +202,9 @@ export function calculateProcessYield(
           oilAbsorbed: fryResult.oilAbsorbed,
         },
       };
+    }
 
-    case 'rendering':
+    case 'rendering': {
       const renderResult = calculateRenderingYield(
         netIn,
         processYield.yieldRatio,
@@ -216,9 +218,10 @@ export function calculateProcessYield(
           wasteOut: renderResult.wasteOut,
         },
       };
+    }
 
     case 'grilling':
-    case 'baking':
+    case 'baking': {
       // Similar to boiling - moisture loss only
       const grillResult = calculateBoilingYield(
         netIn,
@@ -231,6 +234,7 @@ export function calculateProcessYield(
           moistureLost: grillResult.moistureLost,
         },
       };
+    }
 
     case 'portioning':
       // No loss, just dividing

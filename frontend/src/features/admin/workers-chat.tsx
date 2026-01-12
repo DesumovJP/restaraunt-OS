@@ -21,7 +21,6 @@ import {
   ImageIcon,
   ArrowLeft,
   MessageCircle,
-  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -460,27 +459,16 @@ export function WorkersChat() {
               {/* Header */}
               <div className="px-3 md:px-6 py-3 md:py-4 border-b flex items-center justify-between bg-background/80 backdrop-blur-sm">
                 <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                  {/* Mobile Back Button */}
+                  {/* Mobile Back Button - navigates to chat list */}
                   {isMobile && chatView && (
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 flex-shrink-0"
+                      className="h-10 w-10 flex-shrink-0 rounded-xl"
                       onClick={() => setChatView(null)}
+                      aria-label="Назад до списку чатів"
                     >
                       <ArrowLeft className="h-5 w-5" />
-                    </Button>
-                  )}
-
-                  {/* Mobile Menu Button - Opens channels/DM drawer */}
-                  {isMobile && chatView && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className="h-10 w-10 flex-shrink-0 rounded-xl"
-                      onClick={() => setIsSidebarOpen(true)}
-                    >
-                      <Menu className="h-5 w-5" />
                     </Button>
                   )}
 

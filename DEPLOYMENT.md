@@ -49,7 +49,7 @@ NODE_ENV=production
 HOST=0.0.0.0
 PORT=1337
 
-# Security (generate with: openssl rand -base64 32)
+# Security (see key generation script below)
 APP_KEYS=key1,key2,key3,key4
 API_TOKEN_SALT=your-api-token-salt
 ADMIN_JWT_SECRET=your-admin-jwt-secret
@@ -71,11 +71,25 @@ DO_SPACE_REGION=nyc3
 DO_SPACE_BUCKET=your-bucket-name
 ```
 
-### 1.4 Deploy
+### 1.4 Generate Security Keys
+
+Run this script to generate all required keys:
+
+```bash
+echo "APP_KEYS=$(openssl rand -base64 32),$(openssl rand -base64 32),$(openssl rand -base64 32),$(openssl rand -base64 32)"
+echo "API_TOKEN_SALT=$(openssl rand -base64 32)"
+echo "ADMIN_JWT_SECRET=$(openssl rand -base64 32)"
+echo "TRANSFER_TOKEN_SALT=$(openssl rand -base64 32)"
+echo "JWT_SECRET=$(openssl rand -base64 32)"
+```
+
+Copy each generated value to Railway environment variables.
+
+### 1.5 Deploy
 
 Railway will automatically deploy when you push to the main branch.
 
-After deployment, note your Railway backend URL (e.g., `https://your-backend.railway.app`).
+After deployment, note your Railway backend URL (e.g., `https://your-backend.up.railway.app`).
 
 ---
 
@@ -93,7 +107,7 @@ In Vercel project settings → Environment Variables:
 
 ```env
 # Production backend URL from Railway
-NEXT_PUBLIC_STRAPI_URL=https://your-backend.railway.app
+NEXT_PUBLIC_STRAPI_URL=https://your-backend.up.railway.app
 ```
 
 ### 2.3 Deploy
@@ -124,7 +138,7 @@ Add CORS configuration:
 ```json
 [
   {
-    "origin": ["https://your-app.vercel.app", "https://your-backend.railway.app"],
+    "origin": ["https://your-app.vercel.app", "https://your-backend.up.railway.app"],
     "method": ["GET", "PUT", "POST", "DELETE"],
     "header": ["*"],
     "maxAgeSeconds": 3600
@@ -150,7 +164,7 @@ To run the frontend locally while using the production backend:
 
 2. Edit `.env.local`:
    ```env
-   NEXT_PUBLIC_STRAPI_URL=https://your-backend.railway.app
+   NEXT_PUBLIC_STRAPI_URL=https://your-backend.up.railway.app
    ```
 
 3. Run the development server:
@@ -221,7 +235,7 @@ npm run lint         # Run linter
 
 - **Railway**: Built-in logs and metrics dashboard
 - **Vercel**: Analytics and logs in project dashboard
-- **Strapi**: Admin panel at `https://your-backend.railway.app/admin`
+- **Strapi**: Admin panel at `https://your-backend.up.railway.app/admin`
 
 ---
 

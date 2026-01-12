@@ -240,7 +240,7 @@ function WaiterPOSContent() {
           {activeView === 'dailies' ? (
             /* Dailies View */
             <main className="flex-1 flex flex-col overflow-hidden bg-white">
-              <DailiesView compact className="h-full" />
+              <DailiesView compact className="h-full" variant="waiter" />
             </main>
           ) : activeView === 'chat' ? (
             /* Chat View */

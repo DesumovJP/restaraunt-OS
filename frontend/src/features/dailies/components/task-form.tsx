@@ -32,6 +32,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -149,7 +150,7 @@ export function TaskForm({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-[500px] p-6">
+      <DialogContent className="sm:max-w-lg flex flex-col">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Редагувати завдання" : "Нове завдання"}</DialogTitle>
           <DialogDescription>
@@ -159,7 +160,8 @@ export function TaskForm({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <DialogBody className="space-y-4">
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title">Назва *</Label>
@@ -317,12 +319,13 @@ export function TaskForm({
               </Select>
             )}
           </div>
+          </DialogBody>
 
-          <DialogFooter className="mt-6 border-t pt-4">
+          <DialogFooter>
             <Button
               type="submit"
               disabled={loading || !title.trim()}
-              className="w-full h-11 text-base font-medium"
+              className="w-full h-11 text-base font-medium rounded-xl"
             >
               {loading ? "Збереження..." : isEditing ? "Зберегти" : "Створити"}
             </Button>

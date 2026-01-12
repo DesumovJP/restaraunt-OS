@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -185,10 +186,12 @@ export function UndoModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="sm:max-w-md flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Undo2 className="h-5 w-5 text-warning" />
+            <div className="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center">
+              <Undo2 className="h-4 w-4 text-warning" />
+            </div>
             Відкат статусу
           </DialogTitle>
           <DialogDescription>
@@ -196,7 +199,7 @@ export function UndoModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <DialogBody className="space-y-4">
           {/* Item info */}
           <div className="p-3 rounded-lg bg-muted/50 border">
             <p className="font-medium">{itemName}</p>
@@ -288,7 +291,7 @@ export function UndoModal({
                 value={customReason}
                 onChange={(e) => setCustomReason(e.target.value)}
                 placeholder="Опишіть причину відкату..."
-                className="w-full h-20 px-3 py-2 text-sm border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full h-20 px-3 py-2 text-sm border rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-ring bg-background"
                 maxLength={200}
               />
               <p className="text-xs text-muted-foreground text-right mt-1">
@@ -296,9 +299,9 @@ export function UndoModal({
               </p>
             </div>
           )}
-        </div>
+        </DialogBody>
 
-        <DialogFooter className="border-t pt-4">
+        <DialogFooter>
           <Button
             variant={needsApproval ? "default" : "destructive"}
             onClick={handleConfirm}

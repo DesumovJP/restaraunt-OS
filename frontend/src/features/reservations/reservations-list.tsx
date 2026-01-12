@@ -335,6 +335,25 @@ export function ReservationsList({
     }
   };
 
+  // Group by date for upcoming view - must be before early returns
+  const groupedReservations = React.useMemo(() => {
+    if (!reservations || reservations.length === 0) {
+      return {};
+    }
+    if (variant === "today") {
+      return { [displayDate]: reservations };
+    }
+
+    const groups: Record<string, Reservation[]> = {};
+    reservations.forEach((res: Reservation) => {
+      if (!groups[res.date]) {
+        groups[res.date] = [];
+      }
+      groups[res.date].push(res);
+    });
+    return groups;
+  }, [reservations, variant, displayDate]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -371,22 +390,6 @@ export function ReservationsList({
       </div>
     );
   }
-
-  // Group by date for upcoming view
-  const groupedReservations = React.useMemo(() => {
-    if (variant === "today") {
-      return { [displayDate]: reservations };
-    }
-
-    const groups: Record<string, Reservation[]> = {};
-    reservations.forEach((res: Reservation) => {
-      if (!groups[res.date]) {
-        groups[res.date] = [];
-      }
-      groups[res.date].push(res);
-    });
-    return groups;
-  }, [reservations, variant, displayDate]);
 
   const formatDateHeader = (dateStr: string) => {
     const date = new Date(dateStr);

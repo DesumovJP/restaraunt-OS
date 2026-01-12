@@ -219,28 +219,28 @@ export default function WaiterCalendarPage() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b shadow-sm px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <header className="bg-white border-b shadow-sm px-3 sm:px-4 py-3 sm:py-4 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden h-11 w-11"
+              className="lg:hidden h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0"
               onClick={() => setIsSidebarOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <div>
-              <h1 className="text-xl font-bold text-slate-900">Бронювання</h1>
-              <p className="text-sm text-slate-500">Керування резерваціями столиків</p>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-slate-900 truncate">Бронювання</h1>
+              <p className="text-sm text-slate-500 hidden sm:block">Керування резерваціями столиків</p>
             </div>
           </div>
 
           <Button
             onClick={() => setIsReservationDialogOpen(true)}
-            className="bg-slate-900 hover:bg-slate-800 h-11 px-5"
+            className="bg-slate-900 hover:bg-slate-800 h-10 sm:h-11 px-3 sm:px-5 flex-shrink-0"
           >
-            <Plus className="w-4 h-4 mr-2" />
-            Нове бронювання
+            <Plus className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Нове бронювання</span>
           </Button>
         </header>
 

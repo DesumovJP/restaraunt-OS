@@ -260,11 +260,12 @@ export function useBatchesData(options: UseBatchesDataOptions = {}): UseBatchesD
         case "received":
           comparison = new Date(a.receivedAt).getTime() - new Date(b.receivedAt).getTime();
           break;
-        case "expiry":
+        case "expiry": {
           const aExp = a.expiryDate ? new Date(a.expiryDate).getTime() : Infinity;
           const bExp = b.expiryDate ? new Date(b.expiryDate).getTime() : Infinity;
           comparison = aExp - bExp;
           break;
+        }
         case "quantity":
           comparison = a.netAvailable - b.netAvailable;
           break;

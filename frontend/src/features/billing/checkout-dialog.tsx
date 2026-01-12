@@ -19,7 +19,7 @@ import {
   DollarSign,
   Clock,
   CheckCircle2,
-  Receipt,
+  Receipt as ReceiptIcon,
   Printer,
   Users,
   AlertCircle,
@@ -237,7 +237,7 @@ export function CheckoutDialog({
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Receipt className="h-5 w-5" />
+            <ReceiptIcon className="h-5 w-5" />
             Оформлення рахунку
           </DialogTitle>
         </DialogHeader>

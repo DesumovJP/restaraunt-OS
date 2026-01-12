@@ -6,6 +6,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogBody,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { formatTime } from "@/lib/utils";
@@ -87,13 +89,13 @@ export function CookingPlanModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-2xl flex flex-col">
         <DialogHeader>
           <DialogTitle>План приготування</DialogTitle>
-          <p className="text-sm text-muted-foreground">{formattedDate}</p>
+          <DialogDescription>{formattedDate}</DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-4">
+        <DialogBody className="space-y-3">
           {plan.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               Немає запланованих страв на цей день
@@ -102,32 +104,34 @@ export function CookingPlanModal({
             plan.map((planItem, index) => (
               <div
                 key={index}
-                className="border border-border rounded-lg p-4 space-y-2"
+                className="border border-border rounded-xl p-3 sm:p-4 space-y-2 bg-muted/30"
               >
-                <div className="flex items-center gap-2 mb-2">
-                  <Clock className="h-4 w-4 text-primary" />
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Clock className="h-4 w-4 text-primary" />
+                  </div>
                   <span className="font-semibold text-base">{planItem.time}</span>
                 </div>
-                <div className="space-y-1.5 pl-6">
+                <div className="space-y-1.5 pl-10">
                   {planItem.items.map((item, itemIndex) => (
                     <div
                       key={itemIndex}
-                      className="flex items-center justify-between text-sm"
+                      className="flex items-center justify-between text-sm py-1"
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-foreground">
                           {item.name}
                         </span>
                         {item.station && (
                           <Badge
-                            variant="outline"
-                            className="text-xs px-1.5 py-0.5"
+                            variant="secondary"
+                            className="text-[10px] sm:text-xs px-1.5 py-0.5"
                           >
                             {item.station}
                           </Badge>
                         )}
                       </div>
-                      <span className="font-semibold text-primary min-w-[2rem] text-right">
+                      <span className="font-bold text-primary min-w-[2.5rem] text-right bg-primary/10 px-2 py-0.5 rounded-md">
                         {item.quantity}x
                       </span>
                     </div>
@@ -136,7 +140,7 @@ export function CookingPlanModal({
               </div>
             ))
           )}
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   );

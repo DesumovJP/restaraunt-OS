@@ -359,12 +359,13 @@ export function checkPermission(
           return { allowed: false, reason: 'Can only access own resources' };
         }
         break;
-      case 'department':
+      case 'department': {
         const actorDept = ROLES[context.actorRole].department;
         if (context.resourceDepartment && context.resourceDepartment !== actorDept) {
           return { allowed: false, reason: 'Can only access resources in own department' };
         }
         break;
+      }
     }
   }
 

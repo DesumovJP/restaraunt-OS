@@ -186,7 +186,7 @@ export function SupplyForm({ open, onOpenChange, onSuccess }: SupplyFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
         {/* Header */}
         <DialogHeader className="px-6 pt-6 pb-4 border-b bg-slate-50/50">
           <DialogTitle className="flex items-center gap-3 text-lg">
