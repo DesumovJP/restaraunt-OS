@@ -37,8 +37,10 @@ COPY --from=builder --chown=strapi:nodejs /app/public ./public
 COPY --from=builder --chown=strapi:nodejs /app/config ./config
 COPY --from=builder --chown=strapi:nodejs /app/favicon.png ./favicon.png
 
-# Create uploads directory
+# Create required directories with proper permissions
 RUN mkdir -p /app/public/uploads && chown -R strapi:nodejs /app/public/uploads
+RUN mkdir -p /app/database/migrations && chown -R strapi:nodejs /app/database
+RUN mkdir -p /app/.tmp && chown -R strapi:nodejs /app/.tmp
 
 USER strapi
 
