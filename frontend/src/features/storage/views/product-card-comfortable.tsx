@@ -49,8 +49,9 @@ export function ProductCardComfortable({
   return (
     <div
       className={cn(
-        "relative border rounded-lg p-3 cursor-pointer transition-all",
-        "hover:shadow-md hover:border-primary/30 active:scale-[0.99]",
+        "relative border rounded-xl p-3 sm:p-4 cursor-pointer transition-all card-interactive",
+        "hover:shadow-md hover:border-primary/30 active:scale-[0.98]",
+        "min-h-[140px]", // Consistent card height
         selected && "ring-2 ring-primary border-primary",
         status === "critical" && "border-red-300 bg-red-50/50 dark:bg-red-950/20",
         status === "warning" && "border-amber-300 bg-amber-50/50 dark:bg-amber-950/20",
@@ -67,8 +68,8 @@ export function ProductCardComfortable({
       }}
     >
       {/* Header: Name + Category */}
-      <div className="mb-2">
-        <h3 className="font-semibold text-sm leading-tight line-clamp-1">
+      <div className="mb-2.5">
+        <h3 className="font-semibold text-sm sm:text-base leading-tight line-clamp-1">
           {product.name}
         </h3>
         <p className="text-xs text-muted-foreground mt-0.5">
@@ -77,11 +78,11 @@ export function ProductCardComfortable({
       </div>
 
       {/* Stock display */}
-      <div className="flex items-end justify-between gap-2 mb-2">
-        <div className="flex items-baseline gap-1">
+      <div className="flex items-end justify-between gap-2 mb-2.5">
+        <div className="flex items-baseline gap-1.5">
           <span
             className={cn(
-              "text-2xl font-bold tabular-nums",
+              "text-2xl sm:text-3xl font-bold tabular-nums",
               status === "critical" && "text-red-600",
               status === "warning" && "text-amber-600"
             )}
@@ -92,7 +93,7 @@ export function ProductCardComfortable({
             {product.unit}
           </span>
         </div>
-        <span className="text-xs text-muted-foreground tabular-nums">
+        <span className="text-xs text-muted-foreground tabular-nums px-2 py-1 bg-muted/50 rounded-md">
           мін {product.minStock}
         </span>
       </div>

@@ -38,9 +38,10 @@ export function ProductCardCompact({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-3 py-2.5 cursor-pointer transition-colors",
-        "hover:bg-muted/50 active:bg-muted",
-        selected && "bg-primary/5",
+        "flex items-center gap-3 px-3 sm:px-4 py-3 sm:py-2.5 cursor-pointer transition-all",
+        "hover:bg-muted/50 active:bg-muted/80 touch-feedback",
+        "min-h-[52px] sm:min-h-[44px]", // Touch-friendly minimum height
+        selected && "bg-primary/5 border-l-2 border-primary",
         className
       )}
       onClick={() => onSelect?.(product)}
@@ -53,22 +54,26 @@ export function ProductCardCompact({
         }
       }}
     >
-      {/* Status indicator */}
+      {/* Status indicator - larger for visibility */}
       <StatusDot status={status} size="sm" />
 
       {/* Name - takes most space */}
       <div className="flex-1 min-w-0">
-        <span className="font-medium text-sm truncate block">{product.name}</span>
+        <span className="font-medium text-sm sm:text-base truncate block leading-tight">{product.name}</span>
+        {/* Category - shown below name on mobile */}
+        <span className="text-xs text-muted-foreground sm:hidden truncate block mt-0.5">
+          {product.category}
+        </span>
       </div>
 
-      {/* Category - hidden on very small screens */}
+      {/* Category - hidden on mobile, shown on sm+ */}
       <span className="text-xs text-muted-foreground hidden sm:block w-24 truncate">
         {product.category}
       </span>
 
       {/* Stock with mini progress */}
       <div className="flex items-center gap-2 shrink-0">
-        <div className="w-12 h-1 bg-muted rounded-full overflow-hidden hidden xs:block">
+        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden hidden xs:block">
           <div
             className={cn(
               "h-full rounded-full transition-all",
@@ -79,13 +84,13 @@ export function ProductCardCompact({
             style={{ width: `${Math.min(stockPercentage, 100)}%` }}
           />
         </div>
-        <span className="text-sm font-medium tabular-nums w-16 text-right">
+        <span className="text-sm font-semibold tabular-nums min-w-[60px] text-right">
           {product.currentStock} {product.unit}
         </span>
       </div>
 
-      {/* Arrow */}
-      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+      {/* Arrow - larger touch area */}
+      <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
     </div>
   );
 }

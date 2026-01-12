@@ -365,7 +365,10 @@ export function PlannedOrdersView({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+      <div className={cn(
+        "flex-1 overflow-y-auto p-3 sm:p-4",
+        groupedOrders.length === 0 && "flex flex-col"
+      )}>
         {groupedOrders.length === 0 ? (
           <EmptyState
             type={searchQuery ? "search" : "orders"}

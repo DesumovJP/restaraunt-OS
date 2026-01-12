@@ -21,6 +21,7 @@ import {
   ImageIcon,
   ArrowLeft,
   MessageCircle,
+  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -138,23 +139,45 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export function WorkersChat() {
-  const [chatView, setChatView] = React.useState<ChatView>({ type: "channel", id: "general" });
+  const [chatView, setChatView] = React.useState<ChatView | null>(null); // null = show list on mobile
   const [message, setMessage] = React.useState("");
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const [isMobile, setIsMobile] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
-  const activeChannel = chatView.type === "channel"
+  // Detect screen size and handle responsive behavior
+  React.useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (window.innerWidth >= 768) {
+        setIsSidebarOpen(true); // Auto-open на tablet/desktop
+        // On desktop, default to general channel
+        if (!chatView) {
+          setChatView({ type: "channel", id: "general" });
+        }
+      } else {
+        setIsSidebarOpen(false); // Auto-close на mobile
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, [chatView]);
+
+  const activeChannel = chatView?.type === "channel"
     ? MOCK_CHANNELS.find((c) => c.id === chatView.id)
     : null;
 
-  const activeDmUser = chatView.type === "dm"
+  const activeDmUser = chatView?.type === "dm"
     ? MOCK_USERS.find((u) => u.id === chatView.odId)
     : null;
 
-  const channelMessages = chatView.type === "channel"
+  const channelMessages = chatView?.type === "channel"
     ? MOCK_CHANNEL_MESSAGES.filter((m) => m.channelId === chatView.id)
     : [];
 
-  const dmMessages = chatView.type === "dm"
+  const dmMessages = chatView?.type === "dm"
     ? MOCK_DM_MESSAGES[chatView.odId] || []
     : [];
 
@@ -169,7 +192,10 @@ export function WorkersChat() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] min-h-[500px]">
+    <div className={cn(
+      "flex flex-col min-h-[500px]",
+      "h-[calc(100vh-64px)] md:h-[calc(100vh-120px)]"
+    )}>
       {/* "В розробці" Banner - compact */}
       <div className="flex justify-center py-2 bg-amber-50/50 border-b border-amber-100">
         <div className="inline-flex items-center gap-2 text-amber-700">
@@ -179,48 +205,97 @@ export function WorkersChat() {
       </div>
 
       {/* Chat Container */}
-      <div className="flex flex-1 overflow-hidden border-x border-b rounded-b-xl bg-background">
-        {/* Channels Sidebar */}
-        <div className="w-60 border-r flex flex-col bg-muted/10">
-          {/* Channels Header */}
-          <div className="p-3 border-b">
-            <h3 className="font-semibold text-sm flex items-center gap-2">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              Командний чат
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {onlineCount} з {MOCK_USERS.length} онлайн
-            </p>
+      <div className="flex flex-1 overflow-hidden border-x border-b rounded-b-xl bg-background relative">
+        {/* Mobile Drawer Backdrop */}
+        {isMobile && isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
+        {/* Channels Sidebar / Drawer */}
+        <aside className={cn(
+          "border-r flex flex-col bg-white transition-transform duration-300 ease-out",
+          "fixed inset-y-0 left-0 z-50 md:relative",
+          "w-[85vw] max-w-[320px] md:w-56 lg:w-64",
+          "shadow-2xl md:shadow-none",
+          // Default: hidden on mobile
+          "-translate-x-full md:translate-x-0",
+          // Override with JS state when sidebar should be open on mobile
+          isMobile && isSidebarOpen && "translate-x-0"
+        )}>
+          {/* Drawer Header - Mobile */}
+          <div className={cn(
+            "px-4 py-4 border-b bg-gradient-to-b from-slate-50 to-white",
+            "md:px-3 md:py-3"
+          )}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm md:hidden">
+                  <Users className="h-5 w-5 text-white" />
+                </div>
+                <Users className="h-5 w-5 text-muted-foreground hidden md:block" />
+                <div>
+                  <h3 className="font-bold text-base md:text-sm md:font-semibold">
+                    Командний чат
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {onlineCount} з {MOCK_USERS.length} онлайн
+                  </p>
+                </div>
+              </div>
+              {/* Close button - Mobile only */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 rounded-xl md:hidden"
+                onClick={() => setIsSidebarOpen(false)}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Channels List */}
           <div className="flex-1 overflow-y-auto">
-            <div className="p-2">
-              <p className="px-2 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            <div className="px-3 py-3">
+              <p className="px-2 py-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 Канали
               </p>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {MOCK_CHANNELS.map((channel) => {
                   const Icon = channel.icon;
-                  const isActive = chatView.type === "channel" && chatView.id === channel.id;
+                  const isActive = chatView?.type === "channel" && chatView.id === channel.id;
                   return (
                     <button
                       key={channel.id}
-                      onClick={() => openChannel(channel.id)}
+                      onClick={() => {
+                        openChannel(channel.id);
+                        if (isMobile) setIsSidebarOpen(false);
+                      }}
                       className={cn(
-                        "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm transition-all group",
+                        "w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-xl text-sm transition-all touch-feedback active:scale-[0.98]",
                         isActive
-                          ? "bg-foreground/10 font-medium"
-                          : "hover:bg-foreground/5 text-muted-foreground hover:text-foreground"
+                          ? "bg-blue-50 text-blue-700 font-medium"
+                          : "hover:bg-slate-50 text-slate-600 hover:text-slate-900"
                       )}
                     >
-                      <Icon className={cn(
-                        "h-4 w-4 flex-shrink-0 transition-colors",
-                        isActive ? "text-foreground" : "text-muted-foreground group-hover:text-foreground"
-                      )} />
-                      <span className="truncate flex-1 text-left">{channel.name}</span>
+                      <div className={cn(
+                        "w-9 h-9 md:w-7 md:h-7 rounded-lg flex items-center justify-center flex-shrink-0",
+                        isActive ? "bg-blue-100" : "bg-slate-100"
+                      )}>
+                        <Icon className={cn(
+                          "h-4 w-4 transition-colors",
+                          isActive ? "text-blue-600" : "text-slate-500"
+                        )} />
+                      </div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <span className="truncate block">{channel.name}</span>
+                        <span className="text-[10px] text-slate-400 md:hidden">{channel.description}</span>
+                      </div>
                       {channel.unread > 0 && (
-                        <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                        <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full min-w-[22px] text-center">
                           {channel.unread}
                         </span>
                       )}
@@ -230,47 +305,53 @@ export function WorkersChat() {
               </div>
 
               {/* Team Members */}
-              <p className="px-2 py-2 mt-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
-                <span>Особисті повідомлення</span>
+              <p className="px-2 py-2 mt-5 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+                Особисті повідомлення
               </p>
-              <div className="space-y-0.5">
+              <div className="space-y-1">
                 {MOCK_USERS.map((user) => {
-                  const isActive = chatView.type === "dm" && chatView.odId === user.id;
+                  const isActive = chatView?.type === "dm" && chatView.odId === user.id;
                   return (
                     <button
                       key={user.id}
-                      onClick={() => openDm(user.id)}
+                      onClick={() => {
+                        openDm(user.id);
+                        if (isMobile) setIsSidebarOpen(false);
+                      }}
                       className={cn(
-                        "w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-sm transition-colors",
+                        "w-full flex items-center gap-3 px-3 py-3 md:py-2 rounded-xl text-sm transition-all touch-feedback active:scale-[0.98]",
                         isActive
-                          ? "bg-foreground/10"
-                          : "hover:bg-foreground/5"
+                          ? "bg-blue-50"
+                          : "hover:bg-slate-50"
                       )}
                     >
                       <div className="relative flex-shrink-0">
                         <div className={cn(
-                          "w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-semibold text-white",
+                          "w-9 h-9 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs md:text-[10px] font-semibold text-white",
                           ROLE_COLORS[user.role] || "bg-gray-500"
                         )}>
                           {user.initials}
                         </div>
                         <Circle
                           className={cn(
-                            "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 fill-current stroke-background stroke-2",
+                            "absolute -bottom-0.5 -right-0.5 h-3 w-3 md:h-2.5 md:w-2.5 fill-current stroke-background stroke-2",
                             STATUS_COLORS[user.status]
                           )}
                         />
                       </div>
                       <div className="flex-1 min-w-0 text-left">
                         <p className={cn(
-                          "text-xs truncate",
-                          user.status === "offline" ? "text-muted-foreground" : "text-foreground"
+                          "text-sm md:text-xs truncate font-medium",
+                          user.status === "offline" ? "text-slate-400" : "text-slate-700"
                         )}>
-                          {user.shortName}
+                          {user.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400 md:hidden">
+                          {ROLE_LABELS[user.role]}
                         </p>
                       </div>
                       {user.dmUnread > 0 && (
-                        <span className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                        <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full min-w-[22px] text-center">
                           {user.dmUnread}
                         </span>
                       )}
@@ -280,61 +361,180 @@ export function WorkersChat() {
               </div>
             </div>
           </div>
-        </div>
+        </aside>
 
-        {/* Messages Area */}
+        {/* Messages Area / Mobile List View */}
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
-          <div className="px-4 py-3 border-b flex items-center justify-between bg-background/80 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              {chatView.type === "channel" && activeChannel && (
-                <>
-                  <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-muted">
-                    <activeChannel.icon className="h-5 w-5 text-muted-foreground" />
+          {/* Mobile List View - Show channels/DMs list on mobile when no chat selected */}
+          {isMobile && !chatView ? (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Header */}
+              <div className="px-4 py-4 border-b">
+                <h3 className="font-semibold text-base flex items-center gap-2">
+                  <Users className="h-5 w-5 text-muted-foreground" />
+                  Командний чат
+                </h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {onlineCount} з {MOCK_USERS.length} онлайн
+                </p>
+              </div>
+
+              {/* Channels & DMs List */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="px-3 py-2">
+                  <p className="px-2 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Канали
+                  </p>
+                  <div className="space-y-0.5">
+                    {MOCK_CHANNELS.map((channel) => {
+                      const Icon = channel.icon;
+                      return (
+                        <button
+                          key={channel.id}
+                          onClick={() => setChatView({ type: "channel", id: channel.id })}
+                          className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-all hover:bg-foreground/5 active:bg-foreground/10"
+                        >
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted flex-shrink-0">
+                            <Icon className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="font-medium truncate">{channel.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{channel.description}</p>
+                          </div>
+                          {channel.unread > 0 && (
+                            <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full min-w-[24px] text-center">
+                              {channel.unread}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div>
-                    <h2 className="font-semibold">{activeChannel.name}</h2>
-                    <p className="text-xs text-muted-foreground">{activeChannel.description}</p>
+
+                  <p className="px-2 py-2 mt-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                    Особисті повідомлення
+                  </p>
+                  <div className="space-y-0.5">
+                    {MOCK_USERS.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => setChatView({ type: "dm", odId: user.id })}
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-sm transition-colors hover:bg-foreground/5 active:bg-foreground/10"
+                      >
+                        <div className="relative flex-shrink-0">
+                          <div className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white",
+                            ROLE_COLORS[user.role] || "bg-gray-500"
+                          )}>
+                            {user.initials}
+                          </div>
+                          <Circle
+                            className={cn(
+                              "absolute -bottom-0.5 -right-0.5 h-3 w-3 fill-current stroke-background stroke-2",
+                              STATUS_COLORS[user.status]
+                            )}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0 text-left">
+                          <p className={cn(
+                            "font-medium truncate",
+                            user.status === "offline" ? "text-muted-foreground" : "text-foreground"
+                          )}>
+                            {user.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">{ROLE_LABELS[user.role]}</p>
+                        </div>
+                        {user.dmUnread > 0 && (
+                          <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full min-w-[24px] text-center">
+                            {user.dmUnread}
+                          </span>
+                        )}
+                      </button>
+                    ))}
                   </div>
-                </>
-              )}
-              {chatView.type === "dm" && activeDmUser && (
-                <>
-                  <div className="relative">
-                    <div className={cn(
-                      "w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold text-white",
-                      ROLE_COLORS[activeDmUser.role] || "bg-gray-500"
-                    )}>
-                      {activeDmUser.initials}
-                    </div>
-                    <Circle
-                      className={cn(
-                        "absolute -bottom-0.5 -right-0.5 h-3 w-3 fill-current stroke-background stroke-2",
-                        STATUS_COLORS[activeDmUser.status]
-                      )}
-                    />
-                  </div>
-                  <div>
-                    <h2 className="font-semibold">{activeDmUser.name}</h2>
-                    <p className="text-xs text-muted-foreground">{ROLE_LABELS[activeDmUser.role]}</p>
-                  </div>
-                </>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Пошук..."
-                  className="pl-8 h-8 w-40 text-sm"
-                  disabled
-                />
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="px-3 md:px-6 py-3 md:py-4 border-b flex items-center justify-between bg-background/80 backdrop-blur-sm">
+                <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                  {/* Mobile Back Button */}
+                  {isMobile && chatView && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 flex-shrink-0"
+                      onClick={() => setChatView(null)}
+                    >
+                      <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                  )}
+
+                  {/* Mobile Menu Button - Opens channels/DM drawer */}
+                  {isMobile && chatView && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-10 w-10 flex-shrink-0 rounded-xl"
+                      onClick={() => setIsSidebarOpen(true)}
+                    >
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  )}
+
+                  {/* Channel/DM Info */}
+                  <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
+                    {chatView?.type === "channel" && activeChannel && (
+                      <>
+                        <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg flex items-center justify-center bg-muted flex-shrink-0">
+                          <activeChannel.icon className="h-4 w-4 md:h-5 md:w-5 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="font-semibold text-sm md:text-base truncate">{activeChannel.name}</h2>
+                          <p className="text-xs text-muted-foreground truncate hidden sm:block">{activeChannel.description}</p>
+                        </div>
+                      </>
+                    )}
+                    {chatView?.type === "dm" && activeDmUser && (
+                      <>
+                        <div className="relative flex-shrink-0">
+                          <div className={cn(
+                            "w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-xs md:text-sm font-semibold text-white",
+                            ROLE_COLORS[activeDmUser.role] || "bg-gray-500"
+                          )}>
+                            {activeDmUser.initials}
+                          </div>
+                          <Circle
+                            className={cn(
+                              "absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 md:h-3 md:w-3 fill-current stroke-background stroke-2",
+                              STATUS_COLORS[activeDmUser.status]
+                            )}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="font-semibold text-sm md:text-base truncate">{activeDmUser.name}</h2>
+                          <p className="text-xs text-muted-foreground truncate">{ROLE_LABELS[activeDmUser.role]}</p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="relative hidden sm:block">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Пошук..."
+                      className="pl-8 h-8 w-32 md:w-40 text-sm"
+                      disabled
+                    />
+                  </div>
+                </div>
+              </div>
 
           {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="flex-1 overflow-y-auto px-2 md:px-4 py-3 md:py-4">
             <div className="space-y-1 max-w-3xl mx-auto">
               {/* Date separator */}
               <div className="flex items-center gap-3 py-3">
@@ -346,7 +546,7 @@ export function WorkersChat() {
               </div>
 
               {/* Channel Messages */}
-              {chatView.type === "channel" && channelMessages.map((msg, index) => {
+              {chatView?.type === "channel" && channelMessages.map((msg, index) => {
                 const prevMsg = channelMessages[index - 1];
                 const isSameAuthor = prevMsg?.author.id === msg.author.id;
                 const showAvatar = !isSameAuthor;
@@ -355,12 +555,12 @@ export function WorkersChat() {
                   <div
                     key={msg.id}
                     className={cn(
-                      "group flex gap-3 hover:bg-muted/40 -mx-3 px-3 py-1 rounded-lg transition-colors",
+                      "group flex gap-2 md:gap-3 hover:bg-muted/40 -mx-2 px-2 md:-mx-3 md:px-3 py-1.5 md:py-1 rounded-lg transition-colors",
                       showAvatar && "mt-3 pt-2"
                     )}
                   >
                     {showAvatar ? (
-                      <Avatar className="h-9 w-9 flex-shrink-0 mt-0.5">
+                      <Avatar className="h-8 w-8 md:h-9 md:w-9 flex-shrink-0 mt-0.5">
                         <AvatarFallback
                           className={cn(
                             "text-xs font-semibold text-white",
@@ -371,7 +571,7 @@ export function WorkersChat() {
                         </AvatarFallback>
                       </Avatar>
                     ) : (
-                      <div className="w-9 flex-shrink-0 flex items-center justify-center">
+                      <div className="w-8 md:w-9 flex-shrink-0 flex items-center justify-center">
                         <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                           {msg.timestamp}
                         </span>
@@ -381,17 +581,17 @@ export function WorkersChat() {
                       {showAvatar && (
                         <div className="flex items-baseline gap-2 mb-0.5">
                           <span
-                            className="font-semibold text-sm hover:underline cursor-pointer"
+                            className="font-medium md:font-semibold text-sm md:text-base hover:underline cursor-pointer truncate"
                             onClick={() => openDm(msg.author.id)}
                           >
                             {msg.author.name}
                           </span>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-[11px] text-muted-foreground flex-shrink-0">
                             {msg.timestamp}
                           </span>
                         </div>
                       )}
-                      <p className="text-sm text-foreground/90 leading-relaxed">
+                      <p className="text-xs md:text-sm text-foreground/90 leading-relaxed break-words">
                         {msg.content}
                       </p>
                       {msg.reactions.length > 0 && (
@@ -414,7 +614,7 @@ export function WorkersChat() {
               })}
 
               {/* DM Messages */}
-              {chatView.type === "dm" && dmMessages.map((msg, index) => {
+              {chatView?.type === "dm" && dmMessages.map((msg, index) => {
                 const isMe = msg.senderId === "me";
                 const sender = isMe ? null : MOCK_USERS.find(u => u.id === msg.senderId);
                 const prevMsg = dmMessages[index - 1];
@@ -425,12 +625,12 @@ export function WorkersChat() {
                   <div
                     key={msg.id}
                     className={cn(
-                      "group flex gap-3 hover:bg-muted/40 -mx-3 px-3 py-1 rounded-lg transition-colors",
+                      "group flex gap-2 md:gap-3 hover:bg-muted/40 -mx-2 px-2 md:-mx-3 md:px-3 py-1.5 md:py-1 rounded-lg transition-colors",
                       showAvatar && "mt-3 pt-2"
                     )}
                   >
                     {showAvatar ? (
-                      <Avatar className="h-9 w-9 flex-shrink-0 mt-0.5">
+                      <Avatar className="h-8 w-8 md:h-9 md:w-9 flex-shrink-0 mt-0.5">
                         <AvatarFallback
                           className={cn(
                             "text-xs font-semibold text-white",
@@ -441,7 +641,7 @@ export function WorkersChat() {
                         </AvatarFallback>
                       </Avatar>
                     ) : (
-                      <div className="w-9 flex-shrink-0 flex items-center justify-center">
+                      <div className="w-8 md:w-9 flex-shrink-0 flex items-center justify-center">
                         <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                           {msg.timestamp}
                         </span>
@@ -450,15 +650,15 @@ export function WorkersChat() {
                     <div className="flex-1 min-w-0">
                       {showAvatar && (
                         <div className="flex items-baseline gap-2 mb-0.5">
-                          <span className="font-semibold text-sm">
+                          <span className="font-medium md:font-semibold text-sm md:text-base truncate">
                             {isMe ? "Ви" : sender?.name}
                           </span>
-                          <span className="text-[11px] text-muted-foreground">
+                          <span className="text-[11px] text-muted-foreground flex-shrink-0">
                             {msg.timestamp}
                           </span>
                         </div>
                       )}
-                      <p className="text-sm text-foreground/90 leading-relaxed">
+                      <p className="text-xs md:text-sm text-foreground/90 leading-relaxed break-words">
                         {msg.content}
                       </p>
                     </div>
@@ -466,7 +666,7 @@ export function WorkersChat() {
                 );
               })}
 
-              {chatView.type === "dm" && dmMessages.length === 0 && (
+              {chatView?.type === "dm" && dmMessages.length === 0 && (
                 <div className="text-center py-12">
                   <MessageCircle className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
                   <p className="text-sm text-muted-foreground">
@@ -480,15 +680,25 @@ export function WorkersChat() {
           </div>
 
           {/* Message Input */}
-          <div className="p-4 border-t bg-background">
+          <div className="p-3 md:p-4 border-t bg-background">
             <div className="max-w-3xl mx-auto">
-              <div className="flex items-end gap-2 bg-muted/40 rounded-xl px-3 py-2 border border-transparent focus-within:border-border focus-within:bg-background transition-all">
+              <div className="flex items-end gap-2 bg-muted/40 rounded-xl px-2 md:px-3 py-2 border border-transparent focus-within:border-border focus-within:bg-background transition-all">
                 <div className="flex gap-1 pb-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg" disabled>
-                    <Paperclip className="h-4 w-4" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 md:h-8 md:w-8 text-muted-foreground hover:text-foreground rounded-lg"
+                    disabled
+                  >
+                    <Paperclip className="h-5 w-5 md:h-4 md:w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg" disabled>
-                    <ImageIcon className="h-4 w-4" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 md:h-8 md:w-8 text-muted-foreground hover:text-foreground rounded-lg"
+                    disabled
+                  >
+                    <ImageIcon className="h-5 w-5 md:h-4 md:w-4" />
                   </Button>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -496,28 +706,44 @@ export function WorkersChat() {
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder={
-                      chatView.type === "channel"
+                      chatView?.type === "channel"
                         ? `Написати в #${activeChannel?.name.toLowerCase()}...`
                         : `Написати ${activeDmUser?.shortName}...`
                     }
-                    className="border-0 bg-transparent focus-visible:ring-0 px-0 h-9 text-sm"
+                    className="border-0 bg-transparent focus-visible:ring-0 px-0 h-10 md:h-9 text-sm"
                     disabled
                   />
                 </div>
                 <div className="flex gap-1 pb-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg" disabled>
-                    <AtSign className="h-4 w-4" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 md:h-8 md:w-8 text-muted-foreground hover:text-foreground rounded-lg"
+                    disabled
+                  >
+                    <AtSign className="h-5 w-5 md:h-4 md:w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground rounded-lg" disabled>
-                    <Smile className="h-4 w-4" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 md:h-8 md:w-8 text-muted-foreground hover:text-foreground rounded-lg"
+                    disabled
+                  >
+                    <Smile className="h-5 w-5 md:h-4 md:w-4" />
                   </Button>
-                  <Button size="icon" className="h-8 w-8 rounded-lg" disabled>
-                    <Send className="h-4 w-4" />
+                  <Button
+                    size="icon"
+                    className="h-10 w-10 md:h-8 md:w-8 rounded-lg"
+                    disabled
+                  >
+                    <Send className="h-5 w-5 md:h-4 md:w-4" />
                   </Button>
                 </div>
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
     </div>

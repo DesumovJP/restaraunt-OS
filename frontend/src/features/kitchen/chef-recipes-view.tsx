@@ -5,19 +5,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ChefRecipeCard, RecipeDetailModal } from "./chef-recipe-card";
+import { ChefRecipeCard, RecipeDetailModal, RecipesTableHeader } from "./chef-recipe-card";
 import { RecipeFormModal } from "./recipe-form-modal";
 import { useRecipes } from "@/hooks/use-menu";
 import { cn } from "@/lib/utils";
 import {
   Search,
   Plus,
-  Filter,
   ChefHat,
   UtensilsCrossed,
   Wine,
   Cake,
   Snowflake,
+  X,
+  Loader2,
 } from "lucide-react";
 import type { Recipe, OutputType } from "@/types";
 
@@ -46,6 +47,7 @@ export function ChefRecipesView() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
   const [editingRecipe, setEditingRecipe] = React.useState<Recipe | null>(null);
   const [viewingRecipe, setViewingRecipe] = React.useState<Recipe | null>(null);
+  const [isSearchFocused, setIsSearchFocused] = React.useState(false);
 
   // Update local recipes when fetched
   React.useEffect(() => {
@@ -134,101 +136,175 @@ export function ChefRecipesView() {
     }
   };
 
+  const clearSearch = () => {
+    setSearchQuery("");
+  };
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="sticky top-0 z-40 bg-background border-b px-3 sm:px-4 py-3 safe-top">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <ChefHat className="h-5 w-5 text-orange-600" />
-            <h1 className="text-lg sm:text-xl font-bold">Рецепти</h1>
-            <Badge variant="secondary">{recipes.length}</Badge>
+    <div className="flex flex-col h-full bg-slate-50/50">
+      {/* Header - Sticky with iOS-like design */}
+      <div className={cn(
+        "sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b transition-shadow duration-200",
+        isSearchFocused && "shadow-md"
+      )}>
+        {/* Top row - Title and action */}
+        <div className="px-3 sm:px-4 pt-3 pb-2 safe-top">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-sm">
+                <ChefHat className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold text-slate-900">Рецепти</h1>
+                <p className="text-[11px] sm:text-xs text-slate-500">
+                  {recipes.length} {recipes.length === 1 ? "рецепт" : recipes.length < 5 ? "рецепти" : "рецептів"}
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={handleAddRecipe}
+              size="sm"
+              className={cn(
+                "h-9 sm:h-10 px-3 sm:px-4 rounded-xl shadow-sm",
+                "bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600",
+                "touch-feedback active:scale-[0.97] transition-all"
+              )}
+            >
+              <Plus className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Додати</span>
+            </Button>
           </div>
-          <Button onClick={handleAddRecipe} size="sm" className="gap-1.5">
-            <Plus className="h-4 w-4" />
-            <span className="hidden sm:inline">Додати рецепт</span>
-          </Button>
         </div>
 
-        {/* Search */}
-        <div className="relative mb-3">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Пошук за назвою страви або інгредієнтами..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 sm:h-10"
-          />
-        </div>
-
-        {/* Output type filter */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-3 px-3 sm:mx-0 sm:px-0">
-          {OUTPUT_TYPE_OPTIONS.map((option) => {
-            const Icon = option.icon;
-            const isActive = selectedOutputType === option.value;
-            const count = recipesByType[option.value];
-
-            return (
+        {/* Search bar */}
+        <div className="px-3 sm:px-4 pb-2">
+          <div className={cn(
+            "relative transition-all duration-200",
+            isSearchFocused && "scale-[1.01]"
+          )}>
+            <Search className={cn(
+              "absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors",
+              isSearchFocused ? "text-orange-500" : "text-muted-foreground"
+            )} />
+            <Input
+              type="search"
+              placeholder="Пошук за назвою або інгредієнтами..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
+              onBlur={() => setIsSearchFocused(false)}
+              className={cn(
+                "pl-9 pr-9 h-10 sm:h-11 rounded-xl border-slate-200 bg-slate-50/80",
+                "text-sm placeholder:text-slate-400",
+                "focus:bg-white focus:border-orange-300 focus:ring-orange-200",
+                "transition-all duration-200"
+              )}
+            />
+            {searchQuery && (
               <button
-                key={option.value}
-                onClick={() => setSelectedOutputType(option.value)}
-                className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap",
-                  isActive
-                    ? "bg-orange-600 text-white"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                )}
+                onClick={clearSearch}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-200 transition-colors"
               >
-                <Icon className="h-4 w-4" />
-                {option.label}
-                <Badge
-                  variant={isActive ? "secondary" : "outline"}
+                <X className="h-3.5 w-3.5 text-slate-400" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Output type filter - Horizontal scroll with snap */}
+        <div className="overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 px-3 sm:px-4 pb-3 min-w-max">
+            {OUTPUT_TYPE_OPTIONS.map((option) => {
+              const Icon = option.icon;
+              const isActive = selectedOutputType === option.value;
+              const count = recipesByType[option.value];
+
+              return (
+                <button
+                  key={option.value}
+                  onClick={() => setSelectedOutputType(option.value)}
                   className={cn(
-                    "h-5 px-1.5 text-xs",
-                    isActive && "bg-white/20 text-white border-0"
+                    "flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium",
+                    "transition-all duration-200 touch-feedback active:scale-[0.97]",
+                    "whitespace-nowrap",
+                    isActive
+                      ? "bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   )}
                 >
-                  {count}
-                </Badge>
-              </button>
-            );
-          })}
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span>{option.label}</span>
+                  <Badge
+                    variant={isActive ? "secondary" : "outline"}
+                    className={cn(
+                      "h-5 px-1.5 text-[10px] sm:text-xs font-semibold",
+                      isActive && "bg-white/20 text-white border-0"
+                    )}
+                  >
+                    {count}
+                  </Badge>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scroll-smooth">
         {isLoading ? (
-          <div className="space-y-0.5 p-1">
-            {Array.from({ length: 12 }).map((_, i) => (
-              <div key={i} className="h-5 bg-muted animate-pulse" />
-            ))}
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center mb-4">
+              <Loader2 className="h-7 w-7 text-orange-500 animate-spin" />
+            </div>
+            <p className="text-sm text-slate-500 font-medium">Завантаження рецептів...</p>
           </div>
         ) : filteredRecipes.length === 0 ? (
-          <EmptyState
-            type={searchQuery ? "search" : "menu"}
-            title={searchQuery ? "Нічого не знайдено" : "Немає рецептів"}
-            description={
-              searchQuery
-                ? "Спробуйте інший пошуковий запит"
-                : "Додайте перший рецепт для початку роботи"
-            }
-          />
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+              <ChefHat className="h-8 w-8 text-slate-400" />
+            </div>
+            <h3 className="text-base sm:text-lg font-semibold text-slate-900 mb-1">
+              {searchQuery ? "Нічого не знайдено" : "Немає рецептів"}
+            </h3>
+            <p className="text-sm text-slate-500 text-center max-w-xs">
+              {searchQuery
+                ? "Спробуйте інший пошуковий запит або змініть фільтр"
+                : "Додайте перший рецепт для початку роботи"}
+            </p>
+            {!searchQuery && (
+              <Button
+                onClick={handleAddRecipe}
+                className="mt-4 rounded-xl shadow-sm bg-gradient-to-r from-orange-500 to-amber-500"
+              >
+                <Plus className="h-4 w-4 mr-1.5" />
+                Додати рецепт
+              </Button>
+            )}
+          </div>
         ) : (
-          <div className="divide-y">
-            {filteredRecipes.map((recipe) => (
-              <ChefRecipeCard
-                key={recipe.id}
-                recipe={recipe}
-                onEdit={() => handleEditRecipe(recipe)}
-                onReserve={handleReserveIngredients}
-                onViewDetails={handleViewDetails}
-                outputTypeLabel={recipe.outputType ? OUTPUT_TYPE_LABELS[recipe.outputType] : undefined}
-              />
-            ))}
+          <div className="bg-white md:rounded-xl md:border md:shadow-sm md:mx-4 md:mt-4">
+            {/* Table Header - Desktop only */}
+            <RecipesTableHeader />
+
+            {/* Recipe rows */}
+            <div>
+              {filteredRecipes.map((recipe) => (
+                <ChefRecipeCard
+                  key={recipe.id}
+                  recipe={recipe}
+                  onEdit={() => handleEditRecipe(recipe)}
+                  onReserve={handleReserveIngredients}
+                  onViewDetails={handleViewDetails}
+                  outputTypeLabel={recipe.outputType ? OUTPUT_TYPE_LABELS[recipe.outputType] : undefined}
+                />
+              ))}
+            </div>
           </div>
         )}
+
+        {/* Bottom padding for safe area */}
+        <div className="h-4 safe-bottom" />
       </div>
 
       {/* Recipe Form Modal */}

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { Clock, AlertTriangle, Timer, Calendar } from "lucide-react";
+import { Clock, AlertTriangle, Timer, Calendar, ChevronDown } from "lucide-react";
 import { formatDurationMs } from "@/lib/formatters";
 import { TableSessionTimer } from "./table-session-timer";
 import { TaskItemRow } from "./task-item-row";
@@ -12,6 +12,7 @@ import type { TableGroupCardProps } from "./types";
 
 /**
  * Grouped table card - shows all tasks for one table
+ * iOS-level design with smooth animations and responsive layout
  */
 export function TableGroupCard({
   group,
@@ -24,6 +25,7 @@ export function TableGroupCard({
   onTaskServed,
 }: TableGroupCardProps) {
   const [pickupWait, setPickupWait] = React.useState(0);
+  const [isExpanded, setIsExpanded] = React.useState(true);
 
   // Track pickup wait time for completed groups
   React.useEffect(() => {
@@ -77,103 +79,148 @@ export function TableGroupCard({
   return (
     <div
       className={cn(
-        "rounded-lg border transition-all overflow-hidden",
+        "rounded-xl border transition-all overflow-hidden shadow-sm",
+        // Background and border based on state
         isCompleted
           ? isPickupOverdue
-            ? "bg-danger/5 border-danger"
-            : "bg-success/5 border-success/50"
+            ? "bg-danger/5 border-danger/50"
+            : "bg-success/5 border-success/30"
           : isActive
-            ? "bg-primary/5 border-primary"
-            : "bg-background hover:border-primary/50",
-        !isCompleted && hasRush && "ring-2 ring-danger",
-        !isCompleted && hasVip && !hasRush && "ring-2 ring-warning",
-        !isCompleted && isOverdue && !hasRush && !hasVip && "ring-2 ring-danger/50 bg-danger/5",
-        isCompleted && isPickupOverdue && "ring-2 ring-danger"
+            ? "bg-primary/5 border-primary/30"
+            : "bg-white border-slate-200 hover:border-primary/30",
+        // Ring for priority
+        !isCompleted && hasRush && "ring-2 ring-danger shadow-danger/20",
+        !isCompleted && hasVip && !hasRush && "ring-2 ring-warning shadow-warning/20",
+        !isCompleted && isOverdue && !hasRush && !hasVip && "ring-2 ring-danger/40 bg-danger/5",
+        isCompleted && isPickupOverdue && "ring-2 ring-danger shadow-danger/20"
       )}
     >
-      {/* Table Header */}
-      <div
+      {/* Table Header - Tap to collapse/expand on mobile */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
         className={cn(
-          "px-3 py-2 border-b flex items-center justify-between",
+          "w-full px-3 sm:px-4 py-3 sm:py-2.5 border-b flex items-center justify-between gap-2",
+          "touch-feedback active:bg-muted/50 transition-colors min-h-[52px] sm:min-h-[44px]",
           isCompleted
             ? isPickupOverdue
-              ? "bg-danger/10"
-              : "bg-success/10"
+              ? "bg-danger/10 border-danger/20"
+              : "bg-success/10 border-success/20"
             : isActive
-              ? "bg-primary/10"
-              : "bg-muted/50",
-          isOverdue && !isCompleted && "bg-danger/10"
+              ? "bg-primary/10 border-primary/20"
+              : "bg-slate-50/80 border-slate-100",
+          isOverdue && !isCompleted && "bg-danger/10 border-danger/20"
         )}
       >
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-xs px-2 py-0.5 font-semibold">
+        <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+          {/* Table number - prominent with larger touch area */}
+          <Badge
+            variant="secondary"
+            className={cn(
+              "text-sm sm:text-sm px-2.5 sm:px-3 py-1 sm:py-0.5 font-bold rounded-lg",
+              isCompleted && !isPickupOverdue && "bg-success/20 text-success-foreground",
+              isPickupOverdue && "bg-danger/20 text-danger"
+            )}
+          >
             Стіл {group.tableNumber}
           </Badge>
+
+          {/* Session timer */}
           {group.tableOccupiedAt && (
             <TableSessionTimer occupiedAt={group.tableOccupiedAt} />
           )}
+
+          {/* Priority badges */}
           {hasRush && (
-            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 animate-pulse">
               Терміново
             </Badge>
           )}
           {hasVip && !hasRush && (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0">
+            <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 bg-amber-500">
               VIP
             </Badge>
           )}
           {hasAllergen && (
-            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 gap-0.5">
+            <Badge variant="destructive" className="text-[10px] px-1 py-0 h-5 gap-0.5">
               <AlertTriangle className="h-2.5 w-2.5" />
             </Badge>
           )}
           {hasScheduled && (
             <Badge
               variant="outline"
-              className="text-[10px] px-1.5 py-0 gap-0.5 border-purple-300 text-purple-700 bg-purple-50"
+              className="text-[10px] px-1.5 py-0 h-5 gap-0.5 border-purple-300 text-purple-700 bg-purple-50"
             >
               <Calendar className="h-2.5 w-2.5" />
             </Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-            {group.tasks.length}{" "}
-            {group.tasks.length === 1
-              ? "страва"
-              : group.tasks.length < 5
-                ? "страви"
-                : "страв"}
+
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Task count */}
+          <Badge variant="outline" className="text-xs px-2 py-0.5 h-6 bg-white/80 font-medium rounded-lg">
+            {group.tasks.length}
+            <span className="ml-1 hidden xs:inline">
+              {group.tasks.length === 1
+                ? "страва"
+                : group.tasks.length < 5
+                  ? "страви"
+                  : "страв"}
+            </span>
           </Badge>
+
+          {/* Timer - more prominent */}
           {isCompleted ? (
-            <div className={cn("font-mono text-xs flex items-center gap-1", pickupTimerColor)}>
-              <Clock className="h-3 w-3" />
+            <div className={cn(
+              "font-mono text-sm flex items-center gap-1.5 tabular-nums px-2 py-1 rounded-lg",
+              isPickupOverdue ? "bg-danger/15" : "bg-success/15",
+              pickupTimerColor
+            )}>
+              <Clock className="h-3.5 w-3.5" />
               {formatDurationMs(pickupWait)}
             </div>
           ) : (
-            <div className={cn("font-mono text-xs flex items-center gap-1", timerColor)}>
-              <Timer className="h-3 w-3" />
+            <div className={cn(
+              "font-mono text-sm flex items-center gap-1.5 tabular-nums px-2 py-1 rounded-lg",
+              isOverdue ? "bg-danger/15" : isWarning ? "bg-warning/15" : "bg-muted/40",
+              timerColor
+            )}>
+              <Timer className="h-3.5 w-3.5" />
               {formatDurationMs(maxElapsedMs)}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Tasks list */}
-      <div className="divide-y">
-        {group.tasks.map((task) => (
-          <TaskItemRow
-            key={task.documentId}
-            task={task}
-            isActive={isActive}
-            isCompleted={isCompleted}
-            isLoading={loadingTaskId === task.documentId}
-            onStart={onTaskStart ? () => onTaskStart(task.documentId) : undefined}
-            onComplete={onTaskComplete ? () => onTaskComplete(task.documentId) : undefined}
-            onReturn={onTaskReturn ? () => onTaskReturn(task.documentId) : undefined}
-            onServed={onTaskServed ? () => onTaskServed(task.documentId) : undefined}
+          {/* Expand/collapse indicator */}
+          <ChevronDown
+            className={cn(
+              "h-5 w-5 text-muted-foreground transition-transform duration-200",
+              !isExpanded && "-rotate-90"
+            )}
           />
-        ))}
+        </div>
+      </button>
+
+      {/* Tasks list - Collapsible */}
+      <div
+        className={cn(
+          "transition-all duration-200 ease-out overflow-hidden",
+          isExpanded ? "max-h-[1000px] opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
+        <div className="divide-y divide-slate-100">
+          {group.tasks.map((task) => (
+            <TaskItemRow
+              key={task.documentId}
+              task={task}
+              isActive={isActive}
+              isCompleted={isCompleted}
+              isLoading={loadingTaskId === task.documentId}
+              onStart={onTaskStart ? () => onTaskStart(task.documentId) : undefined}
+              onComplete={onTaskComplete ? () => onTaskComplete(task.documentId) : undefined}
+              onReturn={onTaskReturn ? () => onTaskReturn(task.documentId) : undefined}
+              onServed={onTaskServed ? () => onTaskServed(task.documentId) : undefined}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

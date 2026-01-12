@@ -3,7 +3,8 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Clock, Play, Check, AlertTriangle, Flame, Users, Timer, RefreshCw } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Clock, Play, Check, AlertTriangle, Flame, Users, Timer, RefreshCw, Loader2 } from "lucide-react";
 import { CourseBadge } from "@/features/orders/course-selector";
 import { CommentDisplay } from "@/features/orders/comment-editor";
 import { formatDurationMs } from "@/lib/formatters";
@@ -12,7 +13,7 @@ import type { TaskItemRowProps } from "./types";
 
 /**
  * Single task row within a table group
- * Shows item details with phase-specific timer
+ * Optimized for mobile with touch-friendly targets and responsive typography
  */
 export function TaskItemRow({
   task,
@@ -109,7 +110,7 @@ export function TaskItemRow({
   return (
     <div
       className={cn(
-        "px-3 py-2 flex items-center gap-3",
+        "px-3 sm:px-4 py-3 sm:py-2.5 transition-all",
         task.priority === "rush" && "bg-danger/5",
         task.priority === "vip" && "bg-warning/5",
         isQueueOverdue && isPending && "bg-warning/10",
@@ -117,127 +118,180 @@ export function TaskItemRow({
         isPickupOverdue && isCompleted && "bg-danger/10"
       )}
     >
-      {/* Quantity & Name */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-primary text-sm">{task.quantity}x</span>
-          <span className="font-medium text-sm truncate">{task.menuItemName}</span>
-          <CourseBadge course={task.courseType} size="sm" />
-          {hasAllergen && (
-            <AlertTriangle className="h-3 w-3 text-danger shrink-0" />
+      {/* Main content row */}
+      <div className="flex items-start gap-3">
+        {/* Quantity badge - prominent, larger for touch */}
+        <div className="flex-shrink-0">
+          <span className={cn(
+            "inline-flex items-center justify-center font-bold tabular-nums",
+            "w-8 h-8 sm:w-7 sm:h-7 rounded-xl text-sm",
+            "bg-primary/15 text-primary shadow-sm"
+          )}>
+            {task.quantity}
+          </span>
+        </div>
+
+        {/* Item info */}
+        <div className="flex-1 min-w-0">
+          {/* Name and badges row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm sm:text-base leading-tight text-foreground">{task.menuItemName}</span>
+            <CourseBadge course={task.courseType} size="sm" />
+            {hasAllergen && (
+              <Badge variant="destructive" className="h-5 px-1.5 gap-1 text-[10px]">
+                <AlertTriangle className="h-3 w-3" />
+                <span className="hidden sm:inline">Алерген</span>
+              </Badge>
+            )}
+          </div>
+
+          {/* Modifiers */}
+          {task.modifiers.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-1 leading-snug">
+              {task.modifiers.join(" • ")}
+            </p>
+          )}
+
+          {/* Comment */}
+          {task.comment && (
+            <div className="mt-1.5">
+              <CommentDisplay comment={task.comment} size="sm" />
+            </div>
+          )}
+
+          {/* Chef assignment */}
+          {task.assignedChefName && (
+            <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+              <Users className="h-3 w-3" />
+              <span className="truncate">{task.assignedChefName}</span>
+            </div>
           )}
         </div>
-        {(task.modifiers.length > 0 || task.comment) && (
-          <div className="mt-0.5 flex items-center gap-2">
-            {task.modifiers.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {task.modifiers.join(", ")}
-              </p>
-            )}
-            {task.comment && (
-              <CommentDisplay comment={task.comment} size="sm" />
-            )}
-          </div>
-        )}
-        {task.assignedChefName && (
-          <div className="flex items-center gap-1 mt-0.5 text-xs text-muted-foreground">
-            <Users className="h-3 w-3" />
-            {task.assignedChefName}
-          </div>
-        )}
+
+        {/* Timer column - larger and clearer */}
+        <div
+          className={cn(
+            "flex-shrink-0 flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-xs transition-colors",
+            isPending && "bg-slate-100/80",
+            isActive && (isOverdue ? "bg-danger/15" : "bg-primary/10"),
+            isCompleted && (isPickupOverdue ? "bg-danger/15" : "bg-success/15")
+          )}
+        >
+          {isPending && (
+            <>
+              <Clock className={cn("h-4 w-4 flex-shrink-0", queueTimerColor)} />
+              <div className="flex flex-col items-end min-w-[44px]">
+                <span className="text-[10px] text-muted-foreground leading-none mb-0.5">в черзі</span>
+                <span className={cn("font-mono font-bold text-xs leading-tight tabular-nums", queueTimerColor)}>
+                  {formatDurationMs(queueWait)}
+                </span>
+              </div>
+            </>
+          )}
+          {isActive && (
+            <>
+              <Flame className={cn("h-4 w-4 flex-shrink-0", isOverdue && "animate-pulse", timerColor)} />
+              <div className="flex flex-col items-end min-w-[44px]">
+                <span className="text-[10px] text-muted-foreground leading-none mb-0.5">готується</span>
+                <span className={cn("font-mono font-bold text-xs leading-tight tabular-nums", timerColor)}>
+                  {formatDurationMs(currentElapsed)}
+                </span>
+              </div>
+            </>
+          )}
+          {isCompleted && (
+            <>
+              <Timer className={cn("h-4 w-4 flex-shrink-0", isPickupOverdue && "animate-pulse", pickupTimerColor)} />
+              <div className="flex flex-col items-end min-w-[44px]">
+                <span className="text-[10px] text-muted-foreground leading-none mb-0.5">очікує</span>
+                <span className={cn("font-mono font-bold text-xs leading-tight tabular-nums", pickupTimerColor)}>
+                  {formatDurationMs(pickupWait)}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-      {/* Phase-specific timer with label */}
-      <div
-        className={cn(
-          "shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs",
-          isPending && "bg-muted/50",
-          isActive && (isOverdue ? "bg-danger/10" : "bg-primary/10"),
-          isCompleted && (isPickupOverdue ? "bg-danger/10" : "bg-success/10")
-        )}
-      >
-        {isPending && (
-          <>
-            <Clock className={cn("h-3.5 w-3.5", queueTimerColor)} />
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] text-muted-foreground leading-none">в черзі</span>
-              <span className={cn("font-mono font-medium leading-none", queueTimerColor)}>
-                {formatDurationMs(queueWait)}
-              </span>
-            </div>
-          </>
-        )}
-        {isActive && (
-          <>
-            <Flame className={cn("h-3.5 w-3.5", timerColor)} />
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] text-muted-foreground leading-none">готується</span>
-              <span className={cn("font-mono font-medium leading-none", timerColor)}>
-                {formatDurationMs(currentElapsed)}
-              </span>
-            </div>
-          </>
-        )}
-        {isCompleted && (
-          <>
-            <Timer className={cn("h-3.5 w-3.5", pickupTimerColor)} />
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] text-muted-foreground leading-none">очікує</span>
-              <span className={cn("font-mono font-medium leading-none", pickupTimerColor)}>
-                {formatDurationMs(pickupWait)}
-              </span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-1.5 shrink-0">
+      {/* Actions row - Full width buttons on mobile for better touch targets */}
+      <div className="flex items-center justify-end gap-2.5 mt-3 sm:mt-2">
         {!isActive && !isCompleted && onStart && (
-          <Button size="sm" className="h-7 text-xs" onClick={onStart} disabled={isLoading}>
-            {isLoading ? (
-              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-            ) : (
-              <Play className="h-3 w-3 mr-1" />
+          <Button
+            size="sm"
+            className={cn(
+              "h-11 sm:h-9 px-5 sm:px-4 text-sm sm:text-xs font-semibold rounded-xl",
+              "touch-feedback active:scale-[0.97] transition-all",
+              "shadow-md hover:shadow-lg"
             )}
-            {isLoading ? "..." : "Почати"}
+            onClick={onStart}
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4 mr-2" />
+            )}
+            {isLoading ? "Запуск..." : "Почати"}
           </Button>
         )}
         {isActive && onComplete && (
-          <Button size="sm" variant="default" className="h-7 text-xs" onClick={onComplete} disabled={isLoading}>
+          <Button
+            size="sm"
+            variant="default"
+            className={cn(
+              "h-11 sm:h-9 px-5 sm:px-4 text-sm sm:text-xs font-semibold rounded-xl",
+              "touch-feedback active:scale-[0.97] transition-all",
+              "bg-success hover:bg-success/90 shadow-md hover:shadow-lg"
+            )}
+            onClick={onComplete}
+            disabled={isLoading}
+          >
             {isLoading ? (
-              <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
-              <Check className="h-3 w-3 mr-1" />
+              <Check className="h-4 w-4 mr-2" />
             )}
             {isLoading ? "..." : "Готово"}
           </Button>
         )}
         {isCompleted && (
-          <>
+          <div className="flex items-center gap-2.5">
             {onReturn && (
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onReturn} disabled={isLoading}>
-                <RefreshCw className={cn("h-3 w-3 mr-1", isLoading && "animate-spin")} />
-                {isLoading ? "..." : "Повернути"}
+              <Button
+                size="sm"
+                variant="outline"
+                className={cn(
+                  "h-11 sm:h-9 w-11 sm:w-auto sm:px-4 text-xs font-medium rounded-xl",
+                  "touch-feedback active:scale-[0.97] transition-all"
+                )}
+                onClick={onReturn}
+                disabled={isLoading}
+              >
+                <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
+                <span className="ml-2 hidden sm:inline">{isLoading ? "..." : "Повернути"}</span>
               </Button>
             )}
             {onServed && (
               <Button
                 size="sm"
                 variant="default"
-                className="h-7 text-xs bg-success hover:bg-success/90"
+                className={cn(
+                  "h-11 sm:h-9 px-5 sm:px-4 text-sm sm:text-xs font-semibold rounded-xl",
+                  "touch-feedback active:scale-[0.97] transition-all",
+                  "bg-success hover:bg-success/90 shadow-md hover:shadow-lg"
+                )}
                 onClick={onServed}
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
-                  <Check className="h-3 w-3 mr-1" />
+                  <Check className="h-4 w-4 mr-2" />
                 )}
                 {isLoading ? "..." : "Видано"}
               </Button>
             )}
-          </>
+          </div>
         )}
       </div>
     </div>

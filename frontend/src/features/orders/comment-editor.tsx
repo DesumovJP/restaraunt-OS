@@ -288,8 +288,8 @@ export function CommentEditor({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-w-lg p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="flex items-center gap-2">
             <MessageSquare className="h-5 w-5" />
             Коментар до страви
@@ -297,7 +297,7 @@ export function CommentEditor({
           <p className="text-sm text-muted-foreground">{menuItemName}</p>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="px-6 space-y-5 max-h-[60vh] overflow-y-auto">
           {/* Conflicts warning */}
           {conflicts.length > 0 && (
             <div className="flex items-start gap-2 p-3 rounded-lg bg-danger/10 border border-danger/20">
@@ -419,16 +419,13 @@ export function CommentEditor({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="ghost" onClick={handleClear}>
-            Очистити
-          </Button>
-          <Button variant="outline" onClick={onClose}>
-            Скасувати
-          </Button>
-          <Button onClick={handleSave}>
+        <DialogFooter className="px-6 py-4 border-t bg-slate-50/50 flex-col gap-2">
+          <Button onClick={handleSave} className="w-full h-11 bg-slate-900 hover:bg-slate-800 text-base font-medium rounded-xl">
             <Check className="h-4 w-4 mr-1.5" />
             Зберегти
+          </Button>
+          <Button variant="ghost" onClick={handleClear} className="w-full text-slate-500 hover:text-slate-700">
+            Очистити все
           </Button>
         </DialogFooter>
       </DialogContent>

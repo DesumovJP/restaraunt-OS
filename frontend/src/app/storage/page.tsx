@@ -34,6 +34,7 @@ import {
   Layers,
   Archive,
   ArrowUpDown,
+  Package,
 } from "lucide-react";
 
 // Types
@@ -198,13 +199,13 @@ export default function StoragePage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col h-screen-safe bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b safe-top">
+      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm safe-area-inset-top">
         {/* Top row */}
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold">Smart Storage</h1>
+        <div className="flex items-center justify-between px-3 sm:px-4 py-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="text-lg sm:text-xl font-bold">Smart Storage</h1>
             {totalAlerts > 0 && !alertsDismissed && (
               <AlertIndicator
                 count={totalAlerts}
@@ -213,7 +214,7 @@ export default function StoragePage() {
               />
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             {activeTab === "inventory" && (
               <ViewToggle value={viewMode} onChange={setViewMode} />
             )}
@@ -222,6 +223,7 @@ export default function StoragePage() {
               size="icon"
               onClick={() => setIsScannerOpen(true)}
               aria-label="Сканувати QR-код"
+              className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl touch-feedback"
             >
               <QrCode className="h-5 w-5" />
             </Button>
@@ -229,25 +231,26 @@ export default function StoragePage() {
               size="icon"
               aria-label="Прийняти поставку"
               onClick={() => setIsSupplyFormOpen(true)}
+              className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl touch-feedback"
             >
               <Plus className="h-5 w-5" />
             </Button>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 px-4 pb-3">
+        {/* Tabs - touch-friendly */}
+        <div className="flex gap-1.5 px-3 sm:px-4 pb-3 overflow-x-auto scrollbar-hide">
           <button
             onClick={() => setActiveTab("inventory")}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
+              "flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-sm font-medium rounded-xl transition-all touch-feedback",
               activeTab === "inventory"
-                ? "bg-primary text-primary-foreground"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
           >
             <Layers className="h-4 w-4" />
-            Інвентар
+            <span className="whitespace-nowrap">Інвентар</span>
             <Badge
               variant={activeTab === "inventory" ? "secondary" : "outline"}
               className="h-5 px-1.5 text-xs"
@@ -258,14 +261,14 @@ export default function StoragePage() {
           <button
             onClick={() => setActiveTab("batches")}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg transition-colors",
+              "flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-sm font-medium rounded-xl transition-all touch-feedback",
               activeTab === "batches"
-                ? "bg-primary text-primary-foreground"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
           >
             <Archive className="h-4 w-4" />
-            Партії / Історія
+            <span className="whitespace-nowrap">Партії / Історія</span>
             {todaysBatchesCount > 0 && (
               <Badge variant="default" className="h-5 px-1.5 text-xs">
                 +{todaysBatchesCount}
@@ -276,7 +279,7 @@ export default function StoragePage() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto p-4">
+      <main className="flex-1 overflow-y-auto p-3 sm:p-4 scroll-container">
         {activeTab === "inventory" && (
           <div className="space-y-4">
             {/* Alert banner */}
@@ -315,7 +318,7 @@ export default function StoragePage() {
                   placeholder="Пошук по назві або SKU..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-11 sm:h-10 rounded-xl text-sm"
                   aria-label="Пошук товарів"
                 />
               </div>
@@ -389,8 +392,111 @@ export default function StoragePage() {
         )}
 
         {activeTab === "batches" && (
-          <div className="text-center text-muted-foreground py-8">
-            Партії та історія - в розробці
+          <div className="space-y-4">
+            {/* Development Banner */}
+            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Archive className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-medium text-amber-900">Розділ у розробці</p>
+                <p className="text-sm text-amber-700">
+                  Повний функціонал обліку партій буде доступний найближчим часом
+                </p>
+              </div>
+            </div>
+
+            {/* Today's deliveries */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <span>Сьогоднішні поставки</span>
+                <Badge variant="secondary" className="text-xs">{todaysBatchesCount}</Badge>
+              </h3>
+              <div className="space-y-2">
+                {MOCK_BATCHES
+                  .filter((b) => {
+                    const todayStart = new Date();
+                    todayStart.setHours(0, 0, 0, 0);
+                    return new Date(b.receivedAt) >= todayStart;
+                  })
+                  .map((batch) => (
+                    <div
+                      key={batch.documentId}
+                      className="flex items-center gap-4 p-4 bg-white border rounded-xl hover:shadow-sm transition-shadow"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                        <Package className="h-5 w-5 text-emerald-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-900 truncate">{batch.productName}</p>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                          <span>Партія: {batch.batchNumber}</span>
+                          <span>•</span>
+                          <span>Накладна: {batch.invoiceNumber}</span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-semibold text-slate-900 tabular-nums">
+                          {batch.grossIn} кг
+                        </p>
+                        <p className="text-xs text-slate-500 tabular-nums">
+                          {batch.totalCost.toLocaleString()} ₴
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Previous deliveries */}
+            <div>
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Попередні партії</h3>
+              <div className="space-y-2">
+                {MOCK_BATCHES
+                  .filter((b) => {
+                    const todayStart = new Date();
+                    todayStart.setHours(0, 0, 0, 0);
+                    return new Date(b.receivedAt) < todayStart;
+                  })
+                  .map((batch) => (
+                    <div
+                      key={batch.documentId}
+                      className="flex items-center gap-4 p-4 bg-white border rounded-xl opacity-75 hover:opacity-100 transition-opacity"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                        <Package className="h-5 w-5 text-slate-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-slate-900 truncate">{batch.productName}</p>
+                        <div className="flex items-center gap-3 text-xs text-slate-500 mt-0.5">
+                          <span>{batch.batchNumber}</span>
+                          <span>•</span>
+                          <span className={batch.status === "in_use" ? "text-amber-600" : "text-emerald-600"}>
+                            {batch.status === "in_use" ? "В роботі" : "Доступно"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="font-semibold text-slate-900 tabular-nums">
+                          {batch.netAvailable} кг
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          з {batch.grossIn} кг
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+
+            {/* Close shift button */}
+            <Button
+              variant="outline"
+              onClick={handleCloseShift}
+              className="w-full h-12 rounded-xl"
+            >
+              Експортувати звіт за зміну
+            </Button>
           </div>
         )}
       </main>

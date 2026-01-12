@@ -382,20 +382,11 @@ export function SupplyForm({ open, onOpenChange, onSuccess }: SupplyFormProps) {
           </div>
 
           {/* Footer */}
-          <DialogFooter className="px-6 py-4 border-t bg-slate-50/50 gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-              className="flex-1 sm:flex-none h-11"
-            >
-              Скасувати
-            </Button>
+          <DialogFooter className="px-6 py-4 border-t bg-slate-50/50">
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 sm:flex-none h-11 bg-emerald-600 hover:bg-emerald-700"
+              className="w-full h-12 px-6 bg-emerald-600 hover:bg-emerald-700 text-base font-medium rounded-xl"
             >
               {isSubmitting ? (
                 <>

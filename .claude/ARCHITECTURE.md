@@ -2032,3 +2032,211 @@ export default createAdminLifecycles('menu_item', {
 
 - `backend/src/utils/enums.ts` (~580 LOC) - централізовані enum'и
 - `backend/src/utils/lifecycle-helpers.ts` (~350 LOC) - factory functions
+
+---
+
+## 18. UI/UX Polish (Production Ready)
+
+> **Версія:** 1.0
+> **Дата:** 2026-01-12
+> **Мета:** Investor-ready presentation quality
+
+### 18.1 Глобальні анімації (iOS-рівень)
+
+**Файл:** `frontend/tailwind.config.ts`
+
+Додані spring-based анімації:
+
+| Animation | Timing | Use Case |
+|-----------|--------|----------|
+| `modal-in` | 300ms spring | Відкриття модальних вікон |
+| `modal-out` | 200ms ease-out | Закриття модальних вікон |
+| `scale-in` | 200ms spring | Поява елементів |
+| `fade-in-up` | 300ms spring | Плавне виїздження знизу |
+| `slide-in-right/left` | 300ms spring | Drawer navigation |
+| `bounce-in` | 500ms spring | Привертання уваги |
+
+**Easing функції:**
+```css
+/* iOS-like spring physics */
+cubic-bezier(0.16, 1, 0.3, 1)   /* Smooth deceleration */
+cubic-bezier(0.34, 1.56, 0.64, 1) /* Bounce effect */
+```
+
+### 18.2 Touch Utilities
+
+**Файл:** `frontend/src/app/globals.css`
+
+```css
+/* Touch feedback - iOS haptic feel */
+.touch-feedback {
+  transition: transform 150ms, box-shadow 150ms;
+}
+.touch-feedback:active {
+  transform: scale(0.97);
+}
+
+/* Card hover lift effect */
+.hover-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(11, 27, 59, 0.1);
+}
+
+/* Press effect for buttons */
+.press-effect:active {
+  transform: scale(0.95);
+  opacity: 0.9;
+}
+```
+
+### 18.3 Responsive Typography
+
+Fluid typography helpers:
+
+```css
+.text-responsive-xs  { font-size: clamp(0.625rem, 2vw, 0.75rem); }
+.text-responsive-sm  { font-size: clamp(0.75rem, 2.5vw, 0.875rem); }
+.text-responsive-base { font-size: clamp(0.875rem, 3vw, 1rem); }
+.text-responsive-lg  { font-size: clamp(1rem, 3.5vw, 1.125rem); }
+.text-responsive-xl  { font-size: clamp(1.125rem, 4vw, 1.25rem); }
+```
+
+### 18.4 Покращені компоненти
+
+#### Table Card (`features/tables/table-card.tsx`)
+
+**Зміни:**
+- Градієнтний фон по статусу (emerald/amber/blue)
+- Пульсуючий індикатор статусу
+- Hover lift effect
+- Touch feedback на натискання
+- Responsive font sizes (4xl → 5xl)
+- Glass morphism badges
+
+**Статус конфіг:**
+```typescript
+const statusConfig = {
+  free: {
+    bg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50',
+    indicator: 'bg-emerald-500',
+    glow: 'shadow-emerald-500/10',
+  },
+  // ...
+};
+```
+
+#### Table Grid (`features/tables/table-grid.tsx`)
+
+**Зміни:**
+- Stagger animation при появі карток
+- Покращений empty state з іконкою
+- Адаптивна сітка (2-6 колонок)
+
+```tsx
+style={{
+  animationDelay: `${Math.min(index * 30, 300)}ms`,
+  animationFillMode: 'both',
+}}
+```
+
+#### Tables Page (`app/pos/waiter/tables/page.tsx`)
+
+**Зміни:**
+- Sticky header з backdrop blur
+- Loading overlay з анімацією
+- Premium статистичні карточки
+- Покращений пошук (h-12, rounded-xl)
+- Pill-style фільтри статусів
+- Кольорове кодування активних фільтрів
+
+#### Reservation Dialog (`features/reservations/reservation-dialog.tsx`)
+
+**Зміни:**
+- Секціонування форми (Дата і час / Інформація про гостя / Додатково)
+- Покращений DatePicker з тегами "Сьогодні"/"Завтра"
+- Time slot picker з групуванням по періодах (Ранок/День/Вечір)
+- Легенда для слотів
+- Responsive guest counter
+- Fixed footer з sticky позицією
+
+#### Calendar Page (`app/pos/waiter/calendar/page.tsx`)
+
+**Зміни:**
+- Покращений header з subtitle
+- Premium date navigation
+- Кнопка "Сьогодні" при віддаленні
+- Покращений MiniCalendar
+
+#### Reservation Card (`features/reservations/reservations-list.tsx`)
+
+**Зміни:**
+- Time block з виділенням
+- "Через X хв" badge для upcoming
+- Gradient фон для upcoming/past due
+- Колірні іконки в dropdown меню
+
+### 18.5 Dialog Component
+
+**Файл:** `components/ui/dialog.tsx`
+
+**Зміни:**
+- Modal-in/modal-out animations
+- Softer backdrop (40% opacity, 2px blur)
+- Larger close button hit area
+- Scale animation on close button press
+
+### 18.6 Mock Data для Demo
+
+**Файл:** `hooks/use-sync-tables.ts`
+
+Додано fallback mock data (25 столів) для demo без backend:
+
+```typescript
+const DEMO_TABLES: Table[] = [
+  // Main hall - 10 tables (mix of free/occupied/reserved)
+  // Terrace - 6 tables
+  // VIP - 4 tables
+  // Bar - 5 tables
+];
+
+// Автоматично використовується коли Strapi недоступний
+if (!data?.tables || data.tables.length === 0) {
+  setTables(DEMO_TABLES);
+}
+```
+
+### 18.7 Design Tokens Integration
+
+Всі компоненти використовують централізовані design tokens:
+
+- **Кольори:** `bg-slate-*`, `text-emerald-*`, `border-blue-*`
+- **Тіні:** `shadow-sm`, `shadow-lg`, `shadow-xl`
+- **Радіуси:** `rounded-xl`, `rounded-2xl`
+- **Transitions:** `duration-200`, `ease-out`
+
+### 18.8 Accessibility
+
+- Minimum touch targets: 44px
+- Focus visible rings
+- Reduced motion support:
+```css
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; }
+}
+```
+
+### 18.9 Checklist Production Ready UI
+
+- [x] iOS-level animations (spring physics)
+- [x] Touch feedback on interactive elements
+- [x] Responsive typography (clamp-based)
+- [x] Premium card designs with gradients
+- [x] Smooth dialog/modal transitions
+- [x] Empty states with icons
+- [x] Loading states with spinners
+- [x] Status color coding
+- [x] Mock data fallback for demo
+- [x] Accessibility basics
+- [ ] Full mobile testing
+- [ ] Dark mode support
+- [ ] RTL support

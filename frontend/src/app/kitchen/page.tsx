@@ -11,7 +11,6 @@ import {
   Volume2,
   VolumeX,
   Bell,
-  Settings,
   Clock,
   AlertTriangle,
   CheckCircle2,
@@ -19,8 +18,6 @@ import {
   ChefHat,
   Menu,
   Calendar,
-  User,
-  LogOut,
   ListTodo,
 } from "lucide-react";
 import { StationQueue, StationOverview, AllKitchenView } from "@/features/kitchen/station-queue";
@@ -30,6 +27,7 @@ import { PlannedOrdersView } from "@/features/orders/planned-orders-view";
 import { DailiesView } from "@/features/dailies";
 import { WorkersChat } from "@/features/admin/workers-chat";
 import { WorkerProfileCard } from "@/features/profile";
+import { ShiftScheduleView } from "@/features/schedule";
 import { useStationEvents } from "@/hooks/use-websocket";
 import { useKitchenStore, onTaskStarted, type KitchenTask, type BackendKitchenTicket } from "@/stores/kitchen-store";
 import { useInventoryDeduction, storageHistoryApi } from "@/hooks/use-inventory-deduction";
@@ -50,7 +48,6 @@ export default function KitchenDisplayPage() {
   const [pausedStations, setPausedStations] = React.useState<Set<StationType>>(new Set());
   const [activeView, setActiveView] = React.useState<ChefView>("stations");
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = React.useState(false);
   const [currentTime, setCurrentTime] = React.useState<string>("");
   const [isHydrated, setIsHydrated] = React.useState(false);
 
@@ -144,8 +141,6 @@ export default function KitchenDisplayPage() {
   // User info - в реальному додатку це буде з контексту або API
   const currentUser = {
     name: "Олексій Петренко",
-    role: "Шеф-кухар",
-    avatar: undefined,
   };
 
   // Build tasks by station from store - only after hydration to prevent mismatch
@@ -399,7 +394,7 @@ export default function KitchenDisplayPage() {
   ];
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen-safe bg-background">
       {/* Left Sidebar Navigation */}
       <ChefLeftSidebar
         open={isSidebarOpen}
@@ -425,15 +420,7 @@ export default function KitchenDisplayPage() {
             <WorkersChat />
           </div>
         ) : activeView === "schedule" ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-            <div className="inline-flex items-center gap-2 bg-amber-100 border border-amber-300 text-amber-800 px-4 py-2 rounded-full shadow-sm mb-4">
-              <span className="font-medium text-sm">В розробці</span>
-            </div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-2">Графік змін</h2>
-            <p className="text-sm text-muted-foreground max-w-md">
-              Тут ви зможете переглядати графік змін команди. Функція редагування доступна лише адміністраторам.
-            </p>
-          </div>
+          <ShiftScheduleView compact className="flex-1" />
         ) : activeView === "profile" ? (
           <div className="flex-1 overflow-y-auto p-4">
             <div className="max-w-md mx-auto w-full">
@@ -530,90 +517,6 @@ export default function KitchenDisplayPage() {
                     >
                       <Maximize2 className="h-5 w-5" />
                     </Button>
-
-                    {/* User Profile */}
-                    <div className="relative">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="relative h-9 w-9 sm:h-10 sm:w-10"
-                        onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                        aria-label="Профіль користувача"
-                      >
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                          {currentUser.avatar ? (
-                            <img
-                              src={currentUser.avatar}
-                              alt={currentUser.name}
-                              className="w-full h-full rounded-full object-cover"
-                            />
-                          ) : (
-                            <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                          )}
-                        </div>
-                      </Button>
-                      
-                      {/* User Menu Dropdown */}
-                      {isUserMenuOpen && (
-                        <>
-                          {/* Backdrop */}
-                          <div
-                            className="fixed inset-0 z-40"
-                            onClick={() => setIsUserMenuOpen(false)}
-                          />
-                          {/* Menu */}
-                          <div className="absolute right-0 top-full mt-2 w-56 rounded-lg bg-white border border-slate-200 shadow-lg z-50">
-                            <div className="p-4 border-b border-slate-200">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center flex-shrink-0">
-                                  {currentUser.avatar ? (
-                                    <img
-                                      src={currentUser.avatar}
-                                      alt={currentUser.name}
-                                      className="w-full h-full rounded-full object-cover"
-                                    />
-                                  ) : (
-                                    <User className="w-5 h-5 text-white" />
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-semibold text-slate-900 truncate">
-                                    {currentUser.name}
-                                  </p>
-                                  <p className="text-xs text-slate-600 truncate">
-                                    {currentUser.role}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="p-2">
-                              <Button
-                                variant="ghost"
-                                className="w-full justify-start text-sm"
-                                onClick={() => {
-                                  // TODO: Navigate to profile settings
-                                  setIsUserMenuOpen(false);
-                                }}
-                              >
-                                <Settings className="h-4 w-4 mr-2" />
-                                Налаштування профілю
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                className="w-full justify-start text-sm text-danger hover:text-danger hover:bg-danger/10"
-                                onClick={() => {
-                                  // TODO: Handle logout
-                                  setIsUserMenuOpen(false);
-                                }}
-                              >
-                                <LogOut className="h-4 w-4 mr-2" />
-                                Вийти
-                              </Button>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>
@@ -634,8 +537,8 @@ export default function KitchenDisplayPage() {
             )}
 
             {/* Main content */}
-            <main className="flex-1 overflow-y-auto p-4">
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <main className="flex-1 overflow-y-auto p-3 sm:p-4 scroll-container">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {/* Station overview */}
                 <div className="lg:col-span-1">
                   <Card>
@@ -700,7 +603,7 @@ export default function KitchenDisplayPage() {
                 </div>
 
                 {/* Selected station queue or All Kitchen view */}
-                <div className="lg:col-span-3">
+                <div className="md:col-span-2 lg:col-span-3">
                   {selectedStation === "all" ? (
                     <AllKitchenView
                       tasksByStation={tasksByStation}
@@ -710,7 +613,7 @@ export default function KitchenDisplayPage() {
                       onTaskPass={handleTaskPass}
                       onTaskReturn={handleTaskReturn}
                       onTaskServed={handleTaskServed}
-                      className="h-[calc(100vh-180px)]"
+                      className="min-h-[400px] md:min-h-[500px] lg:h-[calc(100dvh-200px)]"
                     />
                   ) : (
                     <StationQueue
@@ -726,7 +629,7 @@ export default function KitchenDisplayPage() {
                       onTaskReturn={handleTaskReturn}
                       onTaskServed={handleTaskServed}
                       onPauseToggle={handlePauseToggle}
-                      className="h-[calc(100vh-180px)]"
+                      className="min-h-[400px] md:min-h-[500px] lg:h-[calc(100dvh-200px)]"
                     />
                   )}
                 </div>

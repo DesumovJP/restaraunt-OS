@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Menu, Clock } from 'lucide-react';
+import { Menu, Clock, Timer } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface TopNavbarProps {
   onMenuClick?: () => void;
@@ -13,6 +14,7 @@ interface TopNavbarProps {
 function TableTimer({ occupiedAt }: { occupiedAt?: Date | string }) {
   const [elapsed, setElapsed] = React.useState<string>('00:00');
   const [isValid, setIsValid] = React.useState(false);
+  const [isLongSession, setIsLongSession] = React.useState(false);
 
   React.useEffect(() => {
     if (!occupiedAt) {
@@ -42,6 +44,9 @@ function TableTimer({ occupiedAt }: { occupiedAt?: Date | string }) {
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((diff % (1000 * 60)) / 1000);
 
+      // Mark as long session if over 90 minutes
+      setIsLongSession(hours > 0 || minutes > 90);
+
       if (hours > 0) {
         // Show hours:minutes for long sessions
         setElapsed(`${hours}:${minutes.toString().padStart(2, '0')}`);
@@ -61,8 +66,11 @@ function TableTimer({ occupiedAt }: { occupiedAt?: Date | string }) {
   if (!isValid) return null;
 
   return (
-    <span className="flex items-center gap-1.5 text-sm font-medium text-amber-600">
-      <Clock className="w-4 h-4" />
+    <span className={cn(
+      "flex items-center gap-1.5 text-sm font-semibold tabular-nums transition-colors",
+      isLongSession ? "text-red-600" : "text-amber-600"
+    )}>
+      <Timer className={cn("w-4 h-4", isLongSession && "animate-pulse")} />
       {elapsed}
     </span>
   );
@@ -74,24 +82,28 @@ export function TopNavbar({
   tableOccupiedAt,
 }: TopNavbarProps) {
   return (
-    <nav className="sticky top-0 z-40 bg-white border-b border-slate-200">
+    <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
       <div className="px-4 md:px-6">
         <div className="flex items-center justify-between h-14">
           {/* Left: Menu button (mobile) */}
           <button
             onClick={onMenuClick}
-            className="lg:hidden w-11 h-11 rounded-lg flex items-center justify-center hover:bg-slate-100"
+            className="lg:hidden w-11 h-11 rounded-xl flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors touch-feedback"
             aria-label="Меню"
           >
             <Menu className="w-5 h-5 text-slate-600" />
           </button>
 
-          {/* Center/Right: Table Number */}
+          {/* Center/Right: Table Number with Premium Badge */}
           {tableNumber && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-lg">
-              <span className="font-semibold text-slate-900">
-                Стіл {tableNumber}
-              </span>
+            <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-r from-slate-100 to-slate-50 rounded-xl border border-slate-200/80 shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-bold text-slate-900">
+                  Стіл {tableNumber}
+                </span>
+              </div>
+              <div className="w-px h-5 bg-slate-200" />
               <TableTimer occupiedAt={tableOccupiedAt} />
             </div>
           )}

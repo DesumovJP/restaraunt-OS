@@ -619,18 +619,11 @@ function OrderDetailContent() {
             )}
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              variant="outline"
-              onClick={() => setShowCloseDialog(false)}
-              disabled={closingTable}
-            >
-              Скасувати
-            </Button>
+          <DialogFooter className="border-t pt-4">
             <Button
               onClick={handleCloseTable}
               disabled={closingTable}
-              className="bg-success hover:bg-success/90"
+              className="w-full h-11 bg-success hover:bg-success/90 text-base font-medium rounded-xl"
             >
               {closingTable ? (
                 <>

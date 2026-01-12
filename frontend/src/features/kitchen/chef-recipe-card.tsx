@@ -65,7 +65,7 @@ function fmt(n: number): string {
 }
 
 // ==========================================
-// COMPACT RECIPE CARD
+// RECIPE TABLE ROW (Desktop)
 // ==========================================
 
 interface ChefRecipeCardProps {
@@ -83,6 +83,7 @@ export function ChefRecipeCard({
   onEdit,
   onReserve,
   onViewDetails,
+  outputTypeLabel,
 }: ChefRecipeCardProps) {
   // Calculations
   const maxPortions = React.useMemo(() => {
@@ -102,29 +103,177 @@ export function ChefRecipeCard({
   const price = recipe.sellingPrice || recipe.menuItem.price || 0;
   const marginPct = recipe.marginPercent || 0;
   const foodCostPct = recipe.foodCostPercent || 0;
+  const marginAbs = recipe.marginAbsolute || (price - cost);
+  const totalTime = (recipe.prepTime || 0) + (recipe.cookTime || 0);
 
   const hasIssue = unavailableCount > 0 || foodCostPct >= 40;
+  const status = getMarginStatus(foodCostPct);
 
   return (
     <button
       onClick={() => onViewDetails?.(recipe)}
       className={cn(
-        "w-full text-left border-l-2 px-1.5 py-0.5 hover:bg-muted/50",
-        getMarginColor(foodCostPct),
-        hasIssue && "bg-red-50/50",
+        "w-full text-left transition-colors hover:bg-slate-50 active:bg-slate-100",
+        hasIssue && "bg-red-50/50 hover:bg-red-50",
         className
       )}
     >
-      <div className="flex items-center text-xs">
-        <span className="truncate flex-1">{recipe.menuItem.name}</span>
-        <span className="text-muted-foreground tabular-nums ml-1">{fmt(cost)}→{fmt(price)}</span>
-        <span className={cn("w-8 text-right tabular-nums font-medium", getMarginTextColor(foodCostPct))}>{marginPct > 0 ? `${Math.round(marginPct)}%` : "—"}</span>
-        <span className={cn(
-          "w-6 text-right tabular-nums font-bold",
-          maxPortions > 10 ? "text-green-600" : maxPortions > 0 ? "text-amber-600" : "text-red-600"
-        )}>{unavailableCount > 0 ? `!${unavailableCount}` : maxPortions}</span>
+      {/* Mobile Card Layout */}
+      <div className="md:hidden p-4 border-b border-slate-100">
+        <div className="flex items-start gap-3">
+          {/* Status indicator */}
+          <div className={cn(
+            "w-1.5 h-full min-h-[60px] rounded-full flex-shrink-0",
+            getMarginColor(foodCostPct).replace("border-l-", "bg-")
+          )} />
+
+          <div className="flex-1 min-w-0">
+            {/* Title and type */}
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <h3 className="font-semibold text-slate-900 leading-tight">
+                {recipe.menuItem.name}
+              </h3>
+              {outputTypeLabel && (
+                <Badge variant="outline" className="text-[10px] h-5 shrink-0">
+                  {outputTypeLabel}
+                </Badge>
+              )}
+            </div>
+
+            {/* Stats row */}
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1">
+                <span className="text-slate-500">Собів:</span>
+                <span className="font-medium tabular-nums">{fmt(cost)} ₴</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-slate-500">Ціна:</span>
+                <span className="font-medium tabular-nums">{fmt(price)} ₴</span>
+              </div>
+            </div>
+
+            {/* Bottom row with margin and portions */}
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium",
+                  status.bg, status.color
+                )}>
+                  <span>Маржа {Math.round(marginPct)}%</span>
+                </div>
+                {totalTime > 0 && (
+                  <span className="flex items-center gap-1 text-xs text-slate-500">
+                    <Clock className="h-3 w-3" />
+                    {totalTime} хв
+                  </span>
+                )}
+              </div>
+
+              <div className={cn(
+                "flex items-center gap-1 text-sm font-bold tabular-nums",
+                maxPortions > 10 ? "text-green-600" : maxPortions > 0 ? "text-amber-600" : "text-red-600"
+              )}>
+                {unavailableCount > 0 && (
+                  <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
+                )}
+                <span>{maxPortions} порц.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Table Row */}
+      <div className="hidden md:grid md:grid-cols-[1fr,100px,90px,90px,80px,70px,80px] items-center gap-4 px-4 py-3 border-b border-slate-100">
+        {/* Name */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={cn(
+            "w-1 h-8 rounded-full shrink-0",
+            getMarginColor(foodCostPct).replace("border-l-", "bg-")
+          )} />
+          <div className="min-w-0">
+            <span className="font-medium text-slate-900 block truncate">
+              {recipe.menuItem.name}
+            </span>
+            {recipe.ingredients.length > 0 && (
+              <span className="text-xs text-slate-500">
+                {recipe.ingredients.length} інгредієнтів
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Output Type */}
+        <div>
+          {outputTypeLabel && (
+            <Badge variant="outline" className="text-xs">
+              {outputTypeLabel}
+            </Badge>
+          )}
+        </div>
+
+        {/* Cost */}
+        <div className="text-right tabular-nums text-sm text-slate-600">
+          {fmt(cost)} ₴
+        </div>
+
+        {/* Price */}
+        <div className="text-right tabular-nums text-sm font-medium text-slate-900">
+          {fmt(price)} ₴
+        </div>
+
+        {/* Margin */}
+        <div className={cn(
+          "text-right tabular-nums text-sm font-semibold",
+          status.color
+        )}>
+          {marginPct > 0 ? `${Math.round(marginPct)}%` : "—"}
+        </div>
+
+        {/* Food Cost */}
+        <div className={cn(
+          "text-right tabular-nums text-sm",
+          getMarginTextColor(foodCostPct)
+        )}>
+          {foodCostPct > 0 ? `${Math.round(foodCostPct)}%` : "—"}
+        </div>
+
+        {/* Portions */}
+        <div className="text-right">
+          {unavailableCount > 0 ? (
+            <span className="inline-flex items-center gap-1 text-red-600">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              <span className="text-sm font-bold tabular-nums">!{unavailableCount}</span>
+            </span>
+          ) : (
+            <span className={cn(
+              "text-sm font-bold tabular-nums",
+              maxPortions > 10 ? "text-green-600" : maxPortions > 0 ? "text-amber-600" : "text-red-600"
+            )}>
+              {maxPortions}
+            </span>
+          )}
+        </div>
       </div>
     </button>
+  );
+}
+
+// ==========================================
+// RECIPES TABLE HEADER
+// ==========================================
+
+export function RecipesTableHeader() {
+  return (
+    <div className="hidden md:grid md:grid-cols-[1fr,100px,90px,90px,80px,70px,80px] items-center gap-4 px-4 py-2.5 bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider sticky top-0 z-10">
+      <div>Назва</div>
+      <div>Цех</div>
+      <div className="text-right">Собівартість</div>
+      <div className="text-right">Ціна</div>
+      <div className="text-right">Маржа</div>
+      <div className="text-right">FC%</div>
+      <div className="text-right">Порцій</div>
+    </div>
   );
 }
 

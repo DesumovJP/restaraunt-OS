@@ -27,11 +27,11 @@ const pageNavigationItems = [
   { id: 'calendar' as const, icon: CalendarCheck, path: '/pos/waiter/calendar', label: 'Календар' },
 ];
 
-// Вкладки всередині сторінки меню
+// Вкладки всередині сторінки меню - тепер з шляхами для навігації
 const viewNavigationItems = [
-  { id: 'dailies' as const, icon: ListTodo, label: 'Завдання' },
-  { id: 'chat' as const, icon: MessageSquare, label: 'Чат' },
-  { id: 'schedule' as const, icon: CalendarDays, label: 'Графік змін' },
+  { id: 'dailies' as const, icon: ListTodo, label: 'Завдання', path: '/pos/waiter?view=dailies' },
+  { id: 'chat' as const, icon: MessageSquare, label: 'Чат', path: '/pos/waiter?view=chat' },
+  { id: 'schedule' as const, icon: CalendarDays, label: 'Графік змін', path: '/pos/waiter?view=schedule' },
 ];
 
 interface LeftSidebarProps {
@@ -97,7 +97,7 @@ export function LeftSidebar({
 
   const SidebarContent = () => (
     <>
-      <div className="flex flex-col items-center gap-3 flex-1">
+      <div className="flex flex-col items-center gap-2 flex-1">
         {/* Page navigation */}
         {pageNavigationItems.map((item) => {
           const Icon = item.icon;
@@ -116,10 +116,10 @@ export function LeftSidebar({
               }}
               className={cn(
                 'w-12 h-12 rounded-xl flex items-center justify-center',
-                'transition-colors duration-150',
+                'transition-all duration-200 touch-feedback',
                 isActive
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
               )}
               aria-label={item.label}
               title={item.label}
@@ -130,7 +130,7 @@ export function LeftSidebar({
         })}
 
         {/* Separator */}
-        <div className="w-8 h-px bg-slate-200 my-1" />
+        <div className="w-8 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-2" />
 
         {/* View navigation (tabs within current page) */}
         {viewNavigationItems.map((item) => {
@@ -140,13 +140,21 @@ export function LeftSidebar({
           return (
             <button
               key={item.id}
-              onClick={() => handleViewChange(item.id)}
+              onClick={() => {
+                // If we have onViewChange and are on /pos/waiter, use local state
+                // Otherwise navigate to the page with view query param
+                if (onViewChange && pathname === '/pos/waiter') {
+                  handleViewChange(item.id);
+                } else {
+                  handleNavigation(item.path);
+                }
+              }}
               className={cn(
                 'w-12 h-12 rounded-xl flex items-center justify-center',
-                'transition-colors duration-150',
+                'transition-all duration-200 touch-feedback',
                 isActive
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
               )}
               aria-label={item.label}
               title={item.label}
@@ -157,13 +165,13 @@ export function LeftSidebar({
         })}
       </div>
 
-      {/* Profile - компактний */}
+      {/* Profile - Premium design */}
       <button
         onClick={() => handleViewChange('profile')}
         className={cn(
-          'w-12 h-12 rounded-xl flex items-center justify-center transition-colors duration-150',
+          'w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 touch-feedback',
           activeView === 'profile'
-            ? 'bg-slate-900 text-white'
+            ? 'bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-lg shadow-slate-900/20'
             : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
         )}
         title={`${userName} • ${userRole}`}
@@ -175,21 +183,21 @@ export function LeftSidebar({
 
   return (
     <>
-      {/* Desktop Sidebar - Always visible */}
-      <aside className="hidden lg:flex w-16 bg-white border-r border-slate-200 flex flex-col items-center py-4 h-full">
+      {/* Desktop Sidebar - Always visible - Premium design */}
+      <aside className="hidden lg:flex w-16 bg-white/95 backdrop-blur-sm border-r border-slate-200/80 flex-col items-center py-4 h-full shadow-sm">
         <SidebarContent />
       </aside>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer - Premium design */}
       <Drawer open={isMobileOpen} onOpenChange={handleOpenChange}>
-        <DrawerContent side="left" className="flex flex-col h-full p-0 w-64">
+        <DrawerContent side="left" className="flex flex-col h-full p-0 w-72">
           <div className="flex flex-col px-4 py-4 h-full bg-white">
             {/* Header */}
-            <div className="flex items-center justify-between mb-4">
-              <span className="font-semibold text-slate-900">Меню</span>
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-lg font-bold text-slate-900">Навігація</span>
               <button
                 onClick={() => handleOpenChange(false)}
-                className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100"
+                className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors touch-feedback"
                 aria-label="Закрити"
               >
                 <X className="w-5 h-5 text-slate-600" />
@@ -197,7 +205,7 @@ export function LeftSidebar({
             </div>
 
             {/* Page Navigation */}
-            <div className="flex flex-col gap-1 flex-1">
+            <div className="flex flex-col gap-1.5 flex-1">
               {pageNavigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = (pathname === item.path || (item.id === 'menu' && pathname === '/pos/waiter')) && activeView !== 'dailies';
@@ -213,21 +221,21 @@ export function LeftSidebar({
                       }
                     }}
                     className={cn(
-                      'flex items-center gap-3 px-4 h-12 rounded-lg',
-                      'transition-colors duration-150',
+                      'flex items-center gap-3 px-4 h-12 rounded-xl',
+                      'transition-all duration-200 touch-feedback',
                       isActive
-                        ? 'bg-slate-900 text-white'
+                        ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
                         : 'text-slate-600 hover:bg-slate-100'
                     )}
                   >
                     <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
+                    <span className="font-semibold">{item.label}</span>
                   </button>
                 );
               })}
 
               {/* Separator */}
-              <div className="h-px bg-slate-200 my-2" />
+              <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-3" />
 
               {/* View Navigation (tabs) */}
               {viewNavigationItems.map((item) => {
@@ -237,40 +245,48 @@ export function LeftSidebar({
                 return (
                   <button
                     key={item.id}
-                    onClick={() => handleViewChange(item.id)}
+                    onClick={() => {
+                      // If we have onViewChange and are on /pos/waiter, use local state
+                      // Otherwise navigate to the page with view query param
+                      if (onViewChange && pathname === '/pos/waiter') {
+                        handleViewChange(item.id);
+                      } else {
+                        handleNavigation(item.path);
+                      }
+                    }}
                     className={cn(
-                      'flex items-center gap-3 px-4 h-12 rounded-lg',
-                      'transition-colors duration-150',
+                      'flex items-center gap-3 px-4 h-12 rounded-xl',
+                      'transition-all duration-200 touch-feedback',
                       isActive
-                        ? 'bg-slate-900 text-white'
+                        ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20'
                         : 'text-slate-600 hover:bg-slate-100'
                     )}
                   >
                     <Icon className="w-5 h-5" />
-                    <span className="font-medium">{item.label}</span>
+                    <span className="font-semibold">{item.label}</span>
                   </button>
                 );
               })}
             </div>
 
-            {/* Profile */}
+            {/* Profile - Premium card */}
             <button
               onClick={() => handleViewChange('profile')}
               className={cn(
-                "flex items-center gap-3 px-4 py-3 rounded-lg w-full transition-colors",
+                "flex items-center gap-3 px-4 py-3.5 rounded-xl w-full transition-all duration-200 touch-feedback",
                 activeView === 'profile'
-                  ? "bg-slate-900 text-white"
-                  : "bg-slate-50 hover:bg-slate-100"
+                  ? "bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-lg shadow-slate-900/20"
+                  : "bg-slate-50 hover:bg-slate-100 border border-slate-100"
               )}
             >
               <div className={cn(
-                "w-10 h-10 rounded-full flex items-center justify-center",
+                "w-11 h-11 rounded-xl flex items-center justify-center",
                 activeView === 'profile' ? "bg-white/20" : "bg-slate-200"
               )}>
                 <User className="w-5 h-5" />
               </div>
               <div className="text-left">
-                <p className={cn("text-sm font-medium", activeView === 'profile' ? "text-white" : "text-slate-900")}>{userName}</p>
+                <p className={cn("text-sm font-semibold", activeView === 'profile' ? "text-white" : "text-slate-900")}>{userName}</p>
                 <p className={cn("text-xs", activeView === 'profile' ? "text-white/70" : "text-slate-500")}>{userRole}</p>
               </div>
             </button>

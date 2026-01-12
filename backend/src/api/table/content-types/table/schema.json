@@ -49,6 +49,13 @@
     "isActive": {
       "type": "boolean",
       "default": true
+    },
+    "lastCloseReason": {
+      "type": "enumeration",
+      "enum": ["mistaken_open", "no_show", "walkout", "technical_error", "normal"]
+    },
+    "closeComment": {
+      "type": "text"
     }
   }
 }

@@ -233,19 +233,11 @@ export function ScheduledOrderSaveDialog({
 
         {/* Actions */}
         {status !== "success" && (
-          <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={status === "saving"}
-              className="flex-1"
-            >
-              Скасувати
-            </Button>
+          <div className="pt-4 border-t">
             <Button
               onClick={handleSave}
               disabled={status === "saving" || items.length === 0}
-              className="flex-1 bg-purple-600 hover:bg-purple-700"
+              className="w-full h-12 bg-purple-600 hover:bg-purple-700 text-base font-medium rounded-xl"
             >
               {status === "saving" ? (
                 <>
@@ -255,7 +247,7 @@ export function ScheduledOrderSaveDialog({
               ) : (
                 <>
                   <Check className="h-4 w-4 mr-2" />
-                  Зберегти
+                  Зберегти замовлення
                 </>
               )}
             </Button>

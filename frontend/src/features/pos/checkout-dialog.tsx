@@ -341,18 +341,11 @@ export function CheckoutDialog({
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0 pt-4 border-t">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={closing}
-          >
-            Скасувати
-          </Button>
+        <DialogFooter className="pt-4 border-t">
           <Button
             onClick={handleCheckout}
             disabled={closing || tableOrders.length === 0 || !canCheckout}
-            className="bg-success hover:bg-success/90 disabled:bg-muted disabled:text-muted-foreground"
+            className="w-full h-12 bg-success hover:bg-success/90 disabled:bg-muted disabled:text-muted-foreground text-base font-medium rounded-xl"
           >
             {closing ? (
               <>

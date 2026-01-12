@@ -110,141 +110,174 @@ function ReservationCard({ reservation, onStatusChange, isUpdating }: Reservatio
     return resDate < now;
   }, [reservation]);
 
+  // Calculate time until reservation
+  const timeUntil = React.useMemo(() => {
+    const now = new Date();
+    const resDate = new Date(`${reservation.date}T${reservation.startTime}`);
+    const diffMs = resDate.getTime() - now.getTime();
+    const diffMins = Math.round(diffMs / 60000);
+    if (diffMins <= 0) return null;
+    if (diffMins < 60) return `через ${diffMins} хв`;
+    const hours = Math.floor(diffMins / 60);
+    if (hours < 24) return `через ${hours} год`;
+    return null;
+  }, [reservation]);
+
   return (
     <div
       className={cn(
-        "flex items-center gap-4 p-4 rounded-xl border bg-white",
-        isUpcoming && "border-amber-300 bg-amber-50",
-        isPast && reservation.status === "pending" && "border-red-200 bg-red-50"
+        "relative rounded-2xl border bg-white overflow-hidden transition-all hover:shadow-md",
+        isUpcoming && "border-amber-300 bg-gradient-to-r from-amber-50 to-white ring-1 ring-amber-200",
+        isPast && reservation.status === "pending" && "border-red-200 bg-gradient-to-r from-red-50 to-white"
       )}
     >
-      {/* Time */}
-      <div className="text-center min-w-[60px]">
-        <div className="text-lg font-bold text-slate-900">
-          {reservation.startTime.slice(0, 5)}
+      {/* Upcoming indicator */}
+      {isUpcoming && timeUntil && (
+        <div className="absolute top-0 right-0 bg-amber-500 text-white text-xs font-semibold px-3 py-1 rounded-bl-lg">
+          {timeUntil}
         </div>
-        <div className="text-xs text-slate-500">
-          {reservation.endTime.slice(0, 5)}
-        </div>
-      </div>
+      )}
 
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-semibold text-slate-900">
-            Стіл {reservation.tableNumber}
-          </span>
-          <Badge variant="outline" className="text-xs">
-            <Users className="w-3 h-3 mr-1" />
-            {reservation.guestCount}
-          </Badge>
-          <Badge variant={statusConfig.variant} className="text-xs gap-1">
-            <StatusIcon className="w-3 h-3" />
-            {statusConfig.label}
-          </Badge>
+      <div className="flex items-stretch">
+        {/* Time block */}
+        <div className={cn(
+          "flex flex-col items-center justify-center px-5 py-4 border-r",
+          isUpcoming ? "bg-amber-100/50 border-amber-200" : "bg-slate-50 border-slate-100"
+        )}>
+          <div className="text-2xl font-bold text-slate-900 leading-none">
+            {reservation.startTime.slice(0, 5)}
+          </div>
+          <div className="text-xs text-slate-400 mt-1">
+            до {reservation.endTime.slice(0, 5)}
+          </div>
         </div>
 
-        <div className="flex items-center gap-3 text-sm text-slate-600">
-          <span>{reservation.contactName}</span>
-          {reservation.contactPhone && (
-            <a
-              href={`tel:${reservation.contactPhone}`}
-              className="flex items-center gap-1 text-blue-600 hover:underline"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Phone className="w-3 h-3" />
-              {reservation.contactPhone}
-            </a>
+        {/* Main content */}
+        <div className="flex-1 p-4 min-w-0">
+          {/* Top row: Table + Status */}
+          <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-slate-900">
+                Стіл {reservation.tableNumber}
+              </span>
+              <Badge variant="outline" className="text-xs font-medium">
+                <Users className="w-3 h-3 mr-1" />
+                {reservation.guestCount}
+              </Badge>
+            </div>
+            <Badge variant={statusConfig.variant} className="text-xs gap-1 ml-auto">
+              <StatusIcon className="w-3 h-3" />
+              {statusConfig.label}
+            </Badge>
+          </div>
+
+          {/* Contact info */}
+          <div className="flex items-center gap-4 text-sm">
+            <span className="font-medium text-slate-700">{reservation.contactName}</span>
+            {reservation.contactPhone && (
+              <a
+                href={`tel:${reservation.contactPhone}`}
+                className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Phone className="w-3.5 h-3.5" />
+                <span className="font-medium">{reservation.contactPhone}</span>
+              </a>
+            )}
+          </div>
+
+          {/* Occasion */}
+          {reservation.occasion && reservation.occasion !== "none" && (
+            <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
+              <span className="px-2 py-0.5 bg-slate-100 rounded-full">
+                {reservation.occasion === "birthday" && "День народження"}
+                {reservation.occasion === "anniversary" && "Річниця"}
+                {reservation.occasion === "business" && "Бізнес-зустріч"}
+                {reservation.occasion === "romantic" && "Романтична вечеря"}
+              </span>
+            </div>
           )}
         </div>
 
-        {reservation.occasion && reservation.occasion !== "none" && (
-          <div className="text-xs text-slate-500 mt-1">
-            {reservation.occasion === "birthday" && "День народження"}
-            {reservation.occasion === "anniversary" && "Річниця"}
-            {reservation.occasion === "business" && "Бізнес-зустріч"}
-            {reservation.occasion === "romantic" && "Романтична вечеря"}
-          </div>
-        )}
-      </div>
+        {/* Actions */}
+        <div className="flex items-center gap-2 px-3 border-l border-slate-100">
+          {/* Pre-order button - visible for pending/confirmed reservations */}
+          {(reservation.status === "pending" || reservation.status === "confirmed") && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleAddPreOrder}
+              className="text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300 h-9"
+            >
+              <ShoppingBag className="w-4 h-4 mr-1.5" />
+              Замовлення
+            </Button>
+          )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-2">
-        {/* Pre-order button - visible for pending/confirmed reservations */}
-        {(reservation.status === "pending" || reservation.status === "confirmed") && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAddPreOrder}
-            className="text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300"
-          >
-            <ShoppingBag className="w-4 h-4 mr-1" />
-            Замовлення
-          </Button>
-        )}
-
-        {onStatusChange && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" disabled={isUpdating}>
-                {isUpdating ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <MoreVertical className="w-4 h-4" />
+          {onStatusChange && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-9 w-9" disabled={isUpdating}>
+                  {isUpdating ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <MoreVertical className="w-4 h-4" />
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {/* Pre-order option in menu too */}
+                {(reservation.status === "pending" || reservation.status === "confirmed") && (
+                  <>
+                    <DropdownMenuItem onClick={handleAddPreOrder} className="text-purple-600">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Додати попереднє замовлення
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
                 )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {/* Pre-order option in menu too */}
-              {(reservation.status === "pending" || reservation.status === "confirmed") && (
-                <>
-                  <DropdownMenuItem onClick={handleAddPreOrder} className="text-purple-600">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Додати попереднє замовлення
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
 
-              {reservation.status === "pending" && (
-                <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "confirmed")}>
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Підтвердити
-                </DropdownMenuItem>
-              )}
-              {(reservation.status === "pending" || reservation.status === "confirmed") && (
-                <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "seated")}>
-                  <UserCheck className="w-4 h-4 mr-2" />
-                  Гість за столом
-                </DropdownMenuItem>
-              )}
-              {reservation.status === "seated" && (
-                <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "completed")}>
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Завершити
-                </DropdownMenuItem>
-              )}
-              {reservation.status !== "cancelled" && reservation.status !== "completed" && (
-                <>
-                  <DropdownMenuItem
-                    onClick={() => onStatusChange(reservation.documentId, "no_show")}
-                    className="text-amber-600"
-                  >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Не з'явився
+                {reservation.status === "pending" && (
+                  <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "confirmed")}>
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
+                    Підтвердити
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => onStatusChange(reservation.documentId, "cancelled")}
-                    className="text-red-600"
-                  >
-                    <XCircle className="w-4 h-4 mr-2" />
-                    Скасувати
+                )}
+                {(reservation.status === "pending" || reservation.status === "confirmed") && (
+                  <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "seated")}>
+                    <UserCheck className="w-4 h-4 mr-2 text-blue-600" />
+                    Гість за столом
                   </DropdownMenuItem>
-                </>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+                )}
+                {reservation.status === "seated" && (
+                  <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "completed")}>
+                    <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
+                    Завершити
+                  </DropdownMenuItem>
+                )}
+                {reservation.status !== "cancelled" && reservation.status !== "completed" && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={() => onStatusChange(reservation.documentId, "no_show")}
+                      className="text-amber-600"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Не з'явився
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onStatusChange(reservation.documentId, "cancelled")}
+                      className="text-red-600"
+                    >
+                      <XCircle className="w-4 h-4 mr-2" />
+                      Скасувати
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -329,7 +362,7 @@ export function ReservationsList({
   // Empty state
   if (reservations.length === 0) {
     return (
-      <div className={className}>
+      <div className={cn("flex items-center justify-center", className)}>
         <EmptyState
           type="empty"
           title="Немає бронювань"

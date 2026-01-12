@@ -110,6 +110,13 @@ interface TimeSlotRangePickerProps {
   isToday?: boolean;
 }
 
+// Time period groups for better UX
+const TIME_PERIODS = [
+  { label: "Ранок", start: 0, end: 3 },   // 10:00-11:30
+  { label: "День", start: 4, end: 11 },    // 12:00-15:30
+  { label: "Вечір", start: 12, end: 24 },  // 16:00-22:00
+];
+
 function TimeSlotRangePicker({
   startIndex,
   endIndex,
@@ -157,60 +164,90 @@ function TimeSlotRangePicker({
     return `${hours} год`;
   };
 
+  const renderSlot = (slot: string, index: number) => {
+    const isBooked = bookedSlots.includes(slot);
+    const isPast = isToday && slot < currentTime;
+    const isDisabled = isBooked || isPast;
+
+    const isInRange = startIndex !== null && endIndex !== null &&
+      index >= startIndex && index <= endIndex;
+    const isStart = index === startIndex;
+    const isEnd = index === endIndex;
+
+    // Check if selecting this would include a booked slot
+    const wouldIncludeBooked = startIndex !== null && !isDisabled &&
+      hasBookedInRange(Math.min(startIndex, index), Math.max(startIndex, index));
+
+    return (
+      <button
+        key={slot}
+        type="button"
+        onClick={() => !isDisabled && !wouldIncludeBooked && handleClick(index)}
+        disabled={isDisabled}
+        className={cn(
+          "py-2.5 px-2 text-sm font-medium transition-all",
+          // Selected range styling
+          isInRange && "bg-slate-900 text-white shadow-sm",
+          isStart && isEnd && "rounded-lg",
+          isStart && !isEnd && "rounded-l-lg rounded-r-none",
+          isEnd && !isStart && "rounded-r-lg rounded-l-none",
+          !isStart && !isEnd && isInRange && "rounded-none",
+          // Not in range
+          !isInRange && isBooked && "bg-red-50 text-red-300 cursor-not-allowed line-through rounded-lg border border-red-100",
+          !isInRange && isPast && "bg-slate-50 text-slate-300 cursor-not-allowed rounded-lg",
+          !isInRange && !isBooked && !isPast && "bg-white hover:bg-slate-100 text-slate-700 rounded-lg border border-slate-200 hover:border-slate-300",
+          // Would include booked
+          wouldIncludeBooked && !isInRange && "opacity-40 cursor-not-allowed"
+        )}
+      >
+        {slot}
+      </button>
+    );
+  };
+
   return (
-    <div>
-      <div className="grid grid-cols-5 gap-1.5">
-        {TIME_SLOTS.map((slot, index) => {
-          const isBooked = bookedSlots.includes(slot);
-          const isPast = isToday && slot < currentTime;
-          const isDisabled = isBooked || isPast;
+    <div className="space-y-4">
+      {/* Time periods */}
+      {TIME_PERIODS.map((period) => {
+        const periodSlots = TIME_SLOTS.slice(period.start, period.end + 1);
+        if (periodSlots.length === 0) return null;
 
-          const isInRange = startIndex !== null && endIndex !== null &&
-            index >= startIndex && index <= endIndex;
-          const isStart = index === startIndex;
-          const isEnd = index === endIndex;
-
-          // Check if selecting this would include a booked slot
-          const wouldIncludeBooked = startIndex !== null && !isDisabled &&
-            hasBookedInRange(Math.min(startIndex, index), Math.max(startIndex, index));
-
-          return (
-            <button
-              key={slot}
-              type="button"
-              onClick={() => !isDisabled && !wouldIncludeBooked && handleClick(index)}
-              disabled={isDisabled}
-              className={cn(
-                "py-2 px-1 text-sm font-medium transition-all",
-                // Selected range styling
-                isInRange && "bg-slate-900 text-white",
-                isStart && isEnd && "rounded-lg",
-                isStart && !isEnd && "rounded-l-lg rounded-r-none",
-                isEnd && !isStart && "rounded-r-lg rounded-l-none",
-                !isStart && !isEnd && isInRange && "rounded-none",
-                // Not in range
-                !isInRange && isBooked && "bg-red-100 text-red-400 cursor-not-allowed line-through rounded-lg",
-                !isInRange && isPast && "bg-slate-100 text-slate-300 cursor-not-allowed rounded-lg",
-                !isInRange && !isBooked && !isPast && "bg-slate-50 hover:bg-slate-200 text-slate-700 rounded-lg",
-                // Would include booked
-                wouldIncludeBooked && !isInRange && "opacity-50 cursor-not-allowed"
-              )}
-            >
-              {slot}
-            </button>
-          );
-        })}
-      </div>
+        return (
+          <div key={period.label}>
+            <div className="text-xs font-medium text-slate-400 mb-2 uppercase tracking-wide">
+              {period.label}
+            </div>
+            <div className="grid grid-cols-4 gap-1.5">
+              {periodSlots.map((slot, idx) => renderSlot(slot, period.start + idx))}
+            </div>
+          </div>
+        );
+      })}
 
       {/* Duration indicator */}
       {getDurationText() && (
-        <div className="mt-2 text-center">
-          <Badge variant="secondary" className="text-xs">
-            <Clock className="w-3 h-3 mr-1" />
-            {TIME_SLOTS[startIndex!]} - {getEndTimeFromSlots(startIndex!, endIndex!)} ({getDurationText()})
+        <div className="flex items-center justify-center gap-2 py-3 bg-slate-50 rounded-lg border border-slate-200">
+          <Clock className="w-4 h-4 text-slate-500" />
+          <span className="text-sm font-medium text-slate-700">
+            {TIME_SLOTS[startIndex!]} - {getEndTimeFromSlots(startIndex!, endIndex!)}
+          </span>
+          <Badge variant="secondary" className="text-xs font-semibold">
+            {getDurationText()}
           </Badge>
         </div>
       )}
+
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-4 pt-2 text-xs text-slate-500">
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-slate-900" />
+          <span>Обрано</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-3 h-3 rounded bg-red-50 border border-red-100" />
+          <span>Зайнято</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -244,39 +281,66 @@ function DatePicker({ value, onChange }: DatePickerProps) {
     return dayNames[date.getDay()];
   };
 
+  const formatMonth = (date: Date) => {
+    const monthNames = ["Січ", "Лют", "Бер", "Кві", "Тра", "Чер", "Лип", "Сер", "Вер", "Жов", "Лис", "Гру"];
+    return monthNames[date.getMonth()];
+  };
+
   const isToday = (date: Date) => {
     return date.toDateString() === today.toDateString();
+  };
+
+  const isTomorrow = (date: Date) => {
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    return date.toDateString() === tomorrow.toDateString();
   };
 
   const isSelected = (date: Date) => {
     return date.toDateString() === value.toDateString();
   };
 
+  const isWeekend = (date: Date) => {
+    const day = date.getDay();
+    return day === 0 || day === 6;
+  };
+
   return (
-    <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1">
+    <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
       {dates.map((date) => (
         <button
           key={date.toISOString()}
           type="button"
           onClick={() => onChange(date)}
           className={cn(
-            "flex flex-col items-center py-2 px-3 rounded-lg transition-all shrink-0",
+            "flex flex-col items-center py-2.5 px-3.5 rounded-xl transition-all shrink-0 min-w-[64px] border",
             isSelected(date)
-              ? "bg-slate-900 text-white"
-              : "bg-slate-50 hover:bg-slate-100"
+              ? "bg-slate-900 text-white border-slate-900 shadow-lg"
+              : isToday(date)
+              ? "bg-blue-50 border-blue-200 hover:bg-blue-100"
+              : isWeekend(date)
+              ? "bg-amber-50/50 border-slate-200 hover:bg-amber-50"
+              : "bg-white border-slate-200 hover:bg-slate-50"
           )}
         >
-          <span className="text-xs font-medium opacity-70">
+          <span className={cn(
+            "text-[10px] font-semibold uppercase tracking-wide",
+            isSelected(date) ? "text-white/70" : "text-slate-400"
+          )}>
             {formatDayName(date)}
           </span>
-          <span className="text-lg font-bold">
+          <span className={cn(
+            "text-xl font-bold leading-tight",
+            isSelected(date) ? "text-white" : "text-slate-900"
+          )}>
             {date.getDate()}
           </span>
-          {isToday(date) && (
-            <span className="text-[10px] font-medium">
-              Сьогодні
-            </span>
-          )}
+          <span className={cn(
+            "text-[10px] font-medium mt-0.5",
+            isSelected(date) ? "text-white/80" : "text-slate-500"
+          )}>
+            {isToday(date) ? "Сьогодні" : isTomorrow(date) ? "Завтра" : formatMonth(date)}
+          </span>
         </button>
       ))}
     </div>
@@ -429,158 +493,203 @@ export function ReservationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Нове бронювання</DialogTitle>
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-slate-50/50">
+          <DialogTitle className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-slate-500" />
+            Нове бронювання
+          </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Date selection */}
-          <div>
-            <Label className="mb-2 block">Дата</Label>
-            <DatePicker value={date} onChange={setDate} />
-          </div>
+        <form id="reservation-form" onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+          {/* Section: Date & Time */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+              Дата і час
+            </h3>
 
-          {/* Table selection */}
-          <div>
-            <Label className="mb-2 block">Столик *</Label>
-            <Select value={tableId} onValueChange={setTableId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Оберіть столик..." />
-              </SelectTrigger>
-              <SelectContent>
-                {tables.map((table) => (
-                  <SelectItem
-                    key={table.id || table.documentId}
-                    value={table.id || table.documentId || ""}
-                  >
-                    Стіл {table.number} ({table.capacity} місць)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Time slots - select range */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <Label>Час * <span className="font-normal text-slate-500">(оберіть слоти)</span></Label>
-              {loadingReservations && (
-                <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
-              )}
-            </div>
-            <TimeSlotRangePicker
-              startIndex={startSlotIndex}
-              endIndex={endSlotIndex}
-              onChange={(start, end) => {
-                setStartSlotIndex(start);
-                setEndSlotIndex(end);
-              }}
-              bookedSlots={bookedSlots}
-              isToday={isToday}
-            />
-          </div>
-
-          {/* Guest count */}
-          <div>
-            <Label className="mb-2 block">Кількість гостей *</Label>
-            <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => setGuestCount((prev) => Math.max(1, parseInt(prev) - 1).toString())}
-              >
-                -
-              </Button>
-              <Input
-                type="number"
-                min="1"
-                max="50"
-                value={guestCount}
-                onChange={(e) => setGuestCount(e.target.value)}
-                className="w-20 text-center text-lg font-bold"
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => setGuestCount((prev) => Math.min(50, parseInt(prev) + 1).toString())}
-              >
-                +
-              </Button>
-              <Users className="w-5 h-5 text-slate-400" />
-            </div>
-          </div>
-
-          {/* Contact info */}
-          <div className="grid grid-cols-2 gap-3">
+            {/* Date selection */}
             <div>
-              <Label className="mb-2 block">Ім'я *</Label>
-              <Input
-                value={contactName}
-                onChange={(e) => setContactName(e.target.value)}
-                placeholder="Ім'я гостя"
-                required
-              />
+              <Label className="mb-2.5 block text-sm font-medium text-slate-700">Дата</Label>
+              <DatePicker value={date} onChange={setDate} />
             </div>
+
+            {/* Table selection */}
             <div>
-              <Label className="mb-2 block">Телефон *</Label>
-              <Input
-                type="tel"
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="+380..."
-                required
+              <Label className="mb-2.5 block text-sm font-medium text-slate-700">
+                Столик <span className="text-red-500">*</span>
+              </Label>
+              <Select value={tableId} onValueChange={setTableId}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Оберіть столик..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {tables.map((table) => (
+                    <SelectItem
+                      key={table.id || table.documentId}
+                      value={table.id || table.documentId || ""}
+                    >
+                      Стіл {table.number} ({table.capacity} місць)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Time slots - select range */}
+            <div>
+              <div className="flex items-center justify-between mb-2.5">
+                <Label className="text-sm font-medium text-slate-700">
+                  Час <span className="text-red-500">*</span>
+                  <span className="font-normal text-slate-400 ml-1">(оберіть діапазон)</span>
+                </Label>
+                {loadingReservations && (
+                  <RefreshCw className="w-4 h-4 animate-spin text-slate-400" />
+                )}
+              </div>
+              <TimeSlotRangePicker
+                startIndex={startSlotIndex}
+                endIndex={endSlotIndex}
+                onChange={(start, end) => {
+                  setStartSlotIndex(start);
+                  setEndSlotIndex(end);
+                }}
+                bookedSlots={bookedSlots}
+                isToday={isToday}
               />
             </div>
           </div>
 
-          <div>
-            <Label className="mb-2 block">Email (необов'язково)</Label>
-            <Input
-              type="email"
-              value={contactEmail}
-              onChange={(e) => setContactEmail(e.target.value)}
-              placeholder="email@example.com"
-            />
-          </div>
+          <div className="border-t" />
 
-          {/* Occasion */}
-          <div>
-            <Label className="mb-2 block">Привід</Label>
-            <div className="flex flex-wrap gap-2">
-              {Object.entries(OCCASION_CONFIG).map(([key, config]) => {
-                const Icon = config.icon;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setOccasion(key as Occasion)}
-                    className={cn(
-                      "flex items-center gap-1.5 py-1.5 px-3 rounded-full text-sm transition-all",
-                      occasion === key
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 hover:bg-slate-200"
-                    )}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    {config.label}
-                  </button>
-                );
-              })}
+          {/* Section: Guest Info */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+              Інформація про гостя
+            </h3>
+
+            {/* Guest count */}
+            <div>
+              <Label className="mb-2.5 block text-sm font-medium text-slate-700">
+                Кількість гостей <span className="text-red-500">*</span>
+              </Label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 shrink-0"
+                  onClick={() => setGuestCount((prev) => Math.max(1, parseInt(prev) - 1).toString())}
+                >
+                  -
+                </Button>
+                <div className="flex items-center gap-2 flex-1 justify-center bg-slate-50 rounded-lg h-11 px-4">
+                  <Users className="w-4 h-4 text-slate-500" />
+                  <span className="text-lg font-bold text-slate-900">{guestCount}</span>
+                  <span className="text-sm text-slate-500">гостей</span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11 shrink-0"
+                  onClick={() => setGuestCount((prev) => Math.min(50, parseInt(prev) + 1).toString())}
+                >
+                  +
+                </Button>
+              </div>
+            </div>
+
+            {/* Contact info */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="mb-2.5 block text-sm font-medium text-slate-700">
+                  Ім'я <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  value={contactName}
+                  onChange={(e) => setContactName(e.target.value)}
+                  placeholder="Ім'я гостя"
+                  className="h-11"
+                  required
+                />
+              </div>
+              <div>
+                <Label className="mb-2.5 block text-sm font-medium text-slate-700">
+                  Телефон <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="tel"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="+380..."
+                  className="h-11"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="mb-2.5 block text-sm font-medium text-slate-700">
+                Email <span className="text-slate-400 font-normal">(необов'язково)</span>
+              </Label>
+              <Input
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="email@example.com"
+                className="h-11"
+              />
             </div>
           </div>
 
-          {/* Special requests */}
-          <div>
-            <Label className="mb-2 block">Особливі побажання</Label>
-            <Textarea
-              value={specialRequests}
-              onChange={(e) => setSpecialRequests(e.target.value)}
-              placeholder="Алергії, дитячі стільці, торт..."
-              rows={2}
-            />
+          <div className="border-t" />
+
+          {/* Section: Additional */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wide">
+              Додатково
+            </h3>
+
+            {/* Occasion */}
+            <div>
+              <Label className="mb-2.5 block text-sm font-medium text-slate-700">Привід</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.entries(OCCASION_CONFIG).map(([key, config]) => {
+                  const Icon = config.icon;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setOccasion(key as Occasion)}
+                      className={cn(
+                        "flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg text-sm font-medium transition-all border",
+                        occasion === key
+                          ? "bg-slate-900 text-white border-slate-900"
+                          : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+                      )}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span className="truncate">{config.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Special requests */}
+            <div>
+              <Label className="mb-2.5 block text-sm font-medium text-slate-700">
+                Особливі побажання
+              </Label>
+              <Textarea
+                value={specialRequests}
+                onChange={(e) => setSpecialRequests(e.target.value)}
+                placeholder="Алергії, дитячі стільці, торт, особливі вподобання..."
+                rows={3}
+                className="resize-none"
+              />
+            </div>
           </div>
 
           {/* Error message */}
@@ -589,27 +698,25 @@ export function ReservationDialog({
               {error}
             </div>
           )}
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Скасувати
-            </Button>
-            <Button
-              type="submit"
-              disabled={!tableId || !startTime || !contactName || !contactPhone || isCreating}
-              className="bg-slate-900 hover:bg-slate-800"
-            >
-              {isCreating ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Створення...
-                </>
-              ) : (
-                "Забронювати"
-              )}
-            </Button>
-          </DialogFooter>
         </form>
+
+        <DialogFooter className="px-6 py-4 border-t bg-slate-50/50">
+          <Button
+            type="submit"
+            form="reservation-form"
+            disabled={!tableId || !startTime || !contactName || !contactPhone || isCreating}
+            className="w-full h-12 bg-slate-900 hover:bg-slate-800 text-base font-medium rounded-xl"
+          >
+            {isCreating ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                Створення...
+              </>
+            ) : (
+              "Забронювати"
+            )}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

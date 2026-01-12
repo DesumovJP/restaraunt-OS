@@ -21,6 +21,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover", // For notched devices (iPhone X+)
   themeColor: "#0B1B3B", // Navy 950 - primary brand color
 };
 

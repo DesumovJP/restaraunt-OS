@@ -130,7 +130,7 @@ export function CategoryFilterMinimal({
         value={selectedMainCategory || "all"}
         onValueChange={handleMainChange}
       >
-        <SelectTrigger className="w-[180px]">
+        <SelectTrigger className="w-[180px] h-11 sm:h-10 rounded-xl">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <SelectValue placeholder="Всі категорії" />
@@ -172,7 +172,7 @@ export function CategoryFilterMinimal({
           value={selectedSubCategory || "all"}
           onValueChange={handleSubChange}
         >
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[160px] h-11 sm:h-10 rounded-xl">
             <SelectValue placeholder="Підкатегорія" />
           </SelectTrigger>
           <SelectContent>
@@ -247,12 +247,12 @@ export function CategoryPills({
   const categoryTree = React.useMemo(() => buildCategoryTree(), []);
 
   return (
-    <div className={cn("flex gap-1.5 overflow-x-auto pb-1", className)}>
+    <div className={cn("flex gap-2 overflow-x-auto pb-1 scrollbar-hide", className)}>
       {/* All pill */}
       <Button
         variant={!selectedMainCategory ? "default" : "outline"}
         size="sm"
-        className="shrink-0 h-8"
+        className="shrink-0 h-10 sm:h-9 px-4 rounded-xl touch-feedback"
         onClick={() => onMainCategoryChange(null)}
       >
         Всі
@@ -269,17 +269,17 @@ export function CategoryPills({
             key={cat.id}
             variant={isSelected ? "default" : "outline"}
             size="sm"
-            className={cn("shrink-0 h-8 gap-1.5")}
+            className={cn("shrink-0 h-10 sm:h-9 gap-2 px-3 sm:px-4 rounded-xl touch-feedback")}
             onClick={() =>
               onMainCategoryChange(isSelected ? null : (cat.id as StorageMainCategory))
             }
           >
-            <IconComponent className="h-3.5 w-3.5" />
+            <IconComponent className="h-4 w-4" />
             <span className="hidden sm:inline">{cat.label.uk}</span>
             {count > 0 && (
               <span
                 className={cn(
-                  "text-xs",
+                  "text-xs font-medium",
                   isSelected ? "opacity-80" : "text-muted-foreground"
                 )}
               >

@@ -9,10 +9,16 @@
     --foreground: 218 82% 13%;         /* Navy 950 */
     --card: 0 0% 100%;                 /* White */
     --card-foreground: 218 82% 13%;    /* Navy 950 */
+    --popover: 0 0% 100%;              /* White - for dropdowns, menus */
+    --popover-foreground: 218 82% 13%; /* Navy 950 */
     --primary: 218 82% 13%;            /* Navy 950 */
     --primary-foreground: 0 0% 100%;   /* White */
+    --secondary: 210 40% 96%;          /* Slate 100 */
+    --secondary-foreground: 218 82% 13%; /* Navy 950 */
     --accent: 217 91% 60%;             /* Electric Blue 500 */
     --accent-foreground: 0 0% 100%;    /* White */
+    --destructive: 0 84% 60%;          /* Red 500 */
+    --destructive-foreground: 0 0% 100%; /* White */
     --muted: 210 40% 98%;              /* Slate 50 */
     --muted-foreground: 215 16% 47%;   /* Slate 500 */
     --border: 214 32% 91%;             /* Slate 200 */
@@ -181,6 +187,77 @@
 
 @layer utilities {
   /* ================================================
+     TYPOGRAPHY HIERARCHY SYSTEM (iOS/Apple HIG Level)
+     Investor-ready professional typography
+     ================================================ */
+
+  /* Display - Hero text, main page titles */
+  .typo-display {
+    @apply text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight;
+    line-height: 1.1;
+  }
+
+  /* H1 - Page titles */
+  .typo-h1 {
+    @apply text-2xl sm:text-3xl font-bold tracking-tight;
+    line-height: 1.2;
+  }
+
+  /* H2 - Section headers */
+  .typo-h2 {
+    @apply text-xl sm:text-2xl font-semibold;
+    line-height: 1.25;
+  }
+
+  /* H3 - Card titles, subsections */
+  .typo-h3 {
+    @apply text-lg sm:text-xl font-semibold;
+    line-height: 1.3;
+  }
+
+  /* H4 - Small headers, list titles */
+  .typo-h4 {
+    @apply text-base sm:text-lg font-medium;
+    line-height: 1.4;
+  }
+
+  /* Body Large - Primary body text */
+  .typo-body-lg {
+    @apply text-base sm:text-lg;
+    line-height: 1.6;
+  }
+
+  /* Body - Standard text */
+  .typo-body {
+    @apply text-sm sm:text-base;
+    line-height: 1.5;
+  }
+
+  /* Body Small - Secondary text */
+  .typo-body-sm {
+    @apply text-xs sm:text-sm;
+    line-height: 1.5;
+  }
+
+  /* Caption - Labels, timestamps */
+  .typo-caption {
+    @apply text-[11px] sm:text-xs text-muted-foreground;
+    line-height: 1.4;
+  }
+
+  /* Micro - Badge text, counters */
+  .typo-micro {
+    @apply text-[10px] sm:text-[11px] font-medium;
+    line-height: 1.2;
+  }
+
+  /* Numeric - Prices, timers, statistics */
+  .typo-numeric {
+    @apply font-mono tabular-nums font-semibold;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+  }
+
+  /* ================================================
      GPU ACCELERATION UTILITIES
      For smooth animations and transitions
      ================================================ */
@@ -201,6 +278,79 @@
   }
 
   /* ================================================
+     iOS-LEVEL ANIMATIONS & TRANSITIONS
+     Smooth, physical, native feel
+     ================================================ */
+
+  /* Spring transitions (iOS-like physics) */
+  .transition-spring {
+    transition-timing-function: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition-duration: 300ms;
+  }
+
+  .transition-smooth {
+    transition-timing-function: cubic-bezier(0.4, 0.0, 0.2, 1);
+    transition-duration: 200ms;
+  }
+
+  .transition-bounce {
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    transition-duration: 400ms;
+  }
+
+  /* Touch feedback - iOS haptic feel */
+  .touch-feedback {
+    transition: transform 150ms cubic-bezier(0.4, 0.0, 0.2, 1),
+                box-shadow 150ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .touch-feedback:active {
+    transform: scale(0.97);
+  }
+
+  /* Card hover lift effect */
+  .hover-lift {
+    transition: transform 200ms cubic-bezier(0.4, 0.0, 0.2, 1),
+                box-shadow 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px -5px rgba(11, 27, 59, 0.1),
+                0 4px 10px -5px rgba(11, 27, 59, 0.04);
+  }
+
+  /* Button press effect */
+  .press-effect {
+    transition: transform 100ms cubic-bezier(0.4, 0.0, 0.2, 1),
+                opacity 100ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .press-effect:active {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+
+  /* Subtle scale on tap - for touch devices */
+  .tap-scale {
+    @apply transition-transform duration-150;
+  }
+
+  .tap-scale:active {
+    transform: scale(0.98);
+  }
+
+  /* Glow on hover - premium feel */
+  .hover-glow {
+    transition: box-shadow 300ms cubic-bezier(0.4, 0.0, 0.2, 1);
+  }
+
+  .hover-glow:hover {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.15),
+                0 0 40px rgba(59, 130, 246, 0.1);
+  }
+
+  /* ================================================
      ACCESSIBILITY & UX UTILITIES
      ================================================ */
 
@@ -217,6 +367,55 @@
   /* Swipe hint animation */
   .swipe-hint {
     @apply animate-pulse-soft;
+  }
+
+  /* Hide scrollbar but keep scrolling - cross browser */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Smooth scroll with momentum (iOS-like) */
+  .scroll-smooth {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ================================================
+     RESPONSIVE TEXT UTILITIES
+     Fluid typography helpers
+     ================================================ */
+
+  .text-responsive-xs {
+    font-size: clamp(0.625rem, 2vw, 0.75rem);
+  }
+
+  .text-responsive-sm {
+    font-size: clamp(0.75rem, 2.5vw, 0.875rem);
+  }
+
+  .text-responsive-base {
+    font-size: clamp(0.875rem, 3vw, 1rem);
+  }
+
+  .text-responsive-lg {
+    font-size: clamp(1rem, 3.5vw, 1.125rem);
+  }
+
+  .text-responsive-xl {
+    font-size: clamp(1.125rem, 4vw, 1.25rem);
+  }
+
+  .text-responsive-2xl {
+    font-size: clamp(1.25rem, 5vw, 1.5rem);
+  }
+
+  .text-responsive-3xl {
+    font-size: clamp(1.5rem, 6vw, 1.875rem);
   }
 
   /* ================================================
@@ -302,4 +501,183 @@
   100% {
     background-position: 200% 0;
   }
+}
+
+/* ================================================
+   iOS-LEVEL INTERACTION PATTERNS
+   Premium touch interactions for investor demo
+   ================================================ */
+
+/* Card with premium hover/tap states */
+.card-interactive {
+  @apply rounded-xl bg-white border border-slate-200/80;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 200ms ease;
+}
+
+.card-interactive:hover {
+  @apply border-slate-300/80;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px -2px rgba(11, 27, 59, 0.08),
+              0 2px 4px -2px rgba(11, 27, 59, 0.04);
+}
+
+.card-interactive:active {
+  transform: scale(0.98) translateY(0);
+}
+
+/* List item with iOS-like selection */
+.list-item-interactive {
+  @apply rounded-lg transition-colors;
+}
+
+.list-item-interactive:hover {
+  @apply bg-slate-50;
+}
+
+.list-item-interactive:active {
+  @apply bg-slate-100;
+}
+
+/* Button with premium press effect */
+.btn-interactive {
+  transition: transform 100ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 100ms cubic-bezier(0.16, 1, 0.3, 1),
+              background-color 150ms ease;
+}
+
+.btn-interactive:active {
+  transform: scale(0.97);
+}
+
+/* Icon button (circular) */
+.icon-btn {
+  @apply w-11 h-11 rounded-xl flex items-center justify-center transition-colors;
+}
+
+.icon-btn:hover {
+  @apply bg-slate-100;
+}
+
+.icon-btn:active {
+  @apply bg-slate-200;
+  transform: scale(0.95);
+}
+
+/* Premium input focus states */
+.input-premium {
+  @apply rounded-xl border border-slate-200 bg-white px-4 py-3;
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+.input-premium:focus {
+  @apply border-slate-400 outline-none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Badge with pulse animation for attention */
+.badge-pulse {
+  animation: badge-pulse 2s infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(16, 185, 129, 0);
+  }
+}
+
+/* Status indicator with subtle pulse */
+.status-indicator {
+  @apply w-2.5 h-2.5 rounded-full;
+  animation: status-pulse 3s infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* Premium floating action button */
+.fab {
+  @apply fixed z-40;
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.fab:hover {
+  transform: scale(1.05);
+}
+
+.fab:active {
+  transform: scale(0.95);
+}
+
+/* Stagger animation for lists */
+.stagger-item {
+  animation: fade-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Safe area utilities for notched devices */
+.safe-area-inset-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+.safe-area-inset-top {
+  padding-top: max(env(safe-area-inset-top), 0px);
+}
+
+/* Mobile-optimized height (accounts for browser chrome) */
+.h-screen-safe {
+  height: 100dvh;
+}
+
+.min-h-screen-safe {
+  min-height: 100dvh;
+}
+
+/* Smooth scroll container with iOS momentum */
+.scroll-container {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+/* Hide scrollbar but keep functionality (cross-browser) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Touch-optimized link/button minimum size */
+.touch-target {
+  @apply min-h-[44px] min-w-[44px];
+}
+
+/* Premium section divider */
+.section-divider {
+  @apply w-full h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent;
 }

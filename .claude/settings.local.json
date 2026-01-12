@@ -64,7 +64,11 @@
       "Bash(if ! head -1 \"$file\")",
       "Bash(yarn dev)",
       "Bash(yarn dev:*)",
-      "Bash(yarn add:*)"
+      "Bash(yarn add:*)",
+      "Bash(kill:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(netstat:*)",
+      "Bash(timeout:*)"
     ]
   }
 }

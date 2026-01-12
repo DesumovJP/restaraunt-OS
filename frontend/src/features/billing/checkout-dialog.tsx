@@ -345,19 +345,11 @@ export function CheckoutDialog({
           />
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isProcessing}
-            className="w-full sm:w-auto"
-          >
-            Скасувати
-          </Button>
+        <DialogFooter className="border-t pt-4">
           <Button
             onClick={handleCheckout}
             disabled={items.length === 0 || isProcessing}
-            className="w-full sm:w-auto"
+            className="w-full h-12 text-base font-medium rounded-xl"
           >
             {isProcessing ? (
               <>

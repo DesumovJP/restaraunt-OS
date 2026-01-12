@@ -64,9 +64,11 @@ function getCommentPreview(comment: ItemComment | null): string {
 interface InvoiceSidebarProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Show desktop sidebar (default: true). Set to false to only show mobile drawer/FAB */
+  showDesktopSidebar?: boolean;
 }
 
-export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {}) {
+export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }: InvoiceSidebarProps = {}) {
   const router = useRouter();
   const items = useCartStore((state) => state.items);
   const updateQuantity = useCartStore((state) => state.updateQuantity);
@@ -144,13 +146,20 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
 
   const InvoiceContent = () => (
     <>
-      {/* Header - компактний */}
-      <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
-        <h2 className="text-lg font-bold text-slate-900">Замовлення</h2>
+      {/* Header - Premium design */}
+      <div className="px-4 py-4 border-b border-slate-200/80 bg-gradient-to-r from-slate-50 to-white flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Замовлення</h2>
+          {items.length > 0 && (
+            <p className="text-xs text-slate-500 mt-0.5">
+              {items.reduce((sum, item) => sum + item.quantity, 0)} позицій
+            </p>
+          )}
+        </div>
         {isMobile && (
           <button
             onClick={() => handleOpenChange(false)}
-            className="w-11 h-11 rounded-lg flex items-center justify-center hover:bg-slate-100"
+            className="w-11 h-11 rounded-xl flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors touch-feedback"
             aria-label="Закрити"
           >
             <X className="w-5 h-5 text-slate-600" />
@@ -158,36 +167,43 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
         )}
       </div>
 
-      {/* Cart Items - спрощений вигляд */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+      {/* Cart Items - Premium design */}
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2.5">
         {items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <ShoppingCart className="w-10 h-10 text-slate-300 mb-2" />
-            <p className="text-slate-500 text-sm">Кошик порожній</p>
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+              <ShoppingCart className="w-8 h-8 text-slate-400" />
+            </div>
+            <p className="text-slate-700 font-medium">Кошик порожній</p>
+            <p className="text-slate-500 text-sm mt-1">Додайте страви з меню</p>
           </div>
         ) : (
-          items.map((item) => {
+          items.map((item, index) => {
             const comment = itemComments[item.menuItem.id];
 
             return (
               <div
                 key={item.menuItem.id}
-                className="p-3 rounded-lg bg-slate-50 border border-slate-100"
+                className="p-3.5 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200/80 shadow-sm animate-fade-in-up hover-lift transition-all"
+                style={{
+                  animationDelay: `${index * 30}ms`,
+                  animationFillMode: 'both',
+                }}
               >
                 {/* Верхній рядок: назва + кількість + видалити */}
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-slate-900 text-sm truncate">
+                      <h3 className="font-semibold text-slate-900 text-sm truncate">
                         {item.menuItem.name}
                       </h3>
                       {item.menuItem.weight && (
-                        <span className="text-xs text-slate-400 shrink-0">
+                        <span className="text-xs text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded shrink-0">
                           {item.menuItem.weight}{item.menuItem.outputType === 'bar' ? 'мл' : 'г'}
                         </span>
                       )}
                     </div>
-                    <span className="text-sm text-slate-600">
+                    <span className="text-sm font-medium text-slate-600">
                       {formatPrice(item.menuItem.price * item.quantity)}
                     </span>
                   </div>
@@ -196,43 +212,43 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
-                      className="w-9 h-9 rounded-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 active:bg-slate-200"
+                      className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors touch-feedback"
                     >
-                      <Minus className="w-4 h-4" />
+                      <Minus className="w-4 h-4 text-slate-600" />
                     </button>
-                    <span className="w-8 text-center font-semibold">
+                    <span className="w-8 text-center font-bold text-slate-900">
                       {item.quantity}
                     </span>
                     <button
                       onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
-                      className="w-9 h-9 rounded-lg border border-slate-300 flex items-center justify-center hover:bg-slate-100 active:bg-slate-200"
+                      className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors touch-feedback"
                     >
-                      <Plus className="w-4 h-4" />
+                      <Plus className="w-4 h-4 text-slate-600" />
                     </button>
                   </div>
 
                   {/* Видалити */}
                   <button
                     onClick={() => removeItem(item.menuItem.id)}
-                    className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500"
+                    className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors touch-feedback"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 
                 {/* Коментар */}
-                <div className="mt-2 pt-2 border-t border-slate-200">
+                <div className="mt-2.5 pt-2.5 border-t border-slate-100">
                   <button
                     onClick={() => setEditingCommentId(item.menuItem.id)}
                     className={cn(
-                      "flex items-center gap-1.5 text-xs px-2 py-1.5 rounded-md max-w-full",
+                      "flex items-center gap-1.5 text-xs px-2.5 py-2 rounded-lg max-w-full transition-colors touch-feedback",
                       comment
-                        ? "bg-blue-50 text-blue-700"
-                        : "text-slate-500 hover:bg-slate-100"
+                        ? "bg-blue-50 text-blue-700 border border-blue-100"
+                        : "text-slate-500 hover:bg-slate-100 border border-transparent"
                     )}
                   >
                     <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="truncate">
+                    <span className="truncate font-medium">
                       {comment ? getCommentPreview(comment) : "Додати коментар"}
                     </span>
                   </button>
@@ -243,14 +259,12 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
         )}
       </div>
 
-      {/* Summary & Send to Kitchen - компактний */}
-      <div className="px-4 py-4 border-t border-slate-200 space-y-3 bg-white">
+      {/* Summary & Send to Kitchen - Premium design */}
+      <div className="px-4 py-4 border-t border-slate-200/80 space-y-3 bg-gradient-to-t from-slate-50 to-white">
         {/* Сума */}
-        <div className="flex justify-between items-center">
-          <span className="text-slate-600">
-            {items.reduce((sum, item) => sum + item.quantity, 0)} позицій
-          </span>
-          <span className="text-xl font-bold text-slate-900">
+        <div className="flex justify-between items-center p-3 bg-slate-100/80 rounded-xl">
+          <span className="text-slate-600 font-medium">Всього</span>
+          <span className="text-2xl font-bold text-slate-900">
             {formatPrice(total)}
           </span>
         </div>
@@ -260,24 +274,24 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
           <Button
             onClick={handlePlaceOrder}
             disabled={items.length === 0}
-            className="w-full h-12 text-base font-semibold bg-purple-600 hover:bg-purple-700 text-white"
+            className="w-full h-14 text-base font-semibold bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white rounded-xl shadow-lg shadow-purple-500/25 transition-all touch-feedback flex-shrink-0"
             size="lg"
           >
-            <Calendar className="w-5 h-5 mr-2" />
-            Зберегти замовлення
-            {scheduledTableNumber && <span className="ml-1 opacity-75">• Стіл {scheduledTableNumber}</span>}
+            <Calendar className="w-5 h-5 mr-2 flex-shrink-0" />
+            <span className="truncate">Зберегти замовлення</span>
+            {scheduledTableNumber && <span className="ml-1 opacity-75 flex-shrink-0">• Стіл {scheduledTableNumber}</span>}
           </Button>
         ) : (
           <>
             <Button
               onClick={handlePlaceOrder}
               disabled={items.length === 0 || !selectedTable}
-              className="w-full h-12 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="w-full h-14 text-base font-semibold bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white rounded-xl shadow-lg shadow-emerald-500/25 transition-all touch-feedback disabled:opacity-50 disabled:shadow-none flex-shrink-0"
               size="lg"
             >
-              <ChefHat className="w-5 h-5 mr-2" />
-              На кухню
-              {selectedTable && <span className="ml-1 opacity-75">• Стіл {selectedTable.number}</span>}
+              <ChefHat className="w-5 h-5 mr-2 flex-shrink-0" />
+              <span>На кухню</span>
+              {selectedTable && <span className="ml-1 opacity-75 flex-shrink-0">• Стіл {selectedTable.number}</span>}
             </Button>
 
             {/* Checkout button - only when table is selected */}
@@ -285,11 +299,11 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
               <Button
                 onClick={() => setIsCheckoutOpen(true)}
                 variant="outline"
-                className="w-full h-11 text-base font-medium border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                className="w-full h-12 text-base font-semibold border-2 border-amber-500 text-amber-600 hover:bg-amber-50 hover:text-amber-700 rounded-xl transition-all touch-feedback flex-shrink-0"
                 size="lg"
               >
-                <Receipt className="w-5 h-5 mr-2" />
-                Розрахувати
+                <Receipt className="w-5 h-5 mr-2 flex-shrink-0" />
+                <span>Розрахувати</span>
               </Button>
             )}
           </>
@@ -313,30 +327,43 @@ export function InvoiceSidebar({ open, onOpenChange }: InvoiceSidebarProps = {})
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-96 bg-white border-l border-slate-200 flex-col h-full">
-        <InvoiceContent />
-      </aside>
+      {/* Desktop Sidebar - Premium design (only show when showDesktopSidebar is true) */}
+      {showDesktopSidebar && (
+        <aside className="hidden lg:flex w-96 bg-white border-l border-slate-200/80 flex-col h-full shadow-sm">
+          <InvoiceContent />
+        </aside>
+      )}
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer - responsive width */}
       <Drawer open={isMobileOpen} onOpenChange={handleOpenChange}>
-        <DrawerContent side="right" className="flex flex-col h-full p-0">
-          <div className="flex flex-col h-full">
+        <DrawerContent side="right" className="flex flex-col h-full p-0 w-full sm:w-96 sm:max-w-[400px]">
+          <div className="flex flex-col h-full safe-area-inset-bottom">
             <InvoiceContent />
           </div>
         </DrawerContent>
       </Drawer>
 
-      {/* Mobile Floating Button */}
+      {/* Mobile Floating Button - Premium design with safe area */}
       {isMobile && (
         <button
           onClick={() => handleOpenChange(true)}
-          className="fixed bottom-6 right-6 lg:hidden z-40 w-14 h-14 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center justify-center transition-all hover:scale-110 active:scale-95"
-          aria-label="Open invoice"
+          className={cn(
+            "fixed lg:hidden z-40 fab",
+            "w-16 h-16 rounded-2xl",
+            "bg-gradient-to-br from-slate-800 to-slate-900",
+            "text-white shadow-xl shadow-slate-900/30",
+            "flex items-center justify-center",
+            "border border-slate-700/50"
+          )}
+          style={{
+            bottom: 'max(env(safe-area-inset-bottom, 0px) + 16px, 24px)',
+            right: '24px',
+          }}
+          aria-label="Відкрити кошик"
         >
           <ShoppingCart className="w-6 h-6" />
           {totalItems > 0 && (
-            <span className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs font-bold flex items-center justify-center">
+            <span className="absolute -top-2 -right-2 min-w-[28px] h-7 px-2 rounded-full bg-emerald-500 text-white text-sm font-bold flex items-center justify-center shadow-lg shadow-emerald-500/40 animate-bounce-in">
               {totalItems}
             </span>
           )}

@@ -279,128 +279,125 @@ export function WorkerProfileCard({
     );
   }
 
-  // Full variant - complete profile card
+  // Full variant - complete profile card (clean, professional design)
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      {/* Header with gradient */}
-      <div className="bg-gradient-to-r from-blue-500 to-blue-600 px-6 py-8">
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur flex items-center justify-center shadow-lg border-4 border-white/30">
+    <Card className={cn("overflow-hidden bg-white", className)}>
+      {/* Clean header without gradient */}
+      <CardContent className="p-5 sm:p-6">
+        {/* Profile header */}
+        <div className="flex items-start gap-4 pb-5 border-b border-slate-100">
+          {/* Avatar */}
+          <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-slate-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
             {worker.avatar ? (
-              <img src={worker.avatar} alt={worker.name} className="w-full h-full rounded-full object-cover" />
+              <img src={worker.avatar} alt={worker.name} className="w-full h-full object-cover" />
             ) : (
-              <span className="text-white text-2xl font-bold">{initials}</span>
+              <span className="text-slate-600 text-xl font-semibold">{initials}</span>
             )}
           </div>
-          <div>
-            <h2 className="text-2xl font-bold text-white">{worker.name}</h2>
-            <div className="flex items-center gap-2 mt-1">
-              <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 truncate">{worker.name}</h2>
+            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+              <Badge variant="outline" className={cn("text-xs font-medium", ROLE_COLORS[worker.role])}>
                 {roleLabel}
               </Badge>
-              <span className="text-white/80 text-sm">{departmentLabel}</span>
+              <span className="text-sm text-slate-500">{departmentLabel}</span>
             </div>
             <div className="flex items-center gap-2 mt-2">
               <div className={cn("w-2 h-2 rounded-full", STATUS_CONFIG[worker.status].color)} />
-              <span className="text-white/90 text-sm">{STATUS_CONFIG[worker.status].label}</span>
+              <span className="text-sm text-slate-600">{STATUS_CONFIG[worker.status].label}</span>
             </div>
           </div>
         </div>
-      </div>
 
-      <CardContent className="p-6 space-y-6">
-        {/* Contact info */}
+        {/* Contact info - inline layout */}
         {(worker.phone || worker.email) && (
-          <div className="space-y-3">
-            <h3 className="font-semibold text-slate-900">Контакти</h3>
+          <div className="py-4 border-b border-slate-100 space-y-2.5">
             {worker.phone && (
-              <div className="flex items-center gap-3 text-slate-600">
-                <Phone className="h-4 w-4" />
-                <span>{worker.phone}</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                  <Phone className="h-4 w-4 text-slate-500" />
+                </div>
+                <span className="text-sm text-slate-700">{worker.phone}</span>
               </div>
             )}
             {worker.email && (
-              <div className="flex items-center gap-3 text-slate-600">
-                <Mail className="h-4 w-4" />
-                <span>{worker.email}</span>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
+                  <Mail className="h-4 w-4 text-slate-500" />
+                </div>
+                <span className="text-sm text-slate-700 truncate">{worker.email}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Stats grid */}
-        <div className="space-y-3">
-          <h3 className="font-semibold text-slate-900">Статистика</h3>
+        {/* Stats - clean 2x2 grid */}
+        <div className="py-4 border-b border-slate-100">
           <div className="grid grid-cols-2 gap-3">
-            <StatItem
-              icon={Clock}
-              label="Цей тиждень"
-              value={worker.hoursThisWeek || 0}
-              unit="год"
-            />
-            <StatItem
-              icon={Calendar}
-              label="Цей місяць"
-              value={worker.hoursThisMonth || 0}
-              unit="год"
-            />
-            {worker.ordersServed !== undefined && (
-              <StatItem
-                icon={Target}
-                label="Замовлень"
-                value={worker.ordersServed}
-              />
-            )}
-            {worker.rating !== undefined && (
-              <StatItem
-                icon={Star}
-                label="Рейтинг"
-                value={worker.rating.toFixed(1)}
-              />
+            <div className="p-3 bg-slate-50 rounded-xl">
+              <p className="text-2xl font-bold text-slate-900 tabular-nums">
+                {worker.hoursThisWeek || 0}
+                <span className="text-base font-medium text-slate-400 ml-0.5">г</span>
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">Годин цього тижня</p>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-xl">
+              <p className="text-2xl font-bold text-slate-900 tabular-nums">
+                {worker.shiftsThisWeek || 0}
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">Змін цього тижня</p>
+            </div>
+            <div className="p-3 bg-slate-50 rounded-xl">
+              <p className="text-2xl font-bold text-slate-900 tabular-nums">
+                {worker.hoursThisMonth || 0}
+                <span className="text-base font-medium text-slate-400 ml-0.5">г</span>
+              </p>
+              <p className="text-xs text-slate-500 mt-0.5">Годин цього місяця</p>
+            </div>
+            {worker.rating !== undefined ? (
+              <div className="p-3 bg-amber-50 rounded-xl">
+                <p className="text-2xl font-bold text-amber-600 tabular-nums flex items-center gap-1">
+                  {worker.rating.toFixed(1)}
+                  <Star className="h-5 w-5 fill-current" />
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5">Рейтинг</p>
+              </div>
+            ) : (
+              <div className="p-3 bg-slate-50 rounded-xl">
+                <p className="text-2xl font-bold text-slate-900 tabular-nums">
+                  {worker.shiftsThisMonth || 0}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">Змін цього місяця</p>
+              </div>
             )}
           </div>
         </div>
 
-        {/* Performance */}
-        {(worker.avgTicketTime || worker.rating) && (
-          <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl border border-amber-100">
-            <div className="flex items-center gap-2 mb-3">
-              <Award className="h-5 w-5 text-amber-600" />
-              <h3 className="font-semibold text-amber-900">Продуктивність</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              {worker.avgTicketTime && (
-                <div>
-                  <p className="text-2xl font-bold text-amber-600">{worker.avgTicketTime} хв</p>
-                  <p className="text-xs text-amber-700">Сер. час тікету</p>
-                </div>
-              )}
-              {worker.rating && (
-                <div>
-                  <p className="text-2xl font-bold text-amber-600 flex items-center gap-1">
-                    {worker.rating.toFixed(1)}
-                    <Star className="h-5 w-5 fill-current" />
-                  </p>
-                  <p className="text-xs text-amber-700">Рейтинг</p>
-                </div>
-              )}
+        {/* Performance indicator - only if data available */}
+        {worker.avgTicketTime && (
+          <div className="py-4 border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-slate-400" />
+                <span className="text-sm text-slate-600">Середній час виконання</span>
+              </div>
+              <span className="text-sm font-semibold text-slate-900">{worker.avgTicketTime} хв</span>
             </div>
           </div>
         )}
 
-        {/* Actions */}
-        <div className="space-y-1 pt-4 border-t">
+        {/* Actions - simplified */}
+        <div className="pt-4 space-y-1">
           {onViewSchedule && (
             <ActionButton icon={Calendar} label="Мій графік" onClick={onViewSchedule} />
-          )}
-          {onViewStats && (
-            <ActionButton icon={TrendingUp} label="Статистика" onClick={onViewStats} />
           )}
           {onSettings && (
             <ActionButton icon={Settings} label="Налаштування" onClick={onSettings} />
           )}
           {onLogout && (
-            <ActionButton icon={LogOut} label="Вийти" onClick={onLogout} variant="danger" />
+            <ActionButton icon={LogOut} label="Вийти з системи" onClick={onLogout} variant="danger" />
           )}
         </div>
       </CardContent>

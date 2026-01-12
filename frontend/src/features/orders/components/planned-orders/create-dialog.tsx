@@ -549,10 +549,7 @@ export function CreateDialog({
           </TabsContent>
         </Tabs>
 
-        <DialogFooter className="gap-2 sm:gap-0 mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Скасувати
-          </Button>
+        <DialogFooter className="border-t pt-4 mt-4">
           <Button
             onClick={handleSubmit}
             disabled={
@@ -561,7 +558,7 @@ export function CreateDialog({
               !formData.time ||
               !formData.prepTime
             }
-            className="bg-purple-600 hover:bg-purple-700"
+            className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-base font-medium rounded-xl"
           >
             <Calendar className="h-4 w-4 mr-1.5" />
             Створити бронювання

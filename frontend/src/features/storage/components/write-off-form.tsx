@@ -304,19 +304,12 @@ export function WriteOffForm({
             </div>
           )}
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Скасувати
-            </Button>
+          <DialogFooter className="border-t bg-slate-50/50 px-6 py-4">
             <Button
               type="submit"
               variant="destructive"
               disabled={isSubmitting}
+              className="w-full h-12 text-base font-medium rounded-xl"
             >
               {isSubmitting ? (
                 <>

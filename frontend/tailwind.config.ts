@@ -113,6 +113,18 @@ const config: Config = {
           DEFAULT: colors.background.primary,          // White
           foreground: colors.foreground.primary,       // Navy 950
         },
+        popover: {
+          DEFAULT: "#FFFFFF",                          // White - for dropdowns
+          foreground: colors.foreground.primary,       // Navy 950
+        },
+        secondary: {
+          DEFAULT: "#F1F5F9",                          // Slate 100
+          foreground: colors.foreground.primary,       // Navy 950
+        },
+        destructive: {
+          DEFAULT: "#EF4444",                          // Red 500
+          foreground: "#FFFFFF",                       // White
+        },
         border: colors.border.primary,                 // Slate 200
         input: colors.border.primary,
         ring: colors.border.focus,                     // Electric 500
@@ -283,6 +295,22 @@ const config: Config = {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(100%)" },
         },
+        "slide-in-left": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "slide-out-left": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(-100%)" },
+        },
+        "slide-in-up": {
+          "0%": { transform: "translateY(100%)", opacity: "0" },
+          "100%": { transform: "translateY(0)", opacity: "1" },
+        },
+        "slide-out-down": {
+          "0%": { transform: "translateY(0)", opacity: "1" },
+          "100%": { transform: "translateY(100%)", opacity: "0" },
+        },
         "pulse-soft": {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.7" },
@@ -291,6 +319,38 @@ const config: Config = {
           "0%, 100%": { transform: "translateX(0)" },
           "25%": { transform: "translateX(-4px)" },
           "75%": { transform: "translateX(4px)" },
+        },
+
+        // iOS-style spring animations
+        "scale-in": {
+          "0%": { transform: "scale(0.9)", opacity: "0" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "scale-out": {
+          "0%": { transform: "scale(1)", opacity: "1" },
+          "100%": { transform: "scale(0.9)", opacity: "0" },
+        },
+        "modal-in": {
+          "0%": { transform: "scale(0.95) translateY(10px)", opacity: "0" },
+          "100%": { transform: "scale(1) translateY(0)", opacity: "1" },
+        },
+        "modal-out": {
+          "0%": { transform: "scale(1) translateY(0)", opacity: "1" },
+          "100%": { transform: "scale(0.95) translateY(10px)", opacity: "0" },
+        },
+        "bounce-in": {
+          "0%": { transform: "scale(0.3)", opacity: "0" },
+          "50%": { transform: "scale(1.05)" },
+          "70%": { transform: "scale(0.9)" },
+          "100%": { transform: "scale(1)", opacity: "1" },
+        },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-5px)" },
+        },
+        "ping-once": {
+          "0%": { transform: "scale(1)", opacity: "1" },
+          "100%": { transform: "scale(1.5)", opacity: "0" },
         },
 
         // New glassmorphism animations
@@ -318,19 +378,42 @@ const config: Config = {
           "0%": { opacity: "1" },
           "100%": { opacity: "0" },
         },
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        "fade-in-down": {
+          "0%": { opacity: "0", transform: "translateY(-8px)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
 
       animation: {
-        "slide-in-right": "slide-in-right 0.3s ease-out",
-        "slide-out-right": "slide-out-right 0.3s ease-out",
+        "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-out-right": "slide-out-right 0.25s cubic-bezier(0.4, 0, 1, 1)",
+        "slide-in-left": "slide-in-left 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-out-left": "slide-out-left 0.25s cubic-bezier(0.4, 0, 1, 1)",
+        "slide-in-up": "slide-in-up 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        "slide-out-down": "slide-out-down 0.3s cubic-bezier(0.4, 0, 1, 1)",
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
         shake: "shake 0.3s ease-in-out",
+
+        // iOS-style animations
+        "scale-in": "scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+        "scale-out": "scale-out 0.15s cubic-bezier(0.4, 0, 1, 1)",
+        "modal-in": "modal-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        "modal-out": "modal-out 0.2s cubic-bezier(0.4, 0, 1, 1)",
+        "bounce-in": "bounce-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "float": "float 3s ease-in-out infinite",
+        "ping-once": "ping-once 0.4s cubic-bezier(0, 0, 0.2, 1)",
 
         // Glassmorphism animations
         "glass-appear": "glass-appear 400ms cubic-bezier(0.16, 1, 0.3, 1)",
         shimmer: "shimmer 2s infinite",
         "fade-in": "fade-in 200ms ease-out",
         "fade-out": "fade-out 200ms ease-out",
+        "fade-in-up": "fade-in-up 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        "fade-in-down": "fade-in-down 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
       },
 
       // =======================================================================

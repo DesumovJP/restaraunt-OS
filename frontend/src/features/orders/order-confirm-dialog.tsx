@@ -366,18 +366,11 @@ export function OrderConfirmDialog({
               </div>
             )}
 
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                variant="outline"
-                onClick={handleClose}
-                disabled={isSubmitting}
-              >
-                Скасувати
-              </Button>
+            <DialogFooter className="border-t pt-4">
               <Button
                 onClick={handleConfirm}
                 disabled={isSubmitting}
-                className="gap-2 bg-orange-600 hover:bg-orange-700"
+                className="w-full h-11 gap-2 bg-orange-600 hover:bg-orange-700 text-base font-medium rounded-xl"
               >
                 {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
                 <ChefHat className="h-4 w-4" />

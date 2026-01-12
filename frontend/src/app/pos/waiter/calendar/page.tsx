@@ -97,30 +97,33 @@ function MiniCalendar({
   };
 
   return (
-    <div className="p-3 w-[280px]">
+    <div className="p-4 w-[300px]">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => goMonth(-1)}
-          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100"
+          className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-5 h-5 text-slate-600" />
         </button>
-        <span className="font-medium text-sm capitalize">{monthName}</span>
+        <span className="font-semibold text-base capitalize text-slate-900">{monthName}</span>
         <button
           onClick={() => goMonth(1)}
-          className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-slate-100"
+          className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-slate-100 transition-colors"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-5 h-5 text-slate-600" />
         </button>
       </div>
 
       {/* Week days */}
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {weekDays.map((day) => (
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {weekDays.map((day, idx) => (
           <div
             key={day}
-            className="h-8 flex items-center justify-center text-xs text-slate-500 font-medium"
+            className={cn(
+              "h-9 flex items-center justify-center text-xs font-semibold uppercase tracking-wide",
+              idx >= 5 ? "text-amber-600" : "text-slate-400"
+            )}
           >
             {day}
           </div>
@@ -131,12 +134,13 @@ function MiniCalendar({
       <div className="grid grid-cols-7 gap-1">
         {days.map((day, i) => {
           if (!day) {
-            return <div key={`empty-${i}`} className="h-8" />;
+            return <div key={`empty-${i}`} className="h-9" />;
           }
 
           const isSelected = isSameDay(day, selected);
-          const isToday = isSameDay(day, today);
-          const isPast = day < today && !isToday;
+          const isDayToday = isSameDay(day, today);
+          const isPast = day < today && !isDayToday;
+          const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
           return (
             <button
@@ -146,15 +150,18 @@ function MiniCalendar({
                 onClose();
               }}
               className={cn(
-                "h-8 rounded-lg text-sm font-medium transition-colors",
+                "h-9 rounded-lg text-sm font-medium transition-all",
                 isSelected
-                  ? "bg-slate-900 text-white"
-                  : isToday
-                  ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                  ? "bg-slate-900 text-white shadow-md"
+                  : isDayToday
+                  ? "bg-blue-500 text-white hover:bg-blue-600"
                   : isPast
-                  ? "text-slate-300"
-                  : "hover:bg-slate-100"
+                  ? "text-slate-300 cursor-default"
+                  : isWeekend
+                  ? "text-amber-600 hover:bg-amber-50"
+                  : "text-slate-700 hover:bg-slate-100"
               )}
+              disabled={isPast}
             >
               {day.getDate()}
             </button>
@@ -163,15 +170,17 @@ function MiniCalendar({
       </div>
 
       {/* Today button */}
-      <button
-        onClick={() => {
-          onSelect(new Date());
-          onClose();
-        }}
-        className="w-full mt-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg font-medium"
-      >
-        Сьогодні
-      </button>
+      <div className="mt-4 pt-3 border-t">
+        <button
+          onClick={() => {
+            onSelect(new Date());
+            onClose();
+          }}
+          className="w-full py-2.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg font-semibold transition-colors"
+        >
+          Перейти на сьогодні
+        </button>
+      </div>
     </div>
   );
 }
@@ -192,8 +201,15 @@ export default function WaiterCalendarPage() {
     setSelectedDate(newDate);
   };
 
+  // Quick jump to today
+  const goToToday = () => {
+    setSelectedDate(new Date());
+  };
+
+  const isToday = isSameDay(selectedDate, new Date());
+
   return (
-    <div className="flex h-screen bg-slate-50">
+    <div className="flex h-screen bg-slate-100">
       <LeftSidebar
         open={isSidebarOpen}
         onOpenChange={setIsSidebarOpen}
@@ -203,8 +219,8 @@ export default function WaiterCalendarPage() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <header className="bg-white border-b shadow-sm px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <Button
               variant="ghost"
               size="icon"
@@ -213,35 +229,38 @@ export default function WaiterCalendarPage() {
             >
               <Menu className="h-5 w-5" />
             </Button>
-            <h1 className="text-lg font-semibold text-slate-900">Бронювання</h1>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">Бронювання</h1>
+              <p className="text-sm text-slate-500">Керування резерваціями столиків</p>
+            </div>
           </div>
 
           <Button
             onClick={() => setIsReservationDialogOpen(true)}
-            className="bg-slate-900 hover:bg-slate-800"
+            className="bg-slate-900 hover:bg-slate-800 h-11 px-5"
           >
-            <Plus className="w-4 h-4 mr-1" />
-            Бронювання
+            <Plus className="w-4 h-4 mr-2" />
+            Нове бронювання
           </Button>
         </header>
 
         {/* Date navigation */}
-        <div className="bg-white border-b px-4 py-3">
-          <div className="flex items-center justify-center gap-2">
+        <div className="bg-white border-b px-4 py-4">
+          <div className="flex items-center justify-center gap-3">
             <button
               onClick={() => goToDay(-1)}
-              className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100"
+              className="w-11 h-11 rounded-xl flex items-center justify-center hover:bg-slate-100 border border-slate-200 transition-colors"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-5 h-5 text-slate-600" />
             </button>
 
             <div className="relative">
               <button
                 onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-100 min-w-[160px] justify-center"
+                className="flex items-center gap-3 px-5 py-2.5 rounded-xl hover:bg-slate-50 min-w-[200px] justify-center border border-slate-200 transition-colors"
               >
-                <CalendarDays className="w-4 h-4 text-slate-500" />
-                <span className="text-lg font-semibold text-slate-900">
+                <CalendarDays className="w-5 h-5 text-slate-500" />
+                <span className="text-lg font-bold text-slate-900">
                   {formatDate(selectedDate)}
                 </span>
               </button>
@@ -254,7 +273,7 @@ export default function WaiterCalendarPage() {
                     onClick={() => setIsCalendarOpen(false)}
                   />
                   {/* Calendar dropdown */}
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white rounded-xl shadow-lg border">
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 z-50 bg-white rounded-2xl shadow-xl border">
                     <MiniCalendar
                       selected={selectedDate}
                       onSelect={setSelectedDate}
@@ -267,18 +286,27 @@ export default function WaiterCalendarPage() {
 
             <button
               onClick={() => goToDay(1)}
-              className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-slate-100"
+              className="w-11 h-11 rounded-xl flex items-center justify-center hover:bg-slate-100 border border-slate-200 transition-colors"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-5 h-5 text-slate-600" />
             </button>
-          </div>
 
+            {/* Today button - show only if not today */}
+            {!isToday && (
+              <button
+                onClick={goToToday}
+                className="ml-2 px-4 py-2.5 rounded-xl text-sm font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors"
+              >
+                Сьогодні
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Content - Reservations list */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="max-w-lg mx-auto">
-            <ReservationsList date={dateStr} variant="today" />
+        <div className="flex-1 overflow-y-auto p-6 flex flex-col">
+          <div className="max-w-2xl mx-auto w-full flex-1 flex flex-col">
+            <ReservationsList date={dateStr} variant="today" className="flex-1" />
           </div>
         </div>
       </div>
@@ -287,6 +315,7 @@ export default function WaiterCalendarPage() {
       <ReservationDialog
         open={isReservationDialogOpen}
         onOpenChange={setIsReservationDialogOpen}
+        selectedDate={selectedDate}
       />
     </div>
   );

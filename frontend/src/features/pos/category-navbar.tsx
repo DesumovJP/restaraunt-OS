@@ -46,24 +46,24 @@ export function CategoryNavbar({
   const totalCount = Object.values(menuItemCounts).reduce((a, b) => a + b, 0);
 
   return (
-    <div className="bg-white border-y border-slate-200 py-2 overflow-x-auto">
+    <div className="bg-white/95 backdrop-blur-sm border-y border-slate-200/80 py-2.5 overflow-x-auto scrollbar-hide">
       <div className="flex gap-2 min-w-max px-4 md:px-6">
         {/* Все */}
         <button
           onClick={() => onCategoryChange(null)}
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 rounded-lg border',
-            'transition-colors duration-150 active:scale-[0.98]',
-            'min-h-[44px]',
+            'flex items-center gap-2 px-4 py-2.5 rounded-xl border',
+            'transition-all duration-200 touch-feedback',
+            'min-h-[44px] shadow-sm',
             activeCategory === null
-              ? 'bg-slate-900 border-slate-900 text-white'
-              : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
+              ? 'bg-slate-900 border-slate-900 text-white shadow-slate-900/20'
+              : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:shadow-md'
           )}
         >
           <Package className="w-4 h-4" />
-          <span className="font-medium text-sm">Все</span>
+          <span className="font-semibold text-sm">Все</span>
           <span className={cn(
-            'text-xs px-1.5 py-0.5 rounded',
+            'text-xs px-2 py-0.5 rounded-md font-medium',
             activeCategory === null ? 'bg-white/20' : 'bg-slate-100'
           )}>
             {totalCount}
@@ -81,18 +81,18 @@ export function CategoryNavbar({
               key={category.id}
               onClick={() => onCategoryChange(category.id)}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-lg border',
-                'transition-colors duration-150 active:scale-[0.98]',
-                'min-h-[44px]',
+                'flex items-center gap-2 px-4 py-2.5 rounded-xl border',
+                'transition-all duration-200 touch-feedback',
+                'min-h-[44px] shadow-sm',
                 isActive
-                  ? 'bg-slate-900 border-slate-900 text-white'
-                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-400'
+                  ? 'bg-slate-900 border-slate-900 text-white shadow-slate-900/20'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:shadow-md'
               )}
             >
               <Icon className="w-4 h-4" />
-              <span className="font-medium text-sm">{category.name}</span>
+              <span className="font-semibold text-sm">{category.name}</span>
               <span className={cn(
-                'text-xs px-1.5 py-0.5 rounded',
+                'text-xs px-2 py-0.5 rounded-md font-medium',
                 isActive ? 'bg-white/20' : 'bg-slate-100'
               )}>
                 {count}

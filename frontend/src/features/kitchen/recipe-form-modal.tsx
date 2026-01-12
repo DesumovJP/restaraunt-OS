@@ -662,11 +662,12 @@ export function RecipeFormModal({
         </div>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
-            Скасувати
-          </Button>
-          <Button onClick={handleSubmit} disabled={!isValid || isSaving}>
+        <DialogFooter className="border-t pt-4">
+          <Button
+            onClick={handleSubmit}
+            disabled={!isValid || isSaving}
+            className="w-full h-11 text-base font-medium"
+          >
             {isSaving ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />

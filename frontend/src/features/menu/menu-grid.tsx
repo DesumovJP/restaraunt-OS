@@ -42,12 +42,21 @@ export function MenuGrid({
     return map;
   }, [categories]);
 
-  // Loading state
+  // Loading state with shimmer animation
   if (isLoading) {
     return (
-      <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3", className)}>
+      <div className={cn("grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4", className)}>
         {Array.from({ length: 10 }).map((_, i) => (
-          <SkeletonMenuItem key={i} />
+          <div
+            key={i}
+            className="animate-fade-in-up"
+            style={{
+              animationDelay: `${i * 50}ms`,
+              animationFillMode: 'both',
+            }}
+          >
+            <SkeletonMenuItem />
+          </div>
         ))}
       </div>
     );
@@ -61,14 +70,22 @@ export function MenuGrid({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3",
+        "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4",
         className
       )}
       role="list"
       aria-label="Меню страв"
     >
-      {items.map((item) => (
-        <div key={item.id} role="listitem" className="flex">
+      {items.map((item, index) => (
+        <div
+          key={item.id}
+          role="listitem"
+          className="flex animate-fade-in-up"
+          style={{
+            animationDelay: `${Math.min(index * 30, 300)}ms`,
+            animationFillMode: 'both',
+          }}
+        >
           <MenuItemCard
             item={item}
             category={categoryMap.get(item.categoryId)}

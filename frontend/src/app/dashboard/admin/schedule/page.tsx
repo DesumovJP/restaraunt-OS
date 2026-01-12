@@ -578,11 +578,12 @@ export default function ScheduleManagementPage() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Скасувати
-            </Button>
-            <Button onClick={handleAddShift} disabled={!selectedWorker}>
+          <DialogFooter className="border-t pt-4">
+            <Button
+              onClick={handleAddShift}
+              disabled={!selectedWorker}
+              className="w-full h-11 text-base font-medium rounded-xl"
+            >
               Додати зміну
             </Button>
           </DialogFooter>

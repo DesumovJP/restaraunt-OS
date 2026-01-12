@@ -186,38 +186,36 @@ function StockCell({ product }: { product: ExtendedProduct }) {
   );
 
   return (
-    <div className="flex items-center gap-3">
-      {/* Progress bar + percentage first */}
-      <div className="flex items-center gap-2">
-        <div className="w-20 h-1.5 bg-muted rounded-full overflow-hidden">
-          <div
-            className={cn(
-              "h-full rounded-full",
-              percentage <= 20 && "bg-red-500",
-              percentage > 20 && percentage <= 40 && "bg-amber-500",
-              percentage > 40 && "bg-green-500"
-            )}
-            style={{ width: `${percentage}%` }}
-          />
-        </div>
-        <span className="text-xs text-muted-foreground tabular-nums w-8">
-          {percentage}%
-        </span>
-      </div>
-      {/* Quantity on the right */}
-      <div className="min-w-[70px]">
+    <div className="flex flex-col gap-1.5 min-w-[80px]">
+      {/* Quantity - primary info */}
+      <div className="flex items-baseline gap-1">
         <span
           className={cn(
-            "font-semibold tabular-nums",
+            "font-semibold tabular-nums text-sm",
             status === "critical" && "text-red-600",
             status === "warning" && "text-amber-600"
           )}
         >
           {product.currentStock}
         </span>
-        <span className="text-muted-foreground text-xs ml-0.5">
+        <span className="text-muted-foreground text-xs">
           {product.unit}
         </span>
+        <span className="text-muted-foreground text-xs ml-auto hidden sm:inline">
+          ({percentage}%)
+        </span>
+      </div>
+      {/* Progress bar - compact */}
+      <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
+        <div
+          className={cn(
+            "h-full rounded-full",
+            percentage <= 20 && "bg-red-500",
+            percentage > 20 && percentage <= 40 && "bg-amber-500",
+            percentage > 40 && "bg-green-500"
+          )}
+          style={{ width: `${percentage}%` }}
+        />
       </div>
     </div>
   );
@@ -238,7 +236,7 @@ function ProductTableRow({ product, onSelect, selected }: TableRowProps) {
     <tr
       className={cn(
         "border-b cursor-pointer transition-colors",
-        "hover:bg-muted/50",
+        "hover:bg-muted/50 active:bg-muted/80",
         selected && "bg-primary/5"
       )}
       onClick={onSelect}
@@ -250,8 +248,8 @@ function ProductTableRow({ product, onSelect, selected }: TableRowProps) {
         }
       }}
     >
-      {/* Checkbox */}
-      <td className="py-2.5 px-3 w-10">
+      {/* Checkbox - hidden on mobile */}
+      <td className="py-2.5 px-2 sm:px-3 w-8 sm:w-10 hidden sm:table-cell">
         <Checkbox
           checked={selected}
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
@@ -259,23 +257,26 @@ function ProductTableRow({ product, onSelect, selected }: TableRowProps) {
         />
       </td>
 
-      {/* Name + SKU */}
-      <td className="py-2.5 px-3">
+      {/* Name + SKU + Category (mobile only) */}
+      <td className="py-2.5 px-2 sm:px-3">
         <div className="min-w-0">
-          <div className="font-medium text-sm truncate max-w-[200px]">
+          <div className="font-medium text-sm truncate max-w-[140px] sm:max-w-[200px]">
             {product.name}
           </div>
-          <div className="text-xs text-muted-foreground">{product.sku}</div>
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <span className="truncate">{product.sku}</span>
+            <span className="md:hidden">• {product.category}</span>
+          </div>
         </div>
       </td>
 
-      {/* Category */}
+      {/* Category - hidden on mobile */}
       <td className="py-2.5 px-3 hidden md:table-cell">
         <span className="text-sm text-muted-foreground">{product.category}</span>
       </td>
 
       {/* Stock */}
-      <td className="py-2.5 px-3">
+      <td className="py-2.5 px-2 sm:px-3">
         <StockCell product={product} />
       </td>
 
@@ -339,10 +340,10 @@ export function ProductsTable({
         <table className="w-full">
           <thead className="bg-muted/50 border-b">
             <tr>
-              <th className="py-2.5 px-3 w-10">
+              <th className="py-2.5 px-2 sm:px-3 w-8 sm:w-10 hidden sm:table-cell">
                 <Checkbox aria-label="Вибрати всі" />
               </th>
-              <th className="py-2.5 px-3 text-left">
+              <th className="py-2.5 px-2 sm:px-3 text-left">
                 <SortHeader
                   field="name"
                   currentField={sortBy}
@@ -362,7 +363,7 @@ export function ProductsTable({
                   Категорія
                 </SortHeader>
               </th>
-              <th className="py-2.5 px-3 text-left">
+              <th className="py-2.5 px-2 sm:px-3 text-left">
                 <SortHeader
                   field="stock"
                   currentField={sortBy}

@@ -152,7 +152,7 @@ export default function AdminDashboardPage() {
   };
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
+    <div className="flex h-screen-safe bg-background overflow-hidden">
       {/* Sidebar */}
       <AdminLeftSidebar
         open={sidebarOpen}
@@ -162,36 +162,44 @@ export default function AdminDashboardPage() {
       />
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {/* Header */}
-        <header className="sticky top-0 z-40 bg-background border-b px-4 py-3 safe-top">
+        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm px-3 sm:px-4 py-3 safe-area-inset-top">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {/* Mobile menu button */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="lg:hidden"
+                className="lg:hidden h-10 w-10 rounded-xl touch-feedback"
                 onClick={() => setSidebarOpen(true)}
                 aria-label="Відкрити меню"
               >
                 <Menu className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-xl font-bold">{viewTitles[activeView]}</h1>
-                <p className="text-sm text-muted-foreground flex items-center gap-1">
+                <h1 className="text-lg sm:text-xl font-bold">{viewTitles[activeView]}</h1>
+                <p className="text-xs sm:text-sm text-muted-foreground flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {new Date().toLocaleDateString("uk-UA", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  <span className="hidden sm:inline">
+                    {new Date().toLocaleDateString("uk-UA", {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
+                  <span className="sm:hidden">
+                    {new Date().toLocaleDateString("uk-UA", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground hidden sm:block">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="text-xs text-muted-foreground hidden md:block">
                 Оновлено: {lastUpdated.toLocaleTimeString("uk-UA")}
               </span>
               <Button
@@ -200,6 +208,7 @@ export default function AdminDashboardPage() {
                 onClick={loadData}
                 disabled={isLoading}
                 aria-label="Оновити дані"
+                className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl touch-feedback"
               >
                 <RefreshCw
                   className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
@@ -210,7 +219,7 @@ export default function AdminDashboardPage() {
         </header>
 
         {/* View content */}
-        <main className="flex-1 p-4 overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-4 overflow-y-auto scroll-container">
           {activeView === 'overview' && (
             <OverviewView
               kpis={kpis}
@@ -261,14 +270,14 @@ function OverviewView({
   onMarkAlertRead,
 }: OverviewViewProps) {
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* KPI Section */}
       <section aria-labelledby="kpi-heading">
-        <h2 id="kpi-heading" className="text-lg font-semibold mb-3">
+        <h2 id="kpi-heading" className="typo-h4 mb-2 sm:mb-3">
           Ключові показники
         </h2>
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
             {Array.from({ length: 5 }).map((_, i) => (
               <SkeletonKPI key={i} />
             ))}
@@ -301,10 +310,10 @@ function OverviewView({
 
       {/* Quick Stats */}
       <section aria-labelledby="stats-heading">
-        <h2 id="stats-heading" className="text-lg font-semibold mb-3">
+        <h2 id="stats-heading" className="typo-h4 mb-2 sm:mb-3">
           Статистика за сьогодні
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
           <QuickStatCard
             title="Середній час готування"
             value="12.5 хв"
@@ -343,8 +352,8 @@ interface LogsViewProps {
 
 function LogsView({ logs, isLoading }: LogsViewProps) {
   return (
-    <div className="h-[calc(100vh-180px)] min-h-[400px] flex flex-col">
-      <p className="text-sm text-muted-foreground mb-3 flex-shrink-0">
+    <div className="min-h-[400px] md:h-[calc(100dvh-180px)] flex flex-col">
+      <p className="typo-body-sm text-muted-foreground mb-2 sm:mb-3 flex-shrink-0">
         Останні {logs.length} записів журналу дій
       </p>
       <div className="flex-1 min-h-0">
@@ -431,7 +440,7 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
       </div>
 
       {/* Key Metrics Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4">
         <MetricCard
           title="Виручка сьогодні"
           value="61 595 ₴"
@@ -467,12 +476,12 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
       {/* Charts Row 1 - Revenue & Orders */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Chart */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Виручка за тиждень</CardTitle>
+        <Card className="card-interactive">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="typo-h4">Виручка за тиждень</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
+          <CardContent className="px-2 sm:px-6">
+            <div className="h-[220px] sm:h-[260px] md:h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={REVENUE_DATA}>
                   <defs>
@@ -485,7 +494,7 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
                   <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="#9ca3af" />
                   <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" tickFormatter={(v) => `${(v/1000).toFixed(0)}k`} />
                   <Tooltip
-                    formatter={(value: number) => [`${value.toLocaleString()} ₴`, "Виручка"]}
+                    formatter={(value) => [`${Number(value).toLocaleString()} ₴`, "Виручка"]}
                     contentStyle={{ borderRadius: 8, border: "1px solid #e5e7eb" }}
                   />
                   <Area
@@ -502,12 +511,12 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
         </Card>
 
         {/* Orders by Hour */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Замовлення по годинах</CardTitle>
+        <Card className="card-interactive">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="typo-h4">Замовлення по годинах</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[280px]">
+          <CardContent className="px-2 sm:px-6">
+            <div className="h-[220px] sm:h-[260px] md:h-[280px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={HOURLY_DATA}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -531,11 +540,11 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
       {/* Charts Row 2 - Top Items & Categories */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top Items */}
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Топ страви за день</CardTitle>
+        <Card className="lg:col-span-2 card-interactive">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="typo-h4">Топ страви за день</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             <div className="space-y-3">
               {TOP_ITEMS.map((item, index) => (
                 <div key={item.name} className="flex items-center gap-3">
@@ -564,12 +573,12 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
         </Card>
 
         {/* Category Distribution */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Категорії</CardTitle>
+        <Card className="card-interactive">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="typo-h4">Категорії</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[200px]">
+          <CardContent className="px-2 sm:px-6">
+            <div className="h-[180px] sm:h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -606,13 +615,13 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
       </div>
 
       {/* Comparison & Staff Performance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Today vs Yesterday */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Порівняння з вчора</CardTitle>
+        <Card className="card-interactive">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="typo-h4">Порівняння з вчора</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             <div className="space-y-4">
               {COMPARISON_DATA.map((item) => {
                 const change = ((item.current - item.previous) / item.previous) * 100;
@@ -652,12 +661,12 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
         </Card>
 
         {/* Staff Performance */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base font-medium">Продуктивність офіціантів</CardTitle>
+        <Card className="card-interactive">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="typo-h4">Продуктивність офіціантів</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="h-[220px]">
+          <CardContent className="px-2 sm:px-6">
+            <div className="h-[180px] sm:h-[220px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={WAITER_PERFORMANCE} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -679,12 +688,12 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
       </div>
 
       {/* Weekly Trend */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-medium">Тренд за тиждень: Виручка vs Замовлення</CardTitle>
+      <Card className="card-interactive">
+        <CardHeader className="pb-2 px-3 sm:px-6">
+          <CardTitle className="typo-h4">Тренд за тиждень: Виручка vs Замовлення</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-[300px]">
+        <CardContent className="px-2 sm:px-6">
+          <div className="h-[220px] sm:h-[280px] md:h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={REVENUE_DATA}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -724,7 +733,7 @@ function AnalyticsView({ kpis, isLoading }: AnalyticsViewProps) {
       </Card>
 
       {/* Footer Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
         <QuickStatCard
           title="Повернення"
           value="2"
@@ -767,12 +776,12 @@ function MetricCard({ title, value, change, period }: MetricCardProps) {
   const isNeutral = Math.abs(change) < 1;
 
   return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs text-muted-foreground mb-1">{title}</p>
-        <p className="text-2xl font-bold mb-1">{value}</p>
-        <div className="flex items-center gap-1">
-          <span className={`text-xs font-medium flex items-center gap-0.5 ${
+    <Card className="card-interactive">
+      <CardContent className="p-3 sm:p-4">
+        <p className="typo-caption mb-0.5 sm:mb-1">{title}</p>
+        <p className="text-xl sm:text-2xl font-bold mb-0.5 sm:mb-1 typo-numeric">{value}</p>
+        <div className="flex items-center gap-1 flex-wrap">
+          <span className={`text-[10px] sm:text-xs font-medium flex items-center gap-0.5 ${
             isNeutral ? "text-slate-500" : isPositive ? "text-green-600" : "text-red-600"
           }`}>
             {isNeutral ? (
@@ -784,7 +793,7 @@ function MetricCard({ title, value, change, period }: MetricCardProps) {
             )}
             {isPositive ? "+" : ""}{change.toFixed(1)}%
           </span>
-          <span className="text-xs text-muted-foreground">{period}</span>
+          <span className="text-[10px] sm:text-xs text-muted-foreground">{period}</span>
         </div>
       </CardContent>
     </Card>

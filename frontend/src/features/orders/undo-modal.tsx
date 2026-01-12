@@ -298,14 +298,12 @@ export function UndoModal({
           )}
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
-            Скасувати
-          </Button>
+        <DialogFooter className="border-t pt-4">
           <Button
             variant={needsApproval ? "default" : "destructive"}
             onClick={handleConfirm}
             disabled={!canSubmit || isSubmitting}
+            className="w-full h-11 text-base font-medium rounded-xl"
           >
             {isSubmitting ? (
               <>
