@@ -3,6 +3,10 @@ const path = require('path');
 module.exports = ({ env }) => {
   const client = env('DATABASE_CLIENT', 'sqlite');
 
+  // Debug: log environment variables
+  console.log('[DB Config] DATABASE_CLIENT:', client);
+  console.log('[DB Config] DATABASE_URL exists:', !!env('DATABASE_URL'));
+
   const connections = {
     mysql: {
       connection: {
@@ -45,11 +49,14 @@ module.exports = ({ env }) => {
     throw new Error(`Unsupported DATABASE_CLIENT: ${client}. Supported: mysql, postgres, sqlite`);
   }
 
-  return {
+  const config = {
     connection: {
       client,
       ...connections[client],
       acquireConnectionTimeout: env.int('DATABASE_CONNECTION_TIMEOUT', 60000),
     },
   };
+
+  console.log('[DB Config] Final config:', JSON.stringify(config, null, 2));
+  return config;
 };
