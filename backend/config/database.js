@@ -39,11 +39,16 @@ module.exports = ({ env }) => {
     },
     sqlite: {
       connection: {
-        filename: path.join(__dirname, '..', '..', env('DATABASE_FILENAME', '.tmp/data.db')),
+        filename: path.join(__dirname, '..', env('DATABASE_FILENAME', '.tmp/data.db')),
       },
       useNullAsDefault: true,
     },
   };
+
+  // Validate that the client is supported
+  if (!connections[client]) {
+    throw new Error(`Unsupported DATABASE_CLIENT: ${client}. Supported: mysql, postgres, sqlite`);
+  }
 
   return {
     connection: {
