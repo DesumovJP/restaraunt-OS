@@ -3,38 +3,13 @@ const path = require('path');
 module.exports = ({ env }) => {
   const client = env('DATABASE_CLIENT', 'sqlite');
 
-  // Debug: log environment variables
-  console.log('[DB Config] DATABASE_CLIENT:', client);
-  console.log('[DB Config] DATABASE_URL exists:', !!env('DATABASE_URL'));
-
   const connections = {
-    mysql: {
-      connection: {
-        host: env('DATABASE_HOST', 'localhost'),
-        port: env.int('DATABASE_PORT', 3306),
-        database: env('DATABASE_NAME', 'strapi'),
-        user: env('DATABASE_USERNAME', 'strapi'),
-        password: env('DATABASE_PASSWORD', 'strapi'),
-        ssl: env.bool('DATABASE_SSL', false) && {
-          key: env('DATABASE_SSL_KEY', undefined),
-          cert: env('DATABASE_SSL_CERT', undefined),
-          ca: env('DATABASE_SSL_CA', undefined),
-          capath: env('DATABASE_SSL_CAPATH', undefined),
-          cipher: env('DATABASE_SSL_CIPHER', undefined),
-          rejectUnauthorized: env.bool('DATABASE_SSL_REJECT_UNAUTHORIZED', true),
-        },
-      },
-      pool: { min: env.int('DATABASE_POOL_MIN', 2), max: env.int('DATABASE_POOL_MAX', 10) },
-    },
     postgres: {
       connection: {
         connectionString: env('DATABASE_URL'),
-        ssl: env.bool('DATABASE_SSL', false) ? {
-          rejectUnauthorized: env.bool('DATABASE_SSL_REJECT_UNAUTHORIZED', false),
-        } : false,
-        schema: env('DATABASE_SCHEMA', 'public'),
+        ssl: env.bool('DATABASE_SSL', false) ? { rejectUnauthorized: false } : false,
       },
-      pool: { min: env.int('DATABASE_POOL_MIN', 2), max: env.int('DATABASE_POOL_MAX', 10) },
+      pool: { min: 2, max: 10 },
     },
     sqlite: {
       connection: {
@@ -44,19 +19,11 @@ module.exports = ({ env }) => {
     },
   };
 
-  // Validate that the client is supported
-  if (!connections[client]) {
-    throw new Error(`Unsupported DATABASE_CLIENT: ${client}. Supported: mysql, postgres, sqlite`);
-  }
-
-  const config = {
+  return {
     connection: {
       client,
       ...connections[client],
-      acquireConnectionTimeout: env.int('DATABASE_CONNECTION_TIMEOUT', 60000),
+      acquireConnectionTimeout: 60000,
     },
   };
-
-  console.log('[DB Config] Final config:', JSON.stringify(config, null, 2));
-  return config;
 };

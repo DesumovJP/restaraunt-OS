@@ -68,7 +68,10 @@
       "Bash(kill:*)",
       "mcp__ide__getDiagnostics",
       "Bash(netstat:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "WebFetch(domain:docs.strapi.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:forum.strapi.io)"
     ]
   }
 }
