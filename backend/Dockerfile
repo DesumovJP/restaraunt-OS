@@ -1,49 +1,39 @@
 # Strapi v5 Production Dockerfile
-FROM node:20-alpine AS builder
+# Based on official Strapi Docker documentation
+FROM node:20-alpine AS build
 
-WORKDIR /app
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev vips-dev python3 make g++
 
-# Install dependencies for native modules
-RUN apk add --no-cache python3 make g++
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
 
-# Copy package files
-COPY package*.json ./
-
-# Install all dependencies including devDependencies for build
+WORKDIR /opt/
+COPY package.json package-lock.json ./
 RUN npm ci
+ENV PATH=/opt/node_modules/.bin:$PATH
 
-# Copy source code
+WORKDIR /opt/app
 COPY . .
-
-# Build Strapi (compiles TypeScript to dist/)
 RUN npm run build
 
 # Production image
-FROM node:20-alpine AS runner
+FROM node:20-alpine
 
-WORKDIR /app
+RUN apk add --no-cache vips-dev
 
-ENV NODE_ENV=production
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
 
-# Create non-root user for security
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 strapi
+WORKDIR /opt/
+COPY --from=build /opt/node_modules ./node_modules
 
-# Copy built application from builder
-COPY --from=builder --chown=strapi:nodejs /app/dist ./dist
-COPY --from=builder --chown=strapi:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=strapi:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=strapi:nodejs /app/public ./public
-COPY --from=builder --chown=strapi:nodejs /app/config ./config
-COPY --from=builder --chown=strapi:nodejs /app/favicon.png ./favicon.png
-COPY --from=builder --chown=strapi:nodejs /app/src ./src
+WORKDIR /opt/app
+COPY --from=build /opt/app ./
 
-# Create required directories with proper permissions
-RUN mkdir -p /app/public/uploads && chown -R strapi:nodejs /app/public/uploads
-RUN mkdir -p /app/database/migrations && chown -R strapi:nodejs /app/database
-RUN mkdir -p /app/.tmp && chown -R strapi:nodejs /app/.tmp
+ENV PATH=/opt/node_modules/.bin:$PATH
 
-USER strapi
+RUN chown -R node:node /opt/app
+USER node
 
 EXPOSE 1337
 
