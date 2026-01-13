@@ -17,4 +17,6 @@ module.exports = ({ env }) => ({
     nps: env.bool('FLAG_NPS', true),
     promoteEE: env.bool('FLAG_PROMOTE_EE', true),
   },
+  // Admin panel configuration for production
+  serveAdminPanel: env.bool('STRAPI_SERVE_ADMIN_PANEL', true),
 });

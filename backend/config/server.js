@@ -4,4 +4,8 @@ module.exports = ({ env }) => ({
   app: {
     keys: env.array('APP_KEYS'),
   },
+  url: env('PUBLIC_URL', ''),
+  dirs: {
+    public: './public',
+  },
 });
