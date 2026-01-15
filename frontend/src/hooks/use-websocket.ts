@@ -9,6 +9,10 @@
  * - Channel-based subscriptions
  * - Type-safe event handling
  *
+ * NOTE: In production, these hooks automatically use Pusher instead of WebSocket
+ * when NEXT_PUBLIC_PUSHER_KEY is configured. This provides more reliable
+ * real-time updates without maintaining a custom WebSocket server.
+ *
  * @module hooks/use-websocket
  *
  * @example
@@ -47,6 +51,14 @@ import type {
   SubscriptionChannel,
   SubscriptionRequest,
 } from "@/lib/websocket-events";
+
+// Import Pusher hooks for production use
+import {
+  isPusherEnabled,
+  useTableEvents as usePusherTableEvents,
+  useStationEvents as usePusherStationEvents,
+  useStorageEvents as usePusherStorageEvents,
+} from "./use-pusher";
 
 /** WebSocket connection state */
 type ConnectionState = "connecting" | "connected" | "disconnected" | "reconnecting";
@@ -337,6 +349,11 @@ export function useTableEvents(
     onSLAWarning?: (event: WSEvent) => void;
   }
 ) {
+  // Use Pusher in production when configured
+  if (isPusherEnabled()) {
+    return usePusherTableEvents(tableNumber, options);
+  }
+
   const wsOptions = React.useMemo(
     () => ({
       url: process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ws",
@@ -397,6 +414,11 @@ export function useStationEvents(
     onOverloadWarning?: (event: WSEvent) => void;
   }
 ) {
+  // Use Pusher in production when configured
+  if (isPusherEnabled()) {
+    return usePusherStationEvents(stationType, options);
+  }
+
   const wsOptions = React.useMemo(
     () => ({
       url: process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ws",
@@ -459,6 +481,11 @@ export function useStorageEvents(
     onYieldVariance?: (event: WSEvent) => void;
   } = {}
 ) {
+  // Use Pusher in production when configured
+  if (isPusherEnabled()) {
+    return usePusherStorageEvents(productDocumentId, options);
+  }
+
   const wsOptions = React.useMemo(
     () => ({
       url: process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ws",

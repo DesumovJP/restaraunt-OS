@@ -4,6 +4,7 @@
  */
 
 import { logAction } from '../../../../utils/action-logger';
+import { emitOrderCreated, emitOrderUpdated, emitOrderCancelled, isPusherEnabled } from '../../../../utils/pusher';
 
 const VALID_TRANSITIONS: Record<string, string[]> = {
   new: ['confirmed', 'cancelled'],
@@ -71,6 +72,18 @@ export default {
 
     // Note: Order creation is NOT logged to action history
     // All order info is shown in the table session close log instead
+
+    // Emit real-time event via Pusher
+    if (isPusherEnabled()) {
+      const tableNumber = result.table?.number;
+      await emitOrderCreated({
+        documentId: result.documentId,
+        orderNumber: result.orderNumber,
+        tableNumber,
+        status: result.status || 'new',
+        totalAmount: result.totalAmount,
+      });
+    }
   },
 
   async afterUpdate(event) {
@@ -127,6 +140,27 @@ export default {
     // Only log cancellations as they are important operational events
     const original = event.state?.original;
     const statusChanged = original && original.status !== result.status;
+
+    // Emit real-time event via Pusher on status change
+    if (statusChanged && isPusherEnabled()) {
+      const tableNumber = result.table?.number;
+
+      if (result.status === 'cancelled') {
+        await emitOrderCancelled({
+          documentId: result.documentId,
+          orderNumber: result.orderNumber,
+          tableNumber,
+        });
+      } else {
+        await emitOrderUpdated({
+          documentId: result.documentId,
+          orderNumber: result.orderNumber,
+          tableNumber,
+          status: result.status,
+          previousStatus: original.status,
+        });
+      }
+    }
 
     if (statusChanged && result.status === 'cancelled') {
       await logAction(strapi, {

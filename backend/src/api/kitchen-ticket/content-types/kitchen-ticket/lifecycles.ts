@@ -3,6 +3,8 @@
  * Validates status transitions according to FSM
  */
 
+import { emitTicketCreated, emitTicketStatusChanged, isPusherEnabled } from '../../../../utils/pusher';
+
 const VALID_TRANSITIONS: Record<string, string[]> = {
   queued: ['started', 'cancelled'],
   started: ['paused', 'ready', 'failed', 'cancelled'],
@@ -93,6 +95,33 @@ export default {
 
     // Note: Kitchen ticket creation is NOT logged to action history
     // All ticket info is shown in the table session close log instead
+
+    // Emit real-time event via Pusher
+    if (isPusherEnabled()) {
+      await emitTicketCreated({
+        documentId: result.documentId,
+        ticketNumber: result.ticketNumber,
+        station: result.station,
+        priority: result.priority,
+      });
+    }
+  },
+
+  async afterUpdate(event) {
+    const { result, state } = event;
+    const original = state?.original;
+
+    // Emit real-time event via Pusher on status change
+    if (original && original.status !== result.status && isPusherEnabled()) {
+      await emitTicketStatusChanged({
+        documentId: result.documentId,
+        ticketNumber: result.ticketNumber,
+        station: result.station,
+        previousStatus: original.status,
+        newStatus: result.status,
+        elapsedSeconds: result.elapsedSeconds,
+      });
+    }
   },
 
   // Note: Kitchen ticket updates are NOT logged to action history
