@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
-import { User, X, type LucideIcon } from 'lucide-react';
+import { Home, User, X, type LucideIcon } from 'lucide-react';
 import { Drawer, DrawerContent } from '@/components/ui/drawer';
 
 // ============================================================================
@@ -170,10 +170,35 @@ export function AppSidebar<T extends string = string>({
     }
   };
 
+  // Home button handler
+  const handleHomeClick = () => {
+    router.push('/');
+    if (isMobile) {
+      handleOpenChange(false);
+    }
+  };
+
   // Desktop sidebar content (icons only)
   const DesktopContent = () => (
     <>
       <div className="flex flex-col items-center gap-3 flex-1">
+        {/* Home button */}
+        <button
+          onClick={handleHomeClick}
+          className={cn(
+            'w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-200 touch-feedback',
+            'hover:scale-105 active:scale-95',
+            styles.inactive
+          )}
+          aria-label="На головну"
+          title="На головну"
+        >
+          <Home className="w-5 h-5" />
+        </button>
+
+        {/* Separator after home */}
+        <div className="w-8 h-px bg-slate-200 my-1" />
+
         {/* Primary navigation */}
         {navigationItems.map((item) => {
           const Icon = item.icon;
@@ -297,6 +322,22 @@ export function AppSidebar<T extends string = string>({
 
       {/* Navigation */}
       <div className="flex flex-col gap-1.5 mt-10 flex-1">
+        {/* Home button */}
+        <button
+          onClick={handleHomeClick}
+          className={cn(
+            'flex items-center gap-3 px-4 py-3.5 min-h-[52px] rounded-xl transition-all duration-200 touch-feedback',
+            'active:scale-[0.98]',
+            styles.inactive
+          )}
+        >
+          <Home className="w-5 h-5" />
+          <span className="font-semibold text-sm">На головну</span>
+        </button>
+
+        {/* Separator after home */}
+        <div className="h-px bg-slate-200 my-3" />
+
         {/* Primary navigation */}
         {navigationItems.map((item) => {
           const Icon = item.icon;

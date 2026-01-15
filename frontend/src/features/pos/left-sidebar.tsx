@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
+  Home,
   User,
   X,
   Grid3X3,
@@ -103,10 +104,35 @@ export function LeftSidebar({
            activeView !== 'dailies' && activeView !== 'chat' && activeView !== 'schedule';
   };
 
+  // Home button handler
+  const handleHomeClick = () => {
+    router.push('/');
+    if (isMobile) {
+      handleOpenChange(false);
+    }
+  };
+
   // Desktop sidebar content
   const DesktopContent = () => (
     <>
       <div className="flex flex-col items-center gap-2 flex-1">
+        {/* Home button */}
+        <button
+          onClick={handleHomeClick}
+          className={cn(
+            'w-12 h-12 rounded-xl flex items-center justify-center',
+            'transition-all duration-200 touch-feedback hover:scale-105 active:scale-95',
+            styles.inactive
+          )}
+          aria-label="На головну"
+          title="На головну"
+        >
+          <Home className="w-5 h-5" />
+        </button>
+
+        {/* Separator after home */}
+        <div className="w-8 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-2" />
+
         {/* Page navigation */}
         {pageNavigationItems.map((item) => {
           const Icon = item.icon;
@@ -192,6 +218,22 @@ export function LeftSidebar({
 
       {/* Page Navigation */}
       <div className="flex flex-col gap-1.5 flex-1">
+        {/* Home button */}
+        <button
+          onClick={handleHomeClick}
+          className={cn(
+            'flex items-center gap-3 px-4 py-3.5 min-h-[52px] rounded-xl',
+            'transition-all duration-200 touch-feedback active:scale-[0.98]',
+            styles.inactive
+          )}
+        >
+          <Home className="w-5 h-5" />
+          <span className="font-semibold">На головну</span>
+        </button>
+
+        {/* Separator after home */}
+        <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-3" />
+
         {pageNavigationItems.map((item) => {
           const Icon = item.icon;
           const isActive = isPageActive(item.id);

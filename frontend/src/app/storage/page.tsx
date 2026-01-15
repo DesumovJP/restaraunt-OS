@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ import { getCategoryCounts, filterProductsByCategory } from "@/lib/mock-storage-
 
 // Icons
 import {
+  Home,
   QrCode,
   Plus,
   Search,
@@ -46,6 +48,8 @@ type StorageTab = "inventory" | "batches";
 // ==========================================
 
 export default function StoragePage() {
+  const router = useRouter();
+
   // Tab state
   const [activeTab, setActiveTab] = React.useState<StorageTab>("inventory");
 
@@ -205,6 +209,15 @@ export default function StoragePage() {
         {/* Top row */}
         <div className="flex items-center justify-between px-3 sm:px-4 py-3">
           <div className="flex items-center gap-2 sm:gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push('/')}
+              aria-label="На головну"
+              className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl touch-feedback"
+            >
+              <Home className="h-5 w-5" />
+            </Button>
             <h1 className="text-lg sm:text-xl font-bold">Smart Storage</h1>
             {totalAlerts > 0 && !alertsDismissed && (
               <AlertIndicator

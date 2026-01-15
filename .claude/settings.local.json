@@ -72,7 +72,10 @@
       "WebFetch(domain:docs.strapi.io)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:forum.strapi.io)",
-      "WebFetch(domain:ishu.dev)"
+      "WebFetch(domain:ishu.dev)",
+      "Bash(psql:*)",
+      "Bash(pkill:*)",
+      "Bash(DATABASE_CLIENT=postgres DATABASE_URL=\"postgresql://postgres:cHYEAiTvRrRnOTNBtYMQGiFiybAtwnGk@yamanote.proxy.rlwy.net:12758/railway\" RUN_SEED=true timeout 90 npm run develop:*)"
     ]
   }
 }
