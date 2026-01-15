@@ -39,6 +39,7 @@ import {
   Search,
   ArrowUpDown,
   Package,
+  Archive,
 } from "lucide-react";
 
 // Types
