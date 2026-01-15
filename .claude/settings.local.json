@@ -71,7 +71,8 @@
       "Bash(timeout:*)",
       "WebFetch(domain:docs.strapi.io)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:forum.strapi.io)"
+      "WebFetch(domain:forum.strapi.io)",
+      "WebFetch(domain:ishu.dev)"
     ]
   }
 }
