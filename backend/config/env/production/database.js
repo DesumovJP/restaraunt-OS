@@ -1,20 +1,18 @@
-module.exports = ({ env }) => {
-  const databaseUrl = env('DATABASE_URL');
-  console.log('=== DATABASE CONFIG DEBUG ===');
-  console.log('DATABASE_URL exists:', !!databaseUrl);
-  console.log('DATABASE_URL value:', databaseUrl ? databaseUrl.substring(0, 30) + '...' : 'UNDEFINED');
-  console.log('NODE_ENV:', process.env.NODE_ENV);
-  console.log('=============================');
+// Strapi v5 production database configuration
+console.log('=== LOADING PRODUCTION DATABASE CONFIG ===');
 
-  if (!databaseUrl) {
-    throw new Error('DATABASE_URL environment variable is not set! Please configure it in Railway.');
-  }
+module.exports = ({ env }) => {
+  console.log('=== PRODUCTION DB CONFIG FUNCTION CALLED ===');
 
   return {
     connection: {
       client: 'postgres',
       connection: {
-        connectionString: databaseUrl,
+        host: env('DATABASE_HOST', 'postgres.railway.internal'),
+        port: env.int('DATABASE_PORT', 5432),
+        database: env('DATABASE_NAME', 'railway'),
+        user: env('DATABASE_USER', 'postgres'),
+        password: env('DATABASE_PASSWORD', ''),
         ssl: { rejectUnauthorized: false },
       },
       pool: { min: 2, max: 10 },
