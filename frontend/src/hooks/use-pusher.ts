@@ -11,7 +11,7 @@
  * @example
  * // Basic usage
  * const { isConnected } = usePusher({
- *   channels: ["orders", "kitchen"],
+ *   channels: ["orders", "stations"],
  * });
  *
  * @example
@@ -222,7 +222,7 @@ export function usePusher(options: UsePusherOptions = {}): UsePusherReturn {
 export function usePusherEvent<T = unknown>(
   eventType: WSEventType | string,
   onEvent: (data: T) => void,
-  channels: SubscriptionChannel[] = ["orders", "kitchen"]
+  channels: SubscriptionChannel[] = ["orders", "stations"]
 ): { isConnected: boolean } {
   const { isConnected, lastMessage } = usePusher({ channels });
 
@@ -291,7 +291,7 @@ export function useStationEvents(
   } = {}
 ) {
   const channels = React.useMemo(
-    () => [`stations:${stationType}` as SubscriptionChannel, "kitchen" as SubscriptionChannel],
+    () => [`stations:${stationType}` as SubscriptionChannel, "stations" as SubscriptionChannel],
     [stationType]
   );
 
@@ -343,7 +343,7 @@ export function useStorageEvents(
     () => [
       productDocumentId
         ? (`storage:${productDocumentId}` as SubscriptionChannel)
-        : ("inventory" as SubscriptionChannel),
+        : ("storage" as SubscriptionChannel),
       "alerts" as SubscriptionChannel,
     ],
     [productDocumentId]
@@ -386,7 +386,7 @@ export function useKitchenEvents(
     onOrderCancelled?: (event: WSEvent) => void;
   } = {}
 ) {
-  const channels = React.useMemo(() => ["kitchen" as SubscriptionChannel], []);
+  const channels = React.useMemo(() => ["stations" as SubscriptionChannel], []);
 
   const { lastMessage, isConnected, state } = usePusher({ channels });
 
