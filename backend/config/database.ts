@@ -1,5 +1,4 @@
-// Strapi v5 database configuration
-module.exports = ({ env }) => ({
+export default ({ env }) => ({
   connection: {
     client: 'postgres',
     connection: {
