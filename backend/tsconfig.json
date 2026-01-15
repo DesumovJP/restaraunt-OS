@@ -3,13 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": ".",
-    "lib": ["esnext", "dom"],
-    "skipLibCheck": true,
-    "strict": false,
-    "allowJs": true,
-    "checkJs": false,
-    "noImplicitAny": false,
-    "noImplicitThis": false
+    "skipLibCheck": true
   },
   "include": [
     "./",
@@ -25,7 +19,6 @@
     ".tmp/",
     "src/admin/",
     "**/*.test.*",
-    "src/plugins/**",
-    "types/generated/**"
+    "src/plugins/**"
   ]
 }
