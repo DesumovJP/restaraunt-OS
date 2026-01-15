@@ -302,14 +302,10 @@ export function useStationEvents(
 
     switch (lastMessage.type) {
       case "station.task_created":
-      case "ticket.created":
         options.onTaskCreated?.(lastMessage);
         break;
       case "station.task_started":
-      case "ticket.status_changed":
-        if ((lastMessage.payload as Record<string, string>)?.newStatus === "started") {
-          options.onTaskStarted?.(lastMessage);
-        }
+        options.onTaskStarted?.(lastMessage);
         break;
       case "station.task_completed":
         options.onTaskCompleted?.(lastMessage);
@@ -386,7 +382,7 @@ export function useKitchenEvents(
     onOrderCancelled?: (event: WSEvent) => void;
   } = {}
 ) {
-  const channels = React.useMemo(() => ["stations" as SubscriptionChannel], []);
+  const channels = React.useMemo(() => ["stations" as SubscriptionChannel, "orders" as SubscriptionChannel], []);
 
   const { lastMessage, isConnected, state } = usePusher({ channels });
 
@@ -394,10 +390,11 @@ export function useKitchenEvents(
     if (!lastMessage) return;
 
     switch (lastMessage.type) {
-      case "ticket.created":
+      case "station.task_created":
         options.onTicketCreated?.(lastMessage);
         break;
-      case "ticket.status_changed":
+      case "station.task_started":
+      case "station.task_completed":
         options.onTicketStatusChanged?.(lastMessage);
         break;
       case "order.cancelled":
