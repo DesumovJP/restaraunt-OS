@@ -1,4 +1,5 @@
 # Strapi v5 Production Dockerfile - Single Stage
+# Force rebuild: 2026-01-15
 FROM node:20-alpine
 
 # Install build dependencies
