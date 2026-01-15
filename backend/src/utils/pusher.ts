@@ -155,7 +155,7 @@ export async function emitOrderCreated(order: {
   totalAmount?: number;
   itemCount?: number;
 }): Promise<void> {
-  const channels = [CHANNELS.ORDERS];
+  const channels: string[] = [CHANNELS.ORDERS];
   if (order.tableNumber) {
     channels.push(CHANNELS.table(order.tableNumber));
   }
@@ -177,7 +177,7 @@ export async function emitOrderUpdated(order: {
   status: string;
   previousStatus?: string;
 }): Promise<void> {
-  const channels = [CHANNELS.ORDERS, CHANNELS.order(order.documentId)];
+  const channels: string[] = [CHANNELS.ORDERS, CHANNELS.order(order.documentId)];
   if (order.tableNumber) {
     channels.push(CHANNELS.table(order.tableNumber));
   }
@@ -197,7 +197,7 @@ export async function emitOrderCancelled(order: {
   tableNumber?: number;
   reason?: string;
 }): Promise<void> {
-  const channels = [CHANNELS.ORDERS, CHANNELS.KITCHEN];
+  const channels: string[] = [CHANNELS.ORDERS, CHANNELS.KITCHEN];
   if (order.tableNumber) {
     channels.push(CHANNELS.table(order.tableNumber));
   }
@@ -223,7 +223,7 @@ export async function emitTicketCreated(ticket: {
   tableNumber?: number;
   menuItemName?: string;
 }): Promise<void> {
-  const channels = [CHANNELS.KITCHEN];
+  const channels: string[] = [CHANNELS.KITCHEN];
   if (ticket.station) {
     channels.push(CHANNELS.station(ticket.station));
   }
@@ -251,7 +251,7 @@ export async function emitTicketStatusChanged(ticket: {
   tableNumber?: number;
   elapsedSeconds?: number;
 }): Promise<void> {
-  const channels = [CHANNELS.KITCHEN];
+  const channels: string[] = [CHANNELS.KITCHEN];
   if (ticket.station) {
     channels.push(CHANNELS.station(ticket.station));
   }
@@ -283,7 +283,7 @@ export async function emitItemStatusChanged(item: {
   tableNumber?: number;
   station?: string;
 }): Promise<void> {
-  const channels = [CHANNELS.ORDERS, CHANNELS.KITCHEN];
+  const channels: string[] = [CHANNELS.ORDERS, CHANNELS.KITCHEN];
   if (item.tableNumber) {
     channels.push(CHANNELS.table(item.tableNumber));
   }
@@ -373,7 +373,7 @@ export async function emitSLAWarning(data: {
   severity: 'warning' | 'critical';
   message: string;
 }): Promise<void> {
-  const channels = [CHANNELS.ALERTS, CHANNELS.KITCHEN];
+  const channels: string[] = [CHANNELS.ALERTS, CHANNELS.KITCHEN];
   if (data.tableNumber) {
     channels.push(CHANNELS.table(data.tableNumber));
   }

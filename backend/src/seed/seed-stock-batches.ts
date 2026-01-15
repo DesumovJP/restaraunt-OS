@@ -1,55 +1,46 @@
 /**
  * Seed script for stock batches - initial inventory for all ingredients
+ * IDs are loaded dynamically from the database
  */
 
-// Ingredient document IDs mapping
-const INGREDIENT_IDS: Record<string, { id: string; unit: string; shelfDays: number; category: string }> = {
-  'tomatoes': { id: 'qxk156cv0ztpctjhr9kmma1c', unit: 'kg', shelfDays: 7, category: 'raw' },
-  'onions': { id: 't1yle3y4rmnm4ckohp86h4ti', unit: 'kg', shelfDays: 30, category: 'raw' },
-  'garlic': { id: 'kdkicogeeq6dhxqgxjz9gjcp', unit: 'kg', shelfDays: 30, category: 'raw' },
-  'potatoes': { id: 'byls75ahu7f7giyhv2b55x8e', unit: 'kg', shelfDays: 30, category: 'raw' },
-  'carrots': { id: 'pb2p2byfapukh87j2klz8vqk', unit: 'kg', shelfDays: 14, category: 'raw' },
-  'beetroot': { id: 'q0dar1lyb3u2cc66tpicnsch', unit: 'kg', shelfDays: 21, category: 'raw' },
-  'cabbage': { id: 'gc204ha09im17x9lrw987dsq', unit: 'kg', shelfDays: 14, category: 'raw' },
-  'lettuce': { id: 'ejn1391vvusnogr1p3xoq7z3', unit: 'kg', shelfDays: 5, category: 'raw' },
-  'cucumber': { id: 'dlr91cx87omseewzb7oi4pro', unit: 'kg', shelfDays: 7, category: 'raw' },
-  'bell-pepper': { id: 'q8xkupobl1bos64cyr3oh2r0', unit: 'kg', shelfDays: 10, category: 'raw' },
-  'beef-tenderloin': { id: 'v6eh9woscojesmcmfgf0lbsv', unit: 'kg', shelfDays: 5, category: 'raw' },
-  'pork-loin': { id: 'ko3nrapz6j8qnt5lqohekrkx', unit: 'kg', shelfDays: 5, category: 'raw' },
-  'chicken-breast': { id: 'vad6vfi54vz2figwvysh7zjm', unit: 'kg', shelfDays: 3, category: 'raw' },
-  'duck-breast': { id: 'wj4aiso6v0m1zgz8ke59553o', unit: 'kg', shelfDays: 5, category: 'raw' },
-  'ribeye-steak': { id: 'nl28p7qhi19ba1n5qtk8m18c', unit: 'kg', shelfDays: 7, category: 'raw' },
-  'pork-ribs': { id: 'opgwy6zq1n07bpc3kcaimt2x', unit: 'kg', shelfDays: 5, category: 'raw' },
-  'salmon-fillet': { id: 'dhhls9euk13yxuewik4wxivi', unit: 'kg', shelfDays: 3, category: 'raw' },
-  'shrimp': { id: 'om5amoflabpvupjgi48npqc2', unit: 'kg', shelfDays: 90, category: 'frozen' },
-  'mussels': { id: 'd00009cnhvokzwk7o8ypumnf', unit: 'kg', shelfDays: 90, category: 'frozen' },
-  'butter': { id: 'oey5ic0b5vdctfphav9jgtdu', unit: 'kg', shelfDays: 30, category: 'dairy' },
-  'cream': { id: 'ulh9jcy5h5urb4e2mu8on88s', unit: 'l', shelfDays: 10, category: 'dairy' },
-  'parmesan': { id: 'drbwo9y6f6i7bb66xdiwn21w', unit: 'kg', shelfDays: 60, category: 'dairy' },
-  'mozzarella': { id: 'skk9p2c8th7fmv1vs15grt4u', unit: 'kg', shelfDays: 14, category: 'dairy' },
-  'feta': { id: 'jze7wrcu2yatixk1u0yhb0dr', unit: 'kg', shelfDays: 30, category: 'dairy' },
-  'sour-cream': { id: 'z3rr6evv4qvyx6kv8u6tfzps', unit: 'kg', shelfDays: 14, category: 'dairy' },
-  'eggs': { id: 'if3vj8q3ihejonec7logxvn3', unit: 'pcs', shelfDays: 30, category: 'dairy' },
-  'pasta': { id: 'zlqpqjpjavk7r43jgrg3osyg', unit: 'kg', shelfDays: 365, category: 'dry-goods' },
-  'rice': { id: 'qbrn5jw8kk05q9dlyu3d047h', unit: 'kg', shelfDays: 365, category: 'dry-goods' },
-  'flour': { id: 'sbbuvccussu0k1rbhif95si2', unit: 'kg', shelfDays: 180, category: 'dry-goods' },
-  'sugar': { id: 'x0bueg7tl6tzpnufwvg2sgph', unit: 'kg', shelfDays: 730, category: 'dry-goods' },
-  'olive-oil': { id: 'grvipk5rlx9gupr7kbdfwciv', unit: 'l', shelfDays: 365, category: 'oils-fats' },
-  'sunflower-oil': { id: 'aqjd5ec47cgmg2tdzjfem1ba', unit: 'l', shelfDays: 365, category: 'oils-fats' },
-  'salt': { id: 'a99ccwplg8qwkmneqmfie1pb', unit: 'kg', shelfDays: 1825, category: 'seasonings' },
-  'black-pepper': { id: 'ss6o7mxptez1pb1i201azl0q', unit: 'kg', shelfDays: 730, category: 'seasonings' },
-  'basil': { id: 'h0srmc6sk67id6453e23p93y', unit: 'kg', shelfDays: 5, category: 'raw' },
-  'rosemary': { id: 'jbzw77aqa1xjvbmx6p5bnwbk', unit: 'kg', shelfDays: 7, category: 'raw' },
-  'coffee': { id: 'gnskcpnk40mdjyvg9wpstiii', unit: 'kg', shelfDays: 180, category: 'beverages' },
-  'orange-juice': { id: 'oxcmgr37dy6cae3fxqel609a', unit: 'l', shelfDays: 7, category: 'beverages' },
-  'mineral-water': { id: 'ak64jv1zrge05ls9zcnxa541', unit: 'l', shelfDays: 365, category: 'beverages' },
-};
+// These will be populated dynamically from the database
+let INGREDIENT_DATA: Record<string, { id: string; unit: string; shelfDays: number; category: string }> = {};
+let SUPPLIER_IDS: Record<string, string> = {};
 
-// Supplier IDs
-const SUPPLIER_IDS = {
-  'metro': 'wgt1kvujdem8w8l5h0mdbdqw',
-  'silpo': 'nyc9q34zkz890zidzx6i9hj8',
-};
+// Helper function to load ingredient data from database
+async function loadIngredientData(strapi: any): Promise<void> {
+  const ingredients = await strapi.db.query('api::ingredient.ingredient').findMany({
+    select: ['documentId', 'slug', 'unit', 'shelfLifeDays', 'mainCategory'],
+  });
+
+  INGREDIENT_DATA = {};
+  for (const ing of ingredients) {
+    if (ing.slug && ing.documentId) {
+      INGREDIENT_DATA[ing.slug] = {
+        id: ing.documentId,
+        unit: ing.unit || 'kg',
+        shelfDays: ing.shelfLifeDays || 7,
+        category: ing.mainCategory || 'raw',
+      };
+    }
+  }
+  console.log(`  📋 Loaded ${Object.keys(INGREDIENT_DATA).length} ingredient records`);
+}
+
+// Helper function to load supplier IDs from database
+async function loadSupplierIds(strapi: any): Promise<void> {
+  const suppliers = await strapi.db.query('api::supplier.supplier').findMany({
+    select: ['documentId', 'slug'],
+  });
+
+  SUPPLIER_IDS = {};
+  for (const sup of suppliers) {
+    if (sup.slug && sup.documentId) {
+      SUPPLIER_IDS[sup.slug] = sup.documentId;
+    }
+  }
+  console.log(`  📋 Loaded ${Object.keys(SUPPLIER_IDS).length} supplier IDs`);
+}
 
 // Stock configuration per ingredient type
 interface StockConfig {
@@ -86,15 +77,15 @@ const STOCK_CONFIG: Record<string, StockConfig> = {
 
   // Dairy
   'butter': { quantity: 10, unitCost: 180, supplier: 'metro' },
-  'cream': { quantity: 15, unitCost: 85, supplier: 'metro' },
+  'cream-33-': { quantity: 15, unitCost: 85, supplier: 'metro' },
   'parmesan': { quantity: 5, unitCost: 650, supplier: 'metro' },
   'mozzarella': { quantity: 5, unitCost: 280, supplier: 'metro' },
-  'feta': { quantity: 5, unitCost: 220, supplier: 'metro' },
+  'feta-cheese': { quantity: 5, unitCost: 220, supplier: 'metro' },
   'sour-cream': { quantity: 10, unitCost: 65, supplier: 'metro' },
   'eggs': { quantity: 300, unitCost: 4.5, supplier: 'silpo' },
 
   // Dry goods
-  'pasta': { quantity: 20, unitCost: 45, supplier: 'metro' },
+  'pasta-spaghetti': { quantity: 20, unitCost: 45, supplier: 'metro' },
   'rice': { quantity: 15, unitCost: 38, supplier: 'metro' },
   'flour': { quantity: 25, unitCost: 22, supplier: 'metro' },
   'sugar': { quantity: 20, unitCost: 28, supplier: 'metro' },
@@ -108,11 +99,11 @@ const STOCK_CONFIG: Record<string, StockConfig> = {
   'black-pepper': { quantity: 2, unitCost: 280, supplier: 'metro' },
 
   // Fresh herbs
-  'basil': { quantity: 1, unitCost: 350, supplier: 'silpo' },
-  'rosemary': { quantity: 0.5, unitCost: 420, supplier: 'silpo' },
+  'basil-fresh': { quantity: 1, unitCost: 350, supplier: 'silpo' },
+  'rosemary-fresh': { quantity: 0.5, unitCost: 420, supplier: 'silpo' },
 
   // Beverages
-  'coffee': { quantity: 5, unitCost: 480, supplier: 'metro' },
+  'coffee-beans': { quantity: 5, unitCost: 480, supplier: 'metro' },
   'orange-juice': { quantity: 20, unitCost: 45, supplier: 'silpo' },
   'mineral-water': { quantity: 50, unitCost: 12, supplier: 'metro' },
 };
@@ -139,17 +130,29 @@ function getReceivedDate(daysAgo: number): string {
 export async function seedStockBatches(strapi: any) {
   console.log('📦 Seeding stock batches...');
 
+  // Load IDs dynamically from database
+  await loadIngredientData(strapi);
+  await loadSupplierIds(strapi);
+
+  if (Object.keys(INGREDIENT_DATA).length === 0) {
+    console.log('  ⚠️  No ingredients found in database. Run restaurant seed first.');
+    return;
+  }
+
+  // Get first available supplier if specific one not found
+  const defaultSupplierId = Object.values(SUPPLIER_IDS)[0];
+
   let batchIndex = 1;
 
-  for (const [ingredientKey, config] of Object.entries(STOCK_CONFIG)) {
-    const ingredientData = INGREDIENT_IDS[ingredientKey];
+  for (const [ingredientSlug, config] of Object.entries(STOCK_CONFIG)) {
+    const ingredientData = INGREDIENT_DATA[ingredientSlug];
     if (!ingredientData) {
-      console.log(`  ⚠️  Unknown ingredient: ${ingredientKey}`);
+      console.log(`  ⚠️  Ingredient not found in DB: ${ingredientSlug}`);
       continue;
     }
 
     try {
-      // Check if stock batch exists for this ingredient
+      // Check if stock batch exists for this ingredient using documentId
       const existing = await strapi.db.query('api::stock-batch.stock-batch').findOne({
         where: {
           ingredient: { documentId: ingredientData.id },
@@ -158,12 +161,21 @@ export async function seedStockBatches(strapi: any) {
       });
 
       if (existing) {
-        console.log(`  ⏭️  Stock batch for ${ingredientKey} exists`);
+        console.log(`  ⏭️  Stock batch for ${ingredientSlug} exists`);
         continue;
       }
 
-      const supplierId = SUPPLIER_IDS[config.supplier as keyof typeof SUPPLIER_IDS];
-      const batchNumber = generateBatchNumber(ingredientKey, batchIndex);
+      // Find supplier by slug pattern (metro, silpo, etc.)
+      const supplierSlug = config.supplier;
+      let supplierId = defaultSupplierId;
+      for (const [slug, docId] of Object.entries(SUPPLIER_IDS)) {
+        if (slug.toLowerCase().includes(supplierSlug.toLowerCase())) {
+          supplierId = docId;
+          break;
+        }
+      }
+
+      const batchNumber = generateBatchNumber(ingredientSlug, batchIndex);
       const receivedAt = getReceivedDate(Math.floor(Math.random() * 3) + 1); // 1-3 days ago
       const expiryDate = getExpiryDate(ingredientData.shelfDays);
       const totalCost = config.quantity * config.unitCost;
@@ -171,7 +183,7 @@ export async function seedStockBatches(strapi: any) {
       await strapi.documents('api::stock-batch.stock-batch').create({
         data: {
           batchNumber,
-          ingredient: ingredientData.id,
+          ingredient: ingredientData.id, // This is documentId
           grossIn: config.quantity,
           netAvailable: config.quantity,
           usedAmount: 0,
@@ -182,13 +194,13 @@ export async function seedStockBatches(strapi: any) {
           expiryDate,
           status: 'available',
           isLocked: false,
-          supplier: supplierId,
+          supplier: supplierId, // documentId
           invoiceNumber: `INV-${new Date().getFullYear()}-${String(batchIndex).padStart(4, '0')}`,
           processes: [],
         }
       });
 
-      // Update ingredient's currentStock
+      // Update ingredient's currentStock using documentId
       await strapi.documents('api::ingredient.ingredient').update({
         documentId: ingredientData.id,
         data: {
@@ -197,10 +209,10 @@ export async function seedStockBatches(strapi: any) {
         }
       });
 
-      console.log(`  ✅ ${ingredientKey}: ${config.quantity} ${ingredientData.unit} @ ${config.unitCost} UAH`);
+      console.log(`  ✅ ${ingredientSlug}: ${config.quantity} ${ingredientData.unit} @ ${config.unitCost} UAH`);
       batchIndex++;
     } catch (error: any) {
-      console.error(`  ❌ Failed: ${ingredientKey}`, error.message);
+      console.error(`  ❌ Failed: ${ingredientSlug}`, error.message);
     }
   }
 

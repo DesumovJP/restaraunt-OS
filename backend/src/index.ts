@@ -4,6 +4,7 @@ import { seedTasksOnly } from './seed/seed-tasks-only';
 import { seedRestaurantData } from './seed/seed-restaurant-data';
 import { seedRecipes } from './seed/seed-recipes';
 import { seedStockBatches } from './seed/seed-stock-batches';
+import { seedLargeRestaurant } from './seed/seed-large-restaurant';
 import { setupPublicPermissions } from './seed/setup-permissions';
 
 export default {
@@ -136,6 +137,17 @@ export default {
           await seedStockBatches(strapi);
         } else {
           console.log('✅ Stock batches already exist');
+        }
+
+        // Seed large restaurant data (more tables, suppliers, sample orders)
+        // Check if we have enough tables AND some orders
+        const tableCount = await strapi.db.query('api::table.table').count();
+        const orderCount = await strapi.db.query('api::order.order').count();
+        if (tableCount < 15 || orderCount === 0) {
+          console.log('\n🏢 Adding large restaurant data...\n');
+          await seedLargeRestaurant(strapi);
+        } else {
+          console.log('✅ Large restaurant data already exists');
         }
 
         // Setup public permissions for REST API access

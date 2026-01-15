@@ -1,81 +1,41 @@
 /**
  * Seed script for recipes with ingredients and steps
+ * IDs are loaded dynamically from the database
  */
 
-// Ingredient document IDs mapping
-const INGREDIENT_IDS: Record<string, string> = {
-  'tomatoes': 'qxk156cv0ztpctjhr9kmma1c',
-  'onions': 't1yle3y4rmnm4ckohp86h4ti',
-  'garlic': 'kdkicogeeq6dhxqgxjz9gjcp',
-  'potatoes': 'byls75ahu7f7giyhv2b55x8e',
-  'carrots': 'pb2p2byfapukh87j2klz8vqk',
-  'beetroot': 'q0dar1lyb3u2cc66tpicnsch',
-  'cabbage': 'gc204ha09im17x9lrw987dsq',
-  'lettuce': 'ejn1391vvusnogr1p3xoq7z3',
-  'cucumber': 'dlr91cx87omseewzb7oi4pro',
-  'bell-pepper': 'q8xkupobl1bos64cyr3oh2r0',
-  'beef-tenderloin': 'v6eh9woscojesmcmfgf0lbsv',
-  'pork-loin': 'ko3nrapz6j8qnt5lqohekrkx',
-  'chicken-breast': 'vad6vfi54vz2figwvysh7zjm',
-  'duck-breast': 'wj4aiso6v0m1zgz8ke59553o',
-  'ribeye-steak': 'nl28p7qhi19ba1n5qtk8m18c',
-  'pork-ribs': 'opgwy6zq1n07bpc3kcaimt2x',
-  'salmon-fillet': 'dhhls9euk13yxuewik4wxivi',
-  'shrimp': 'om5amoflabpvupjgi48npqc2',
-  'mussels': 'd00009cnhvokzwk7o8ypumnf',
-  'butter': 'oey5ic0b5vdctfphav9jgtdu',
-  'cream': 'ulh9jcy5h5urb4e2mu8on88s',
-  'parmesan': 'drbwo9y6f6i7bb66xdiwn21w',
-  'mozzarella': 'skk9p2c8th7fmv1vs15grt4u',
-  'feta': 'jze7wrcu2yatixk1u0yhb0dr',
-  'sour-cream': 'z3rr6evv4qvyx6kv8u6tfzps',
-  'eggs': 'if3vj8q3ihejonec7logxvn3',
-  'pasta': 'zlqpqjpjavk7r43jgrg3osyg',
-  'rice': 'qbrn5jw8kk05q9dlyu3d047h',
-  'flour': 'sbbuvccussu0k1rbhif95si2',
-  'sugar': 'x0bueg7tl6tzpnufwvg2sgph',
-  'olive-oil': 'grvipk5rlx9gupr7kbdfwciv',
-  'sunflower-oil': 'aqjd5ec47cgmg2tdzjfem1ba',
-  'salt': 'a99ccwplg8qwkmneqmfie1pb',
-  'black-pepper': 'ss6o7mxptez1pb1i201azl0q',
-  'basil': 'h0srmc6sk67id6453e23p93y',
-  'rosemary': 'jbzw77aqa1xjvbmx6p5bnwbk',
-  'coffee': 'gnskcpnk40mdjyvg9wpstiii',
-  'orange-juice': 'oxcmgr37dy6cae3fxqel609a',
-  'mineral-water': 'ak64jv1zrge05ls9zcnxa541',
-};
+// These will be populated dynamically from the database
+let INGREDIENT_IDS: Record<string, string> = {};
+let MENU_ITEM_IDS: Record<string, string> = {};
 
-// Menu item document IDs mapping
-const MENU_ITEM_IDS: Record<string, string> = {
-  'bruschetta': 'f1234aidis2iixaufi4orjvg',
-  'carpaccio': 'w12f1dtqid0lr1zse64dtvbh',
-  'cheese-plate': 'vfkt5xntmlo65a4l6632crai',
-  'borscht': 'r12gxr92e7ctrqdd3ll3t18w',
-  'mushroom-cream-soup': 'y6wto4ttdc971icyx2zyh06w',
-  'tom-yum': 'tbyy5xahgm1rvxlkcbczwzxf',
-  'caesar-salad': 'upj9b1rnuxc9zefzh5vy4m3e',
-  'greek-salad': 'jbrsug74uqievg007eiy5xt7',
-  'warm-salad-with-beef': 'xpvniudoeqxrsif8ptei2z22',
-  'chicken-kyiv': 'rw2iwcfwkkhz23pj7akr1z0u',
-  'pork-medallions': 'z1cqnyxhcgmoajynky1l3lpc',
-  'salmon-fillet': 'shgg1vq6f4acpb921m373e3r',
-  'duck-breast': 'zrhbfa988ph7f1fukyuzuton',
-  'ribeye-steak': 'm792v9o1dlonueurluwg1rzy',
-  'pork-ribs': 'n7pjevbg2ikeb30pg3oyrc4a',
-  'grilled-vegetables': 'qedbnh3d5mh6drysbhgyfpkl',
-  'carbonara': 'nkdf27772argzx7d0ixuxpjb',
-  'bolognese': 'lijwdrm53jv6yl200zit07zr',
-  'seafood-pasta': 'nsjqbt8p3vt0agsx9m2vmuuu',
-  'tiramisu': 'a379h94hq9oms959zexwxd6y',
-  'cheesecake': 'mp7429vgw3gmiq8g5tb1t01j',
-  'chocolate-fondant': 'ntqjslr0rv9g2nuki6semaix',
-  'espresso': 'y1tn70a4vr7brasjha3xtrkr',
-  'cappuccino': 'ygjdwdwuerxjxzlxi8u5mlqq',
-  'fresh-orange-juice': 'pf2gopgq2foewxxqro9upgwd',
-  'lemonade': 'vb2mbbis0n371jds4fl40ixg',
-  'house-red-wine': 'h3kd481xp12copoftandopcl',
-  'house-white-wine': 'kc2en73pr2ywaks2olinqis3',
-};
+// Helper function to load ingredient IDs from database
+async function loadIngredientIds(strapi: any): Promise<void> {
+  const ingredients = await strapi.db.query('api::ingredient.ingredient').findMany({
+    select: ['documentId', 'slug'],
+  });
+
+  INGREDIENT_IDS = {};
+  for (const ing of ingredients) {
+    if (ing.slug && ing.documentId) {
+      INGREDIENT_IDS[ing.slug] = ing.documentId;
+    }
+  }
+  console.log(`  📋 Loaded ${Object.keys(INGREDIENT_IDS).length} ingredient IDs`);
+}
+
+// Helper function to load menu item IDs from database
+async function loadMenuItemIds(strapi: any): Promise<void> {
+  const items = await strapi.db.query('api::menu-item.menu-item').findMany({
+    select: ['documentId', 'slug'],
+  });
+
+  MENU_ITEM_IDS = {};
+  for (const item of items) {
+    if (item.slug && item.documentId) {
+      MENU_ITEM_IDS[item.slug] = item.documentId;
+    }
+  }
+  console.log(`  📋 Loaded ${Object.keys(MENU_ITEM_IDS).length} menu item IDs`);
+}
 
 interface RecipeIngredient {
   ingredient: string; // key from INGREDIENT_IDS
@@ -804,6 +764,15 @@ const RECIPES: Recipe[] = [
 
 export async function seedRecipes(strapi: any) {
   console.log('📖 Seeding recipes...');
+
+  // Load IDs dynamically from database
+  await loadIngredientIds(strapi);
+  await loadMenuItemIds(strapi);
+
+  if (Object.keys(INGREDIENT_IDS).length === 0) {
+    console.log('  ⚠️  No ingredients found in database. Run restaurant seed first.');
+    return;
+  }
 
   for (const recipe of RECIPES) {
     try {

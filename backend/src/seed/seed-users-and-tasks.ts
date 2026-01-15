@@ -394,12 +394,21 @@ export async function seedUsersAndTasks(strapi: any) {
         systemRole: userData.systemRole,
         department: userData.department,
         station: userData.station,
-        firstName: userData.firstName,
-        lastName: userData.lastName,
         isActive: true,
       });
 
-      console.log(`  ✅ Created user: ${userData.username} (${userData.systemRole})`);
+      // Update firstName and lastName separately (userService.add doesn't support custom fields)
+      if (user && user.id) {
+        await strapi.db.query('plugin::users-permissions.user').update({
+          where: { id: user.id },
+          data: {
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+          }
+        });
+      }
+
+      console.log(`  ✅ Created user: ${userData.username} (${userData.firstName} ${userData.lastName})`);
       createdUsers[userData.systemRole] = user;
 
       // Store first user of each role (for users with same role like cook1, cook2)
