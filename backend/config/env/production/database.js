@@ -1,22 +1,30 @@
-// Strapi v5 production database configuration
-module.exports = ({ env }) => ({
-  connection: {
-    client: 'postgres',
+// Strapi v5 production database configuration - HARDCODED FOR TESTING
+module.exports = () => {
+  console.log('=== PRODUCTION DATABASE CONFIG LOADING ===');
+
+  const config = {
     connection: {
-      host: env('DATABASE_HOST', 'postgres.railway.internal'),
-      port: env.int('DATABASE_PORT', 5432),
-      database: env('DATABASE_NAME', 'railway'),
-      user: env('DATABASE_USERNAME', 'postgres'),
-      password: env('DATABASE_PASSWORD', ''),
-      schema: env('DATABASE_SCHEMA', 'public'),
-      ssl: env.bool('DATABASE_SSL', false) && {
-        rejectUnauthorized: false,
+      client: 'postgres',
+      connection: {
+        host: 'postgres.railway.internal',
+        port: 5432,
+        database: 'railway',
+        user: 'postgres',
+        password: 'cHYEAiTvRrRnOTNBtYMQGiFiybAtwnGk',
+        schema: 'public',
+        ssl: false,
       },
+      pool: {
+        min: 2,
+        max: 10,
+      },
+      debug: true,
     },
-    pool: {
-      min: env.int('DATABASE_POOL_MIN', 2),
-      max: env.int('DATABASE_POOL_MAX', 10),
-    },
-    debug: false,
-  },
-});
+  };
+
+  console.log('=== CONFIG OBJECT ===');
+  console.log(JSON.stringify(config, null, 2));
+  console.log('=====================');
+
+  return config;
+};
