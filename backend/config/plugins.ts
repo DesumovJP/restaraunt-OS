@@ -1,4 +1,4 @@
-export default = ({ env }) => ({
+export default ({ env }) => ({
   graphql: {
     enabled: true,
     config: {
