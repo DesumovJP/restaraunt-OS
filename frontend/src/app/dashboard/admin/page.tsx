@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -1007,11 +1008,11 @@ function WorkersView() {
         </div>
       </div>
 
-      {/* Filter & Actions */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      {/* Filter & Actions - Mobile optimized */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-[130px] sm:w-[160px] h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1022,27 +1023,114 @@ function WorkersView() {
               <SelectItem value="management">Менеджмент</SelectItem>
             </SelectContent>
           </Select>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
             {filteredWorkers.length} працівників
           </span>
         </div>
         <a href="/dashboard/admin/schedule">
-          <Button variant="outline" size="sm" className="gap-2">
+          <Button variant="outline" size="sm" className="gap-2 w-full sm:w-auto">
             <CalendarDays className="h-4 w-4" />
-            Графік змін
+            <span>Графік змін</span>
           </Button>
         </a>
       </div>
 
-      {/* Combined Workers Table */}
-      <Card>
+      {/* Mobile: Card-based Workers List */}
+      <div className="sm:hidden space-y-3">
+        {filteredWorkers.map((worker: Worker, index: number) => {
+          const perf = getWorkerPerformance(worker);
+          const isOnShift = perf.todayHours > 0;
+          return (
+            <Card
+              key={worker.documentId}
+              onClick={() => setSelectedWorker(worker)}
+              className="cursor-pointer hover:shadow-md transition-all active:scale-[0.99] touch-feedback"
+            >
+              <CardContent className="p-3">
+                <div className="flex items-start justify-between gap-3">
+                  {/* Worker info */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="relative shrink-0">
+                      <Avatar className="h-11 w-11">
+                        <AvatarFallback className={`text-sm font-semibold text-white ${
+                          WORKER_ROLE_AVATAR_COLORS[worker.systemRole || "viewer"]
+                        }`}>
+                          {worker.firstName?.[0]}{worker.lastName?.[0] || worker.username?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      {index < 3 && (
+                        <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-background">
+                          {index + 1}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm truncate">
+                        {worker.firstName} {worker.lastName}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${WORKER_ROLE_COLORS[worker.systemRole || "viewer"]}`}>
+                          {WORKER_ROLE_LABELS[worker.systemRole || "viewer"]}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${
+                          isOnShift
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-600"
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            isOnShift ? "bg-green-500" : "bg-gray-400"
+                          }`} />
+                          {isOnShift ? "Зміна" : "Офлайн"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Efficiency score */}
+                  <div className="text-right shrink-0">
+                    <div className="flex items-center justify-end gap-1">
+                      <span className={`text-xl font-bold ${getEfficiencyColor(perf.efficiency)}`}>
+                        {perf.efficiency}%
+                      </span>
+                      {perf.trend === "up" && <TrendingUp className="h-4 w-4 text-green-600" />}
+                      {perf.trend === "down" && <TrendingDown className="h-4 w-4 text-red-600" />}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">{perf.monthHours} год/міс</p>
+                  </div>
+                </div>
+
+                {/* Quick stats row */}
+                <div className="flex items-center gap-3 mt-3 pt-2 border-t">
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <CheckCircle2 className="h-3 w-3" />
+                    <span>{perf.tasksCompleted} задач</span>
+                  </div>
+                  {perf.ticketsCompleted > 0 && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Utensils className="h-3 w-3" />
+                      <span>{perf.ticketsCompleted} тікетів</span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground ml-auto">
+                    <Award className="h-3 w-3" />
+                    <span>{perf.rating.toFixed(1)}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      {/* Desktop: Table-based Workers View */}
+      <Card className="hidden sm:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b bg-muted/50">
                   <th className="p-3 text-left font-medium text-sm">Працівник</th>
-                  <th className="p-3 text-center font-medium text-sm hidden sm:table-cell">
+                  <th className="p-3 text-center font-medium text-sm">
                     <div className="flex items-center justify-center gap-1">
                       <Clock className="h-3.5 w-3.5" />
                       <span>Години/міс</span>
@@ -1061,7 +1149,7 @@ function WorkersView() {
                     </div>
                   </th>
                   <th className="p-3 text-center font-medium text-sm">Ефективність</th>
-                  <th className="p-3 text-center font-medium text-sm w-20 hidden sm:table-cell">Статус</th>
+                  <th className="p-3 text-center font-medium text-sm w-20">Статус</th>
                 </tr>
               </thead>
               <tbody>
@@ -1107,7 +1195,7 @@ function WorkersView() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-3 text-center hidden sm:table-cell">
+                      <td className="p-3 text-center">
                         <div>
                           <span className="font-semibold">{perf.monthHours}</span>
                           <span className="text-xs text-muted-foreground ml-1">год</span>
@@ -1130,7 +1218,7 @@ function WorkersView() {
                           {perf.trend === "down" && <TrendingDown className="h-4 w-4 text-red-600" />}
                         </div>
                       </td>
-                      <td className="p-3 text-center hidden sm:table-cell">
+                      <td className="p-3 text-center">
                         <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-full ${
                           isOnShift
                             ? "bg-green-100 text-green-700"
@@ -1180,7 +1268,7 @@ function WorkersView() {
           </DialogHeader>
 
           {selectedWorker && selectedPerformance && (
-            <div className="space-y-6 pt-2">
+            <DialogBody className="space-y-6">
               {/* Efficiency Score */}
               <div className="text-center p-4 bg-muted/30 rounded-xl">
                 <p className="text-sm text-muted-foreground mb-1">Загальна ефективність</p>
@@ -1266,7 +1354,7 @@ function WorkersView() {
                   )}
                 </div>
               </div>
-            </div>
+            </DialogBody>
           )}
         </DialogContent>
       </Dialog>

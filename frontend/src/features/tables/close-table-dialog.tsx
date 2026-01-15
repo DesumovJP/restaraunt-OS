@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -131,7 +132,7 @@ export function CloseTableDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <DialogBody className="space-y-4">
           {/* Reason selection */}
           <div className="space-y-2">
             <Label>Причина закриття</Label>
@@ -188,7 +189,7 @@ export function CloseTableDialog({
               {error}
             </div>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter className="border-t pt-4">
           <Button

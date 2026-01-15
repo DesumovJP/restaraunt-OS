@@ -11,6 +11,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -216,7 +217,7 @@ export function CheckoutDialog({
             <p className="text-muted-foreground">Немає активних замовлень</p>
           </div>
         ) : (
-          <div className="flex-1 overflow-y-auto space-y-4">
+          <DialogBody className="flex-1 overflow-y-auto space-y-4">
             {/* Items list */}
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">
@@ -338,7 +339,7 @@ export function CheckoutDialog({
                 {error}
               </div>
             )}
-          </div>
+          </DialogBody>
         )}
 
         <DialogFooter className="pt-4 border-t">

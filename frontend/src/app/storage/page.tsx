@@ -1,13 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { QRScanner } from "@/features/inventory/qr-scanner";
+
+// Sidebar
+import { StorageLeftSidebar, type StorageView } from "@/features/storage/storage-left-sidebar";
+import { WorkerProfileCard } from "@/features/profile/worker-profile-card";
+import { WorkersChat } from "@/features/admin/workers-chat";
+import { useAuthStore } from "@/stores/auth-store";
 
 // New optimized components
 import {
@@ -28,12 +33,10 @@ import { getCategoryCounts, filterProductsByCategory } from "@/lib/mock-storage-
 
 // Icons
 import {
-  Home,
+  Menu,
   QrCode,
   Plus,
   Search,
-  Layers,
-  Archive,
   ArrowUpDown,
   Package,
 } from "lucide-react";
@@ -41,17 +44,14 @@ import {
 // Types
 import type { ExtendedProduct, StorageMainCategory, StorageSubCategory } from "@/types/extended";
 
-type StorageTab = "inventory" | "batches";
-
 // ==========================================
 // MAIN PAGE COMPONENT
 // ==========================================
 
 export default function StoragePage() {
-  const router = useRouter();
-
-  // Tab state
-  const [activeTab, setActiveTab] = React.useState<StorageTab>("inventory");
+  // View state (controlled by sidebar)
+  const [activeView, setActiveView] = React.useState<StorageView>("inventory");
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
   // UI state from store
   const viewMode = useStorageUIStore((s) => s.viewMode);
@@ -203,97 +203,68 @@ export default function StoragePage() {
   };
 
   return (
-    <div className="flex flex-col h-screen-safe bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm safe-area-inset-top">
-        {/* Top row */}
-        <div className="flex items-center justify-between px-3 sm:px-4 py-3">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push('/')}
-              aria-label="На головну"
-              className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl touch-feedback"
-            >
-              <Home className="h-5 w-5" />
-            </Button>
-            <h1 className="text-lg sm:text-xl font-bold">Smart Storage</h1>
-            {totalAlerts > 0 && !alertsDismissed && (
-              <AlertIndicator
-                count={totalAlerts}
-                critical={lowStockProducts.some((p) => p.currentStock === 0)}
-                onClick={() => setSortBy("status")}
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {activeTab === "inventory" && (
-              <ViewToggle value={viewMode} onChange={setViewMode} />
-            )}
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsScannerOpen(true)}
-              aria-label="Сканувати QR-код"
-              className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl touch-feedback"
-            >
-              <QrCode className="h-5 w-5" />
-            </Button>
-            <Button
-              size="icon"
-              aria-label="Прийняти поставку"
-              onClick={() => setIsSupplyFormOpen(true)}
-              className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl touch-feedback"
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
+    <div className="flex h-screen-safe bg-background overflow-hidden">
+      {/* Sidebar */}
+      <StorageLeftSidebar
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+        activeView={activeView}
+        onViewChange={setActiveView}
+      />
 
-        {/* Tabs - touch-friendly */}
-        <div className="flex gap-1.5 px-3 sm:px-4 pb-3 overflow-x-auto scrollbar-hide">
-          <button
-            onClick={() => setActiveTab("inventory")}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-sm font-medium rounded-xl transition-all touch-feedback",
-              activeTab === "inventory"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            )}
-          >
-            <Layers className="h-4 w-4" />
-            <span className="whitespace-nowrap">Інвентар</span>
-            <Badge
-              variant={activeTab === "inventory" ? "secondary" : "outline"}
-              className="h-5 px-1.5 text-xs"
-            >
-              {products.length}
-            </Badge>
-          </button>
-          <button
-            onClick={() => setActiveTab("batches")}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 min-h-[44px] text-sm font-medium rounded-xl transition-all touch-feedback",
-              activeTab === "batches"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            )}
-          >
-            <Archive className="h-4 w-4" />
-            <span className="whitespace-nowrap">Партії / Історія</span>
-            {todaysBatchesCount > 0 && (
-              <Badge variant="default" className="h-5 px-1.5 text-xs">
-                +{todaysBatchesCount}
-              </Badge>
-            )}
-          </button>
-        </div>
-      </header>
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm safe-area-inset-top">
+          <div className="flex items-center justify-between px-3 sm:px-4 py-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Mobile menu button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden h-10 w-10 rounded-xl touch-feedback"
+                onClick={() => setSidebarOpen(true)}
+                aria-label="Відкрити меню"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <h1 className="text-lg sm:text-xl font-bold">Smart Storage</h1>
+              {totalAlerts > 0 && !alertsDismissed && (
+                <AlertIndicator
+                  count={totalAlerts}
+                  critical={lowStockProducts.some((p) => p.currentStock === 0)}
+                  onClick={() => setSortBy("status")}
+                />
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {activeView === "inventory" && (
+                <ViewToggle value={viewMode} onChange={setViewMode} />
+              )}
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsScannerOpen(true)}
+                aria-label="Сканувати QR-код"
+                className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl touch-feedback"
+              >
+                <QrCode className="h-5 w-5" />
+              </Button>
+              <Button
+                size="icon"
+                aria-label="Прийняти поставку"
+                onClick={() => setIsSupplyFormOpen(true)}
+                className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl touch-feedback"
+              >
+                <Plus className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </header>
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto p-3 sm:p-4 scroll-container">
-        {activeTab === "inventory" && (
+        {activeView === "inventory" && (
           <div className="space-y-4">
             {/* Alert banner */}
             {!alertsDismissed && (
@@ -442,7 +413,7 @@ export default function StoragePage() {
           </div>
         )}
 
-        {activeTab === "batches" && (
+        {activeView === "batches" && (
           <div className="space-y-6 max-w-5xl">
             {/* Development Banner */}
             <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
@@ -554,7 +525,50 @@ export default function StoragePage() {
             </Button>
           </div>
         )}
+
+        {/* Chat View */}
+        {activeView === "chat" && (
+          <WorkersChat />
+        )}
+
+        {/* Schedule View - redirect to schedule page */}
+        {activeView === "schedule" && (
+          <div className="flex flex-col items-center justify-center h-64 text-center">
+            <p className="text-muted-foreground mb-4">Графік змін доступний на окремій сторінці</p>
+            <Button
+              onClick={() => window.location.href = '/dashboard/admin/schedule'}
+              className="rounded-xl"
+            >
+              Перейти до графіку
+            </Button>
+          </div>
+        )}
+
+        {/* Profile View */}
+        {activeView === "profile" && (
+          <div className="max-w-md mx-auto">
+            <WorkerProfileCard
+              worker={{
+                documentId: 'storage-1',
+                name: 'Комірник',
+                role: 'waiter',
+                department: 'service',
+                status: 'active',
+                hoursThisWeek: 40,
+                hoursThisMonth: 160,
+                shiftsThisWeek: 5,
+                shiftsThisMonth: 20,
+              }}
+              variant="full"
+              onLogout={() => {
+                useAuthStore.getState().logout();
+                window.location.href = '/';
+              }}
+            />
+          </div>
+        )}
       </main>
+      </div>
 
       {/* Product Preview Drawer */}
       <ProductPreview

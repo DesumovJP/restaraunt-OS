@@ -4,6 +4,9 @@ export * from "./components";
 // Views
 export * from "./views";
 
+// Sidebar
+export * from "./storage-left-sidebar";
+
 // Hooks
 export * from "./hooks";
 

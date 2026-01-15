@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogBody,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -131,7 +132,7 @@ export function ExtendSessionDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <DialogBody className="space-y-4">
           {/* Current session time */}
           {currentDuration && (
             <div className="rounded-lg bg-muted p-4 text-center">
@@ -209,7 +210,7 @@ export function ExtendSessionDialog({
               {error}
             </div>
           )}
-        </div>
+        </DialogBody>
 
         <DialogFooter className="border-t pt-4">
           <Button

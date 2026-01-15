@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
@@ -316,24 +317,24 @@ export default function ScheduleManagementPage() {
   return (
     <div className="flex flex-col min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b px-4 py-3 safe-top">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-40 bg-background border-b px-3 sm:px-4 py-3 safe-top">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             <Link href="/dashboard/admin">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <div>
-              <h1 className="text-xl font-bold">Графік змін</h1>
-              <p className="text-sm text-muted-foreground">
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold truncate">Графік змін</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                 Управління робочими змінами команди
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <Select value={department} onValueChange={setDepartment}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[100px] sm:w-[140px] h-9 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -347,6 +348,7 @@ export default function ScheduleManagementPage() {
             <Button
               variant="outline"
               size="icon"
+              className="h-9 w-9"
               onClick={() => refetchSchedule({ requestPolicy: "network-only" })}
               disabled={scheduleFetching}
             >
@@ -356,39 +358,168 @@ export default function ScheduleManagementPage() {
         </div>
       </header>
 
-      <main className="flex-1 p-4">
-        {/* Week Navigation */}
-        <Card className="mb-4">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <Button variant="outline" size="icon" onClick={navigatePrev}>
+      <main className="flex-1 p-3 sm:p-4">
+        {/* Week Navigation - Mobile optimized */}
+        <Card className="mb-3 sm:mb-4">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center justify-between gap-2">
+              <Button variant="outline" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 shrink-0" onClick={navigatePrev}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-muted-foreground" />
-                <span className="font-medium">
-                  {weekDates[0].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
-                  {" - "}
-                  {weekDates[6].toLocaleDateString("uk-UA", { day: "numeric", month: "short", year: "numeric" })}
-                </span>
-                <Button variant="ghost" size="sm" onClick={goToToday}>
+              <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground hidden sm:block" />
+                  <span className="font-medium text-sm sm:text-base whitespace-nowrap">
+                    {weekDates[0].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
+                    {" - "}
+                    {weekDates[6].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
+                  </span>
+                </div>
+                <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={goToToday}>
                   Сьогодні
                 </Button>
               </div>
-              <Button variant="outline" size="icon" onClick={navigateNext}>
+              <Button variant="outline" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 shrink-0" onClick={navigateNext}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Schedule Grid */}
-        <Card>
+        {/* Mobile: Card-based Schedule View */}
+        <div className="md:hidden space-y-3">
+          {/* Day selector - horizontal scroll */}
+          <div className="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+            {weekDates.map((date, i) => {
+              const today = isToday(date);
+              const dateStr = date.toISOString().split("T")[0];
+              const shiftsOnDay = filteredWorkers.reduce((count, worker) => {
+                return count + (scheduleByDateWorker[dateStr]?.[worker.documentId]?.length || 0);
+              }, 0);
+
+              return (
+                <button
+                  key={i}
+                  onClick={() => openAddDialog(dateStr)}
+                  className={`flex flex-col items-center min-w-[52px] p-2 rounded-xl border transition-all touch-feedback ${
+                    today
+                      ? "bg-primary/10 border-primary ring-2 ring-primary/20"
+                      : "bg-white border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className={`text-xs font-medium ${today ? "text-primary" : "text-muted-foreground"}`}>
+                    {DAYS_UK[i]}
+                  </span>
+                  <span className={`text-lg font-bold ${today ? "text-primary" : "text-foreground"}`}>
+                    {date.getDate()}
+                  </span>
+                  {shiftsOnDay > 0 && (
+                    <Badge variant="secondary" className="h-4 px-1 text-[10px] mt-0.5">
+                      {shiftsOnDay}
+                    </Badge>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Workers list with shifts */}
+          {filteredWorkers.length === 0 ? (
+            <div className="p-8 text-center text-muted-foreground">
+              Немає працівників
+            </div>
+          ) : (
+            filteredWorkers.map((worker) => {
+              const workerWeekShifts = weekDates.map(date => ({
+                date,
+                dateStr: date.toISOString().split("T")[0],
+                shifts: scheduleByDateWorker[date.toISOString().split("T")[0]]?.[worker.documentId] || []
+              }));
+              const totalShifts = workerWeekShifts.reduce((sum, d) => sum + d.shifts.length, 0);
+
+              return (
+                <Card key={worker.documentId} className="overflow-hidden">
+                  <CardHeader className="p-3 pb-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
+                        {worker.firstName?.[0] || worker.username?.[0] || "?"}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm truncate">
+                          {worker.firstName} {worker.lastName}
+                        </p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
+                            {ROLE_LABELS[worker.systemRole || "viewer"]}
+                          </span>
+                          {worker.department && (
+                            <span className="text-[10px] text-muted-foreground">
+                              {DEPARTMENT_LABELS[worker.department]}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="shrink-0">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {totalShifts} зм.
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-2 pt-0">
+                    {/* Week grid for this worker */}
+                    <div className="grid grid-cols-7 gap-1">
+                      {workerWeekShifts.map(({ date, dateStr, shifts }, i) => {
+                        const today = isToday(date);
+                        return (
+                          <div
+                            key={i}
+                            className={`min-h-[50px] p-1 rounded-lg text-center ${
+                              today ? "bg-primary/10" : "bg-muted/30"
+                            }`}
+                          >
+                            <div className={`text-[10px] font-medium mb-0.5 ${today ? "text-primary" : "text-muted-foreground"}`}>
+                              {DAYS_UK[i]}
+                            </div>
+                            {shifts.length > 0 ? (
+                              <div className="space-y-0.5">
+                                {shifts.map((shift) => (
+                                  <div
+                                    key={shift.documentId}
+                                    className={`text-[9px] font-mono font-medium px-1 py-0.5 rounded ${SHIFT_TYPE_COLORS[shift.shiftType]}`}
+                                  >
+                                    {formatTime(shift.startTime).slice(0,2)}-{formatTime(shift.endTime).slice(0,2)}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })
+          )}
+
+          {/* Add shift FAB */}
+          <Button
+            onClick={() => openAddDialog(new Date().toISOString().split("T")[0])}
+            className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
+          >
+            <UserPlus className="h-6 w-6" />
+          </Button>
+        </div>
+
+        {/* Desktop: Table-based Schedule Grid */}
+        <Card className="hidden md:block">
           <CardContent className="p-0 overflow-x-auto">
-            <table className="w-full min-w-[800px]">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b">
-                  <th className="p-3 text-left font-medium w-[150px]">
+                  <th className="p-3 text-left font-medium w-[180px]">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
                       Працівник
@@ -399,16 +530,16 @@ export default function ScheduleManagementPage() {
                     return (
                       <th
                         key={i}
-                        className={`p-3 text-center font-medium ${today ? "bg-primary/10" : ""}`}
+                        className={`p-2 text-center font-medium ${today ? "bg-primary/10" : ""}`}
                       >
-                        <div>{DAYS_UK[i]}</div>
+                        <div className="text-xs">{DAYS_UK[i]}</div>
                         <div className={`text-sm ${today ? "text-primary font-bold" : "text-muted-foreground"}`}>
                           {date.getDate()}.{date.getMonth() + 1}
                         </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="mt-1"
+                          className="mt-1 h-7 w-7 p-0"
                           onClick={() => openAddDialog(date.toISOString().split("T")[0])}
                         >
                           <Plus className="h-3 w-3" />
@@ -430,22 +561,17 @@ export default function ScheduleManagementPage() {
                     <tr key={worker.documentId} className="border-b hover:bg-muted/50">
                       <td className="p-3">
                         <div className="flex items-center gap-2">
-                          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
                             {worker.firstName?.[0] || worker.username?.[0] || "?"}
                           </div>
                           <div className="min-w-0">
                             <p className="font-medium text-sm truncate">
                               {worker.firstName} {worker.lastName}
                             </p>
-                            <div className="flex items-center gap-1 mt-0.5">
+                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                               <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
                                 {ROLE_LABELS[worker.systemRole || "viewer"]}
                               </span>
-                              {worker.station && (
-                                <span className="text-[10px] text-muted-foreground capitalize">
-                                  • {worker.station}
-                                </span>
-                              )}
                             </div>
                           </div>
                         </div>
@@ -458,14 +584,14 @@ export default function ScheduleManagementPage() {
                         return (
                           <td
                             key={i}
-                            className={`p-2 text-center ${today ? "bg-primary/5" : ""}`}
+                            className={`p-1.5 text-center ${today ? "bg-primary/5" : ""}`}
                           >
                             {workerShifts.length > 0 ? (
                               <div className="space-y-1">
                                 {workerShifts.map((shift) => (
                                   <div
                                     key={shift.documentId}
-                                    className={`text-xs p-1.5 rounded border-l-2 ${SHIFT_TYPE_COLORS[shift.shiftType]} ${STATUS_COLORS[shift.status]}`}
+                                    className={`text-[11px] p-1 rounded border-l-2 ${SHIFT_TYPE_COLORS[shift.shiftType]} ${STATUS_COLORS[shift.status]}`}
                                   >
                                     <div className="font-mono font-medium">
                                       {formatTime(shift.startTime)}-{formatTime(shift.endTime)}
@@ -508,7 +634,7 @@ export default function ScheduleManagementPage() {
           <DialogHeader>
             <DialogTitle>Додати зміну на {selectedDate}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <DialogBody className="space-y-4">
             <div>
               <label className="text-sm font-medium mb-2 block">Працівник</label>
               <Select value={selectedWorker} onValueChange={setSelectedWorker}>
@@ -577,7 +703,7 @@ export default function ScheduleManagementPage() {
                 </SelectContent>
               </Select>
             </div>
-          </div>
+          </DialogBody>
           <DialogFooter className="border-t pt-4">
             <Button
               onClick={handleAddShift}

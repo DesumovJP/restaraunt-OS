@@ -8,6 +8,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogBody,
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
@@ -186,9 +187,10 @@ export function WriteOffForm({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Batch Info */}
-          <div className="p-3 bg-muted rounded-lg space-y-2">
+        <form onSubmit={handleSubmit}>
+          <DialogBody className="space-y-4">
+            {/* Batch Info */}
+            <div className="p-3 bg-muted rounded-lg space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Продукт:</span>
               <span className="font-medium">{batch.ingredient?.name}</span>
@@ -303,8 +305,9 @@ export function WriteOffForm({
               <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
+          </DialogBody>
 
-          <DialogFooter className="border-t bg-slate-50/50 px-6 py-4">
+          <DialogFooter className="border-t pt-4">
             <Button
               type="submit"
               variant="destructive"

@@ -272,37 +272,30 @@ export function AppSidebar<T extends string = string>({
         })}
       </div>
 
-      {/* Profile bar at bottom - desktop compact */}
+      {/* Profile button at bottom - desktop compact */}
       {showProfile && (
         <button
           onClick={handleProfileClick}
           className={cn(
-            'w-full px-2 py-3 rounded-lg border transition-all duration-200',
-            activeView === profileViewId ? styles.profileActive : styles.profileInactive
+            'w-12 flex flex-col items-center gap-1 py-2 rounded-xl transition-all duration-200 touch-feedback',
+            'hover:scale-105 active:scale-95',
+            activeView === profileViewId ? styles.activeDesktop : styles.inactive
           )}
+          aria-label="Профіль"
+          title="Профіль"
         >
-          <div className="flex items-center gap-2">
-            <div className={cn(
-              'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm',
-              activeView === profileViewId ? styles.profileAvatarActive : styles.profileAvatar
-            )}>
-              <User className="w-4 h-4 text-white" />
-            </div>
-            <div className="flex-1 min-w-0 text-left">
-              <p className={cn(
-                'text-xs font-semibold truncate',
-                activeView === profileViewId ? 'text-white' : 'text-slate-900'
-              )}>
-                {userName}
-              </p>
-              <p className={cn(
-                'text-[10px] truncate',
-                activeView === profileViewId ? 'text-white/70' : 'text-slate-600'
-              )}>
-                {userRole}
-              </p>
-            </div>
+          <div className={cn(
+            'w-8 h-8 rounded-full flex items-center justify-center shadow-sm',
+            activeView === profileViewId ? 'bg-white/20' : styles.profileAvatar
+          )}>
+            <User className="w-4 h-4 text-white" />
           </div>
+          <span className={cn(
+            'text-[10px] font-medium',
+            activeView === profileViewId ? 'text-white' : 'text-slate-600'
+          )}>
+            Профіль
+          </span>
         </button>
       )}
     </>
