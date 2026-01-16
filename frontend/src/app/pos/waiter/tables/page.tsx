@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { useTableStore } from '@/stores/table-store';
+import { useTableStore, type TableStore } from '@/stores/table-store';
 import { useSyncTables } from '@/hooks/use-sync-tables';
 import { useUpdateTableStatus } from '@/hooks/use-graphql-orders';
 import { TableGrid } from '@/features/tables/table-grid';
@@ -35,10 +35,10 @@ import { ReservationDialog } from '@/features/reservations';
 
 export default function TableSelectionPage() {
   const router = useRouter();
-  const tables = useTableStore((state) => state.tables);
-  const selectTable = useTableStore((state) => state.selectTable);
-  const updateLocalTableStatus = useTableStore((state) => state.updateTableStatus);
-  const resetAllTables = useTableStore((state) => state.resetAllTables);
+  const tables = useTableStore((s: TableStore) => s.tables);
+  const selectTable = useTableStore((s: TableStore) => s.selectTable);
+  const updateLocalTableStatus = useTableStore((s: TableStore) => s.updateTableStatus);
+  const resetAllTables = useTableStore((s: TableStore) => s.resetAllTables);
   const [showResetDialog, setShowResetDialog] = React.useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   const [isReservationDialogOpen, setIsReservationDialogOpen] = React.useState(false);
@@ -57,7 +57,7 @@ export default function TableSelectionPage() {
 
   // Filter tables by zone, status, and search
   const filteredTables = React.useMemo(() => {
-    return tables.filter((table) => {
+    return tables.filter((table: Table) => {
       // Zone filter
       if (selectedZone !== 'all' && table.zone !== selectedZone) {
         return false;
@@ -82,9 +82,9 @@ export default function TableSelectionPage() {
   const stats = React.useMemo(() => {
     return {
       total: tables.length,
-      free: tables.filter((t) => t.status === 'free').length,
-      occupied: tables.filter((t) => t.status === 'occupied').length,
-      reserved: tables.filter((t) => t.status === 'reserved').length,
+      free: tables.filter((t: Table) => t.status === 'free').length,
+      occupied: tables.filter((t: Table) => t.status === 'occupied').length,
+      reserved: tables.filter((t: Table) => t.status === 'reserved').length,
     };
   }, [tables]);
 
@@ -92,7 +92,7 @@ export default function TableSelectionPage() {
   const zoneCounts = React.useMemo(() => {
     const zones = ['main', 'terrace', 'vip', 'bar'] as TableZone[];
     return zones.reduce((acc, zone) => {
-      acc[zone] = tables.filter((t) => t.zone === zone).length;
+      acc[zone] = tables.filter((t: Table) => t.zone === zone).length;
       return acc;
     }, {} as Record<TableZone, number>);
   }, [tables]);

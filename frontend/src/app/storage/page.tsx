@@ -23,8 +23,10 @@ import {
   SupplyForm,
   WriteOffForm,
 } from "@/features/storage/components";
-import { ProductList, ProductListSkeleton } from "@/features/storage/views";
+import { ProductList, ProductListSkeleton, BatchView } from "@/features/storage/views";
 import { MOCK_BATCHES } from "@/features/storage";
+import { useBatches, useBatchMutations, useStorageAlerts } from "@/hooks/use-batches";
+import { useStorageNotifications } from "@/hooks/use-storage-notifications";
 
 // Stores
 import { useStorageUIStore } from "@/stores/storage-ui-store";
@@ -46,6 +48,100 @@ import {
 import type { ExtendedProduct, StorageMainCategory, StorageSubCategory } from "@/types/extended";
 
 // ==========================================
+// BATCH VIEW WRAPPER (with API integration)
+// ==========================================
+
+interface BatchViewWrapperProps {
+  onExportReport: () => void;
+}
+
+function BatchViewWrapper({ onExportReport }: BatchViewWrapperProps) {
+  const { batches, isLoading, error, refetch } = useBatches();
+  const mutations = useBatchMutations();
+
+  const handleProcess = async (
+    batch: any,
+    processType: any,
+    yieldRatio: number,
+    notes?: string
+  ) => {
+    try {
+      await mutations.processBatch(batch.documentId, processType, yieldRatio, notes);
+      refetch();
+    } catch (err) {
+      console.error("Process error:", err);
+      throw err;
+    }
+  };
+
+  const handleWriteOff = async (
+    batch: any,
+    reason: string,
+    quantity: number,
+    notes?: string
+  ) => {
+    try {
+      await mutations.writeOffBatch(batch.documentId, reason, quantity, notes);
+      refetch();
+    } catch (err) {
+      console.error("Write-off error:", err);
+      throw err;
+    }
+  };
+
+  const handleCount = async (batch: any, actualQuantity: number, notes?: string) => {
+    try {
+      await mutations.countBatch(batch.documentId, actualQuantity, notes);
+      refetch();
+    } catch (err) {
+      console.error("Count error:", err);
+      throw err;
+    }
+  };
+
+  const handleLock = async (batch: any) => {
+    try {
+      await mutations.lockBatch(batch.documentId);
+      refetch();
+    } catch (err) {
+      console.error("Lock error:", err);
+    }
+  };
+
+  const handleUnlock = async (batch: any) => {
+    try {
+      await mutations.unlockBatch(batch.documentId);
+      refetch();
+    } catch (err) {
+      console.error("Unlock error:", err);
+    }
+  };
+
+  return (
+    <div className="space-y-4 max-w-7xl">
+      <BatchView
+        batches={batches}
+        isLoading={isLoading}
+        error={error}
+        onProcess={handleProcess}
+        onWriteOff={handleWriteOff}
+        onCount={handleCount}
+        onLock={handleLock}
+        onUnlock={handleUnlock}
+        onRefresh={refetch}
+      />
+      <Button
+        variant="outline"
+        onClick={onExportReport}
+        className="w-full max-w-xs h-11 rounded-xl"
+      >
+        Експортувати звіт за зміну
+      </Button>
+    </div>
+  );
+}
+
+// ==========================================
 // MAIN PAGE COMPONENT
 // ==========================================
 
@@ -53,6 +149,9 @@ export default function StoragePage() {
   // View state (controlled by sidebar)
   const [activeView, setActiveView] = React.useState<StorageView>("inventory");
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
+  // Storage notifications (auto-checks and shows toasts for alerts)
+  useStorageNotifications();
 
   // UI state from store
   const viewMode = useStorageUIStore((s) => s.viewMode);
@@ -415,116 +514,7 @@ export default function StoragePage() {
         )}
 
         {activeView === "batches" && (
-          <div className="space-y-6 max-w-5xl">
-            {/* Development Banner */}
-            <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
-                <Archive className="h-5 w-5 text-amber-600" />
-              </div>
-              <div>
-                <p className="font-medium text-amber-900">Розділ у розробці</p>
-                <p className="text-sm text-amber-700">
-                  Повний функціонал обліку партій буде доступний найближчим часом
-                </p>
-              </div>
-            </div>
-
-            {/* Today's deliveries */}
-            <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
-                <span>Сьогоднішні поставки</span>
-                <Badge variant="secondary" className="text-xs">{todaysBatchesCount}</Badge>
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {MOCK_BATCHES
-                  .filter((b) => {
-                    const todayStart = new Date();
-                    todayStart.setHours(0, 0, 0, 0);
-                    return new Date(b.receivedAt) >= todayStart;
-                  })
-                  .map((batch) => (
-                    <div
-                      key={batch.documentId}
-                      className="flex items-start gap-3 p-4 bg-white border rounded-xl hover:shadow-md hover:border-emerald-200 transition-all cursor-pointer"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center flex-shrink-0">
-                        <Package className="h-5 w-5 text-emerald-600" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 truncate">{batch.productName}</p>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 mt-1">
-                          <span>#{batch.batchNumber}</span>
-                          <span className="text-slate-300">•</span>
-                          <span>{batch.invoiceNumber}</span>
-                        </div>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
-                            {batch.grossIn} кг
-                          </span>
-                          <span className="text-sm text-slate-600 tabular-nums">
-                            {batch.totalCost.toLocaleString()} ₴
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* Previous deliveries */}
-            <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Попередні партії</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                {MOCK_BATCHES
-                  .filter((b) => {
-                    const todayStart = new Date();
-                    todayStart.setHours(0, 0, 0, 0);
-                    return new Date(b.receivedAt) < todayStart;
-                  })
-                  .map((batch) => (
-                    <div
-                      key={batch.documentId}
-                      className="flex items-start gap-3 p-4 bg-white border rounded-xl hover:shadow-md transition-all cursor-pointer group"
-                    >
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 group-hover:bg-slate-200 flex items-center justify-center flex-shrink-0 transition-colors">
-                        <Package className="h-5 w-5 text-slate-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-slate-900 truncate">{batch.productName}</p>
-                        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-slate-500 mt-1">
-                          <span>#{batch.batchNumber}</span>
-                          <span className={cn(
-                            "px-1.5 py-0.5 rounded-full text-[10px] font-medium",
-                            batch.status === "in_use"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-emerald-100 text-emerald-700"
-                          )}>
-                            {batch.status === "in_use" ? "В роботі" : "Доступно"}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t">
-                          <span className="text-sm font-semibold text-slate-900 tabular-nums">
-                            {batch.netAvailable} кг
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            з {batch.grossIn} кг
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-
-            {/* Close shift button */}
-            <Button
-              variant="outline"
-              onClick={handleCloseShift}
-              className="w-full max-w-xs h-11 rounded-xl"
-            >
-              Експортувати звіт за зміну
-            </Button>
-          </div>
+          <BatchViewWrapper onExportReport={handleCloseShift} />
         )}
 
         {/* Chat View */}

@@ -12,7 +12,7 @@ export interface ScheduledOrderModeContext {
   guestCount: number | null;
 }
 
-interface ScheduledOrderModeStore extends ScheduledOrderModeContext {
+export interface ScheduledOrderModeStore extends ScheduledOrderModeContext {
   // Actions
   enterScheduledMode: (context: Omit<ScheduledOrderModeContext, 'isScheduledMode'>) => void;
   exitScheduledMode: () => void;

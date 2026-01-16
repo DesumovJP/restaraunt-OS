@@ -55,12 +55,15 @@ export interface OperationTypeConfig {
  */
 export const BATCH_STATUS_CONFIG: Record<BatchStatus, BatchStatusConfig> = {
   received: { label: "Received", labelUk: "Отримано", variant: "default" },
-  processed: { label: "Processed", labelUk: "Оброблено", variant: "secondary" },
+  inspecting: { label: "Inspecting", labelUk: "На перевірці", variant: "outline" },
   processing: { label: "Processing", labelUk: "Обробляється", variant: "warning" },
-  in_use: { label: "In Use", labelUk: "В роботі", variant: "outline" },
+  processed: { label: "Processed", labelUk: "Оброблено", variant: "secondary" },
   available: { label: "Available", labelUk: "Доступно", variant: "secondary" },
+  reserved: { label: "Reserved", labelUk: "Зарезервовано", variant: "outline" },
+  in_use: { label: "In Use", labelUk: "В роботі", variant: "outline" },
   depleted: { label: "Depleted", labelUk: "Вичерпано", variant: "outline" },
   expired: { label: "Expired", labelUk: "Прострочено", variant: "destructive" },
+  quarantine: { label: "Quarantine", labelUk: "Карантин", variant: "destructive" },
   written_off: { label: "Written Off", labelUk: "Списано", variant: "destructive" },
 };
 

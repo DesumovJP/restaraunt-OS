@@ -12,7 +12,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useCartStore, type PaymentMethod } from "@/stores/cart-store";
-import { useTableStore } from "@/stores/table-store";
+import { useTableStore, type TableStore } from "@/stores/table-store";
 import { formatPrice, cn } from "@/lib/utils";
 import {
   CreditCard,
@@ -78,9 +78,9 @@ export function CheckoutDialog({
   const clearCart = useCartStore((state) => state.clearCart);
 
   // Table store
-  const selectedTable = useTableStore((state) => state.selectedTable);
-  const updateTableStatus = useTableStore((state) => state.updateTableStatus);
-  const clearSelectedTable = useTableStore((state) => state.clearSelectedTable);
+  const selectedTable = useTableStore((s: TableStore) => s.selectedTable);
+  const updateTableStatus = useTableStore((s: TableStore) => s.updateTableStatus);
+  const clearSelectedTable = useTableStore((s: TableStore) => s.clearSelectedTable);
 
   const subtotal = getSubtotal();
   const tax = getTax();

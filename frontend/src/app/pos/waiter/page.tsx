@@ -12,8 +12,8 @@ import { InvoiceSidebar } from "@/features/pos/invoice-sidebar";
 import { ScheduledModeBanner } from "@/features/pos/scheduled-mode-banner";
 import { OrderConfirmDialog } from "@/features/orders/order-confirm-dialog";
 import { useCartStore } from "@/stores/cart-store";
-import { useTableStore } from "@/stores/table-store";
-import { useScheduledOrderModeStore } from "@/stores/scheduled-order-mode-store";
+import { useTableStore, type TableStore } from "@/stores/table-store";
+import { useScheduledOrderModeStore, type ScheduledOrderModeStore } from "@/stores/scheduled-order-mode-store";
 import { ordersApi } from "@/lib/api";
 import { useMenu } from "@/hooks/use-menu";
 import { DailiesView } from "@/features/dailies";
@@ -67,11 +67,11 @@ function WaiterPOSContent() {
     getTotalAmount,
   } = useCartStore();
 
-  const selectedTable = useTableStore((state) => state.selectedTable);
+  const selectedTable = useTableStore((s: TableStore) => s.selectedTable);
 
   // Scheduled mode
-  const isScheduledMode = useScheduledOrderModeStore((state) => state.isScheduledMode);
-  const enterScheduledMode = useScheduledOrderModeStore((state) => state.enterScheduledMode);
+  const isScheduledMode = useScheduledOrderModeStore((s: ScheduledOrderModeStore) => s.isScheduledMode);
+  const enterScheduledMode = useScheduledOrderModeStore((s: ScheduledOrderModeStore) => s.enterScheduledMode);
 
   // Parse URL params for scheduled mode
   React.useEffect(() => {

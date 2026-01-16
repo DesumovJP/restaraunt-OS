@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useCartStore } from '@/stores/cart-store';
-import { useTableStore } from '@/stores/table-store';
+import { useTableStore, type TableStore } from '@/stores/table-store';
 import { useScheduledOrderModeStore } from '@/stores/scheduled-order-mode-store';
 import { formatPrice, cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -78,7 +78,7 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
   const removeItem = useCartStore((state) => state.removeItem);
   const getSubtotal = useCartStore((state) => state.getSubtotal);
   const getTotalAmount = useCartStore((state) => state.getTotalAmount);
-  const selectedTable = useTableStore((state) => state.selectedTable);
+  const selectedTable = useTableStore((s: TableStore) => s.selectedTable);
 
   // Scheduled mode
   const isScheduledMode = useScheduledOrderModeStore((state) => state.isScheduledMode);

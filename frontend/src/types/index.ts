@@ -10,6 +10,7 @@ export interface MenuItem {
   description?: string;
   price: number;
   categoryId: string;
+  categoryDocumentId?: string;
   categorySlug?: string;
   recipeId?: string;
   imageUrl?: string;
@@ -96,6 +97,7 @@ export interface KitchenTicket {
 
 export interface Product {
   id: string;
+  documentId?: string;
   name: string;
   sku?: string;
   unit: string;

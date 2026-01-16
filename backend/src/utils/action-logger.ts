@@ -65,6 +65,14 @@ const ACTION_NAMES_UK: Record<string, string> = {
   unmerge: "роз'єднано",
   recall: 'відкликано',
   add_items: 'додано страви',
+  // Storage/Inventory specific actions
+  consume: 'використано',
+  process: 'оброблено',
+  adjust: 'скориговано',
+  reserve: 'зарезервовано',
+  release: 'вивільнено',
+  count: 'інвентаризовано',
+  expire: 'прострочено',
 };
 
 /**

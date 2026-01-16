@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { Table, CloseReason } from '@/types/table';
 import { tableSessionEventsApi } from '@/lib/api-events';
 
-interface TableStore {
+export interface TableStore {
   tables: Table[];
   selectedTable: Table | null;
 
@@ -23,7 +23,7 @@ interface TableStore {
 
 export const useTableStore = create<TableStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       // TODO: Load tables from database via setTables()
       // Tables should be configured in admin panel and fetched on app init
       tables: [],
@@ -37,7 +37,7 @@ export const useTableStore = create<TableStore>()(
 
       updateTableStatus: (tableId, status) => {
         // Get current table state before update
-        const currentTables = useTableStore.getState().tables;
+        const currentTables = get().tables;
         const currentTable = currentTables.find((t) => t.documentId === tableId || t.id === tableId);
         const wasOccupied = currentTable?.status === 'occupied' || currentTable?.status === 'reserved';
         const isBecomingOccupied = (status === 'occupied' || status === 'reserved') && !wasOccupied;
@@ -123,7 +123,7 @@ export const useTableStore = create<TableStore>()(
         })),
 
       closeTable: async (tableId, reason, comment) => {
-        const currentTables = useTableStore.getState().tables;
+        const currentTables = get().tables;
         const currentTable = currentTables.find((t) => t.documentId === tableId || t.id === tableId);
 
         if (!currentTable) {
@@ -268,7 +268,7 @@ export const useTableStore = create<TableStore>()(
       },
 
       emergencyCloseTable: async (tableId, reason, comment) => {
-        const currentTables = useTableStore.getState().tables;
+        const currentTables = get().tables;
         const currentTable = currentTables.find((t) => t.documentId === tableId || t.id === tableId);
 
         if (!currentTable) {
@@ -341,7 +341,7 @@ export const useTableStore = create<TableStore>()(
       },
 
       mergeTables: async (primaryTableId, tableIds) => {
-        const currentTables = useTableStore.getState().tables;
+        const currentTables = get().tables;
         const primaryTable = currentTables.find((t) => t.documentId === primaryTableId || t.id === primaryTableId);
 
         if (!primaryTable) {
@@ -410,7 +410,7 @@ export const useTableStore = create<TableStore>()(
       },
 
       unmergeTables: async (primaryTableId) => {
-        const currentTables = useTableStore.getState().tables;
+        const currentTables = get().tables;
         const primaryTable = currentTables.find((t) => t.documentId === primaryTableId || t.id === primaryTableId);
 
         if (!primaryTable || !primaryTable.mergedWith?.length) {
@@ -478,7 +478,7 @@ export const useTableStore = create<TableStore>()(
       },
 
       transferGuests: async (sourceTableId, targetTableId) => {
-        const currentTables = useTableStore.getState().tables;
+        const currentTables = get().tables;
         const sourceTable = currentTables.find((t) => t.documentId === sourceTableId || t.id === sourceTableId);
         const targetTable = currentTables.find((t) => t.documentId === targetTableId || t.id === targetTableId);
 

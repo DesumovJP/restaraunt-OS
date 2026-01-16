@@ -17,7 +17,7 @@
 import { useEffect, useCallback } from 'react';
 import { useQuery } from 'urql';
 import { GET_TABLES } from '@/graphql/queries';
-import { useTableStore } from '@/stores/table-store';
+import { useTableStore, type TableStore } from '@/stores/table-store';
 import type { Table, TableStatus, TableZone } from '@/types/table';
 
 interface StrapiTable {
@@ -77,7 +77,7 @@ export function useSyncTables() {
     requestPolicy: 'cache-and-network',
   });
 
-  const setTables = useTableStore((state) => state.setTables);
+  const setTables = useTableStore((s: TableStore) => s.setTables);
 
   // Transform Strapi tables to local format
   const transformTables = useCallback((strapiTables: StrapiTable[]): Table[] => {

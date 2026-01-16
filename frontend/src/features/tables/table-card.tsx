@@ -19,7 +19,7 @@ import { ExtendSessionDialog } from './extend-session-dialog';
 import { MergeTablesDialog } from './merge-tables-dialog';
 import { EmergencyCloseDialog } from './emergency-close-dialog';
 import { TransferGuestsDialog } from './transfer-guests-dialog';
-import { useTableStore } from '@/stores/table-store';
+import { useTableStore, type TableStore } from '@/stores/table-store';
 import { toast } from 'sonner';
 
 interface NextReservation {
@@ -120,12 +120,12 @@ const statusConfig = {
 
 export function TableCard({ table, onSelect, nextReservation }: TableCardProps) {
   const config = statusConfig[table.status];
-  const tables = useTableStore((state) => state.tables);
-  const closeTable = useTableStore((state) => state.closeTable);
-  const extendTableSession = useTableStore((state) => state.extendTableSession);
-  const mergeTables = useTableStore((state) => state.mergeTables);
-  const emergencyCloseTable = useTableStore((state) => state.emergencyCloseTable);
-  const transferGuests = useTableStore((state) => state.transferGuests);
+  const tables = useTableStore((s: TableStore) => s.tables);
+  const closeTable = useTableStore((s: TableStore) => s.closeTable);
+  const extendTableSession = useTableStore((s: TableStore) => s.extendTableSession);
+  const mergeTables = useTableStore((s: TableStore) => s.mergeTables);
+  const emergencyCloseTable = useTableStore((s: TableStore) => s.emergencyCloseTable);
+  const transferGuests = useTableStore((s: TableStore) => s.transferGuests);
   const [isCloseDialogOpen, setIsCloseDialogOpen] = React.useState(false);
   const [isEmergencyCloseDialogOpen, setIsEmergencyCloseDialogOpen] = React.useState(false);
   const [isExtendDialogOpen, setIsExtendDialogOpen] = React.useState(false);

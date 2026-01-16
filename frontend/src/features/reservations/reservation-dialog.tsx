@@ -41,7 +41,8 @@ import {
   RefreshCw,
   CheckCircle2,
 } from "lucide-react";
-import { useTableStore } from "@/stores/table-store";
+import { useTableStore, type TableStore } from "@/stores/table-store";
+import type { Table } from "@/types/table";
 import { useCreateReservation, useReservationsForDate, type Reservation } from "@/hooks/use-graphql-scheduled-orders";
 
 // ==========================================
@@ -385,7 +386,7 @@ export function ReservationDialog({
   }, [open, initialDate, initialTableId]);
 
   // Tables
-  const tables = useTableStore((s) => s.tables);
+  const tables = useTableStore((s: TableStore) => s.tables);
 
   // Get existing reservations for selected date
   const dateStr = date.toISOString().split("T")[0];
@@ -478,7 +479,7 @@ export function ReservationDialog({
               </span>
             </div>
             <div className="text-sm text-slate-500 mb-6">
-              <p>Стіл {tables.find((t) => t.id === tableId || t.documentId === tableId)?.number}</p>
+              <p>Стіл {tables.find((t: Table) => t.id === tableId || t.documentId === tableId)?.number}</p>
               <p>{date.toLocaleDateString("uk-UA")} о {startTime} - {endTime}</p>
               <p>{guestCount} гостей</p>
             </div>
@@ -524,7 +525,7 @@ export function ReservationDialog({
                   <SelectValue placeholder="Оберіть столик..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {tables.map((table) => (
+                  {tables.map((table: Table) => (
                     <SelectItem
                       key={table.documentId || table.id}
                       value={table.documentId || table.id || ""}

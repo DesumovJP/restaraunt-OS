@@ -427,6 +427,14 @@ export const ACTION_TYPES = [
   'unmerge',
   'recall',
   'add_items',
+  // Storage/Inventory specific actions
+  'consume',
+  'process',
+  'adjust',
+  'reserve',
+  'release',
+  'count',
+  'expire',
 ] as const;
 
 export type ActionType = (typeof ACTION_TYPES)[number];

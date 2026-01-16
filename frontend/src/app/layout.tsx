@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { UrqlProvider } from "@/providers/urql-provider";
+import { Toaster } from "sonner";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] });
@@ -36,6 +37,15 @@ export default function RootLayout({
         <UrqlProvider>
           {children}
         </UrqlProvider>
+        <Toaster
+          position="top-right"
+          expand={true}
+          richColors
+          closeButton
+          toastOptions={{
+            duration: 5000,
+          }}
+        />
       </body>
     </html>
   );

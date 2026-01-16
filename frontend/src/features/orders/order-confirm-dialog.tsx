@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCartStore } from "@/stores/cart-store";
-import { useTableStore } from "@/stores/table-store";
+import { useTableStore, type TableStore } from "@/stores/table-store";
 import { formatPrice } from "@/lib/utils";
 import { Loader2, ChefHat, UtensilsCrossed, AlertCircle } from "lucide-react";
 import { tableSessionEventsApi } from "@/lib/api-events";
@@ -77,8 +77,8 @@ export function OrderConfirmDialog({
   const clearCart = useCartStore((state) => state.clearCart);
 
   // Table store
-  const selectedTable = useTableStore((state) => state.selectedTable);
-  const updateTableStatus = useTableStore((state) => state.updateTableStatus);
+  const selectedTable = useTableStore((s: TableStore) => s.selectedTable);
+  const updateTableStatus = useTableStore((s: TableStore) => s.updateTableStatus);
 
   // GraphQL mutations
   const { createOrder, loading: creatingOrder } = useCreateOrder();

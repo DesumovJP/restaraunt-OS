@@ -354,12 +354,15 @@ export interface ExtendedProduct {
 
 export type BatchStatus =
   | "received"
-  | "processed"
-  | "in_use"
+  | "inspecting"
   | "processing"
+  | "processed"
   | "available"
+  | "reserved"
+  | "in_use"
   | "depleted"
   | "expired"
+  | "quarantine"
   | "written_off";
 
 export interface BatchProcess {

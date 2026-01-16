@@ -24,7 +24,8 @@ import {
   User,
   Baby,
 } from "lucide-react";
-import { useTableStore } from "@/stores/table-store";
+import { useTableStore, type TableStore } from "@/stores/table-store";
+import type { Table } from "@/types/table";
 import {
   useScheduledOrdersStore,
   type EventType,
@@ -52,7 +53,7 @@ export function CreateDialog({
   const [formData, setFormData] = React.useState<CreateOrderFormData>(getInitialFormData);
 
   // Tables store
-  const tables = useTableStore((state) => state.tables);
+  const tables = useTableStore((s: TableStore) => s.tables);
   const addScheduledOrder = useScheduledOrdersStore((state) => state.addOrder);
 
   // Reset form when dialog opens
@@ -85,7 +86,7 @@ export function CreateDialog({
 
     // Find table by number to get documentId
     const tableNumber = parseInt(formData.tableNumber, 10);
-    const selectedTable = tables.find((t) => t.number === tableNumber);
+    const selectedTable = tables.find((t: Table) => t.number === tableNumber);
     const tableId = selectedTable?.documentId || selectedTable?.id || `table_${tableNumber}`;
 
     addScheduledOrder({
@@ -219,7 +220,7 @@ export function CreateDialog({
                   className="mt-1.5 w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
                 >
                   <option value="">Оберіть столик...</option>
-                  {tables.map((table) => (
+                  {tables.map((table: Table) => (
                     <option key={table.id} value={table.number}>
                       Столик {table.number} ({table.capacity} місць)
                     </option>

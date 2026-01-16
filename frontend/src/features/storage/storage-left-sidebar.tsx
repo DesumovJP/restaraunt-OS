@@ -6,6 +6,8 @@ import {
   Archive,
   MessageSquare,
   CalendarDays,
+  FileBarChart,
+  Trash2,
 } from 'lucide-react';
 import { AppSidebar, type NavigationItem } from '@/components/layout/app-sidebar';
 
@@ -19,6 +21,12 @@ const defaultNavigationItems: NavigationItem<StorageView>[] = [
 const secondaryItems: NavigationItem<StorageView>[] = [
   { id: 'chat', icon: MessageSquare, label: 'Чат' },
   { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
+];
+
+// External page links (use 'reports' and 'waste' as ids for typing, with path for navigation)
+const externalPageLinks: NavigationItem<string>[] = [
+  { id: 'reports', icon: FileBarChart, label: 'Звіти витрат', path: '/storage/reports' },
+  { id: 'waste', icon: Trash2, label: 'Аналітика втрат', path: '/storage/waste' },
 ];
 
 interface StorageLeftSidebarProps {
@@ -41,14 +49,15 @@ export function StorageLeftSidebar({
   navigationItems = defaultNavigationItems,
 }: StorageLeftSidebarProps) {
   return (
-    <AppSidebar<StorageView>
+    <AppSidebar<StorageView | string>
       variant="storage"
       open={open}
       onOpenChange={onOpenChange}
       navigationItems={navigationItems}
       secondaryItems={secondaryItems}
+      externalLinks={externalPageLinks}
       activeView={activeView}
-      onViewChange={onViewChange}
+      onViewChange={onViewChange as (view: StorageView | string) => void}
       userName={userName}
       userRole={userRole}
       showProfile={true}
