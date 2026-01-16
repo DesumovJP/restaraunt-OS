@@ -396,9 +396,9 @@ export default function StoragePage() {
               />
             )}
 
-            {/* Toolbar: Search (compact) */}
-            <div className="flex items-center gap-3">
-              <div className="relative w-full max-w-xs">
+            {/* Toolbar: Search + Category filter in one row */}
+            <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+              <div className="relative flex-1 sm:max-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="search"
@@ -409,16 +409,14 @@ export default function StoragePage() {
                   aria-label="Пошук товарів"
                 />
               </div>
+              <CategoryFilterMinimal
+                selectedMainCategory={selectedMainCategory}
+                selectedSubCategory={selectedSubCategory}
+                onMainCategoryChange={setSelectedMainCategory}
+                onSubCategoryChange={setSelectedSubCategory}
+                categoryCounts={categoryCounts}
+              />
             </div>
-
-            {/* Category filter - dropdown with subcategory support */}
-            <CategoryFilterMinimal
-              selectedMainCategory={selectedMainCategory}
-              selectedSubCategory={selectedSubCategory}
-              onMainCategoryChange={setSelectedMainCategory}
-              onSubCategoryChange={setSelectedSubCategory}
-              categoryCounts={categoryCounts}
-            />
 
             {/* Results info */}
             <div className="flex items-center justify-between text-sm text-muted-foreground">

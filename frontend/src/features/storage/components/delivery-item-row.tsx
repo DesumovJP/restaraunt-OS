@@ -4,7 +4,8 @@ import * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Sparkles } from "lucide-react";
+import { Trash2, Sparkles, Plus, Minus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { DeliveryOrderItem } from "@/types/delivery";
 
 interface DeliveryItemRowProps {
@@ -28,6 +29,12 @@ export function DeliveryItemRow({ item, onUpdate, onRemove }: DeliveryItemRowPro
     onUpdate({ ...item, quantity });
   };
 
+  const adjustQuantity = (delta: number) => {
+    const step = item.unit === "pcs" ? 1 : 0.5;
+    const newQuantity = Math.max(0, (item.quantity || 0) + delta * step);
+    onUpdate({ ...item, quantity: newQuantity });
+  };
+
   return (
     <div className="flex items-center gap-2 sm:gap-3 p-3 sm:p-4 hover:bg-slate-50/50 transition-colors border-b last:border-b-0">
       {/* Product Name */}
@@ -47,14 +54,23 @@ export function DeliveryItemRow({ item, onUpdate, onRemove }: DeliveryItemRowPro
       </div>
 
       {/* Unit */}
-      <div className="w-16 text-center shrink-0">
+      <div className="w-12 text-center shrink-0">
         <span className="text-sm text-muted-foreground">
           {UNIT_LABELS[item.unit] || item.unit}
         </span>
       </div>
 
-      {/* Quantity */}
-      <div className="w-28 shrink-0">
+      {/* Quantity with +/- buttons */}
+      <div className="flex items-center gap-1 shrink-0">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => adjustQuantity(-1)}
+          className="h-8 w-8 rounded-lg"
+          disabled={!item.quantity || item.quantity <= 0}
+        >
+          <Minus className="h-3.5 w-3.5" />
+        </Button>
         <Input
           type="number"
           min="0"
@@ -62,8 +78,16 @@ export function DeliveryItemRow({ item, onUpdate, onRemove }: DeliveryItemRowPro
           value={item.quantity || ""}
           onChange={(e) => handleQuantityChange(e.target.value)}
           placeholder="0"
-          className="h-9 text-center text-sm"
+          className="h-8 w-20 text-center text-sm"
         />
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => adjustQuantity(1)}
+          className="h-8 w-8 rounded-lg"
+        >
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
       </div>
 
       {/* Remove Button */}
@@ -71,7 +95,7 @@ export function DeliveryItemRow({ item, onUpdate, onRemove }: DeliveryItemRowPro
         variant="ghost"
         size="icon"
         onClick={() => onRemove(item.id)}
-        className="h-9 w-9 text-muted-foreground hover:text-red-600 hover:bg-red-50 shrink-0"
+        className="h-8 w-8 text-muted-foreground hover:text-red-600 hover:bg-red-50 shrink-0"
       >
         <Trash2 className="h-4 w-4" />
       </Button>
@@ -86,6 +110,12 @@ export function DeliveryItemRowMobile({ item, onUpdate, onRemove }: DeliveryItem
   const handleQuantityChange = (value: string) => {
     const quantity = parseFloat(value) || 0;
     onUpdate({ ...item, quantity });
+  };
+
+  const adjustQuantity = (delta: number) => {
+    const step = item.unit === "pcs" ? 1 : 0.5;
+    const newQuantity = Math.max(0, (item.quantity || 0) + delta * step);
+    onUpdate({ ...item, quantity: newQuantity });
   };
 
   return (
@@ -116,10 +146,19 @@ export function DeliveryItemRowMobile({ item, onUpdate, onRemove }: DeliveryItem
         </Button>
       </div>
 
-      {/* Quantity Input */}
+      {/* Quantity Input with +/- */}
       <div>
-        <label className="text-xs text-muted-foreground mb-1 block">Кількість</label>
+        <label className="text-xs text-muted-foreground mb-2 block">Кількість</label>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => adjustQuantity(-1)}
+            className="h-11 w-11 rounded-xl"
+            disabled={!item.quantity || item.quantity <= 0}
+          >
+            <Minus className="h-4 w-4" />
+          </Button>
           <Input
             type="number"
             min="0"
@@ -127,9 +166,17 @@ export function DeliveryItemRowMobile({ item, onUpdate, onRemove }: DeliveryItem
             value={item.quantity || ""}
             onChange={(e) => handleQuantityChange(e.target.value)}
             placeholder="0"
-            className="h-10 text-center flex-1"
+            className="h-11 text-center flex-1 text-lg font-medium"
           />
-          <span className="text-sm text-muted-foreground w-10">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => adjustQuantity(1)}
+            className="h-11 w-11 rounded-xl"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          <span className="text-sm text-muted-foreground w-10 text-center">
             {UNIT_LABELS[item.unit] || item.unit}
           </span>
         </div>

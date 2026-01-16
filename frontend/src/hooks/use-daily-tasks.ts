@@ -7,6 +7,8 @@ import {
   GET_MY_TASKS_TODAY,
   GET_TEAM_TASKS,
   GET_TASK_BY_ID,
+  CREATE_DAILY_TASK,
+  UPDATE_DAILY_TASK,
   DELETE_DAILY_TASK,
 } from '@/graphql/daily-tasks';
 import {
@@ -169,118 +171,94 @@ export function useTask(documentId: string | null) {
 
 /**
  * Create a new task
- * Uses REST API for reliable task creation with proper relation handling
+ * Uses GraphQL mutation for reliable task creation
  *
  * @returns { createTask, loading, error }
  */
 export function useCreateTask() {
+  const user = useAuthStore((state) => state.user);
   const { addTask } = useDailyTasksStore();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [result, executeMutation] = useMutation(CREATE_DAILY_TASK);
 
   const createTask = useCallback(
     async (input: CreateTaskInput): Promise<DailyTask | null> => {
-      setLoading(true);
-      setError(null);
+      // Prepare data for GraphQL mutation
+      const data = {
+        title: input.title,
+        description: input.description || null,
+        priority: input.priority || 'normal',
+        category: input.category || 'other',
+        status: 'pending',
+        dueDate: input.dueDate || null,
+        dueTime: input.dueTime || null,
+        isRecurring: input.isRecurring || false,
+        recurringPattern: input.recurringPattern || null,
+        assignee: input.assignee,
+        createdByUser: user?.documentId,
+        station: input.station || null,
+        estimatedMinutes: input.estimatedMinutes || null,
+      };
 
-      try {
-        const response = await fetchWithRetry(
-          () => authFetch(`${STRAPI_URL}/api/daily-tasks`, {
-            method: 'POST',
-            body: JSON.stringify({ data: input }),
-          }),
-          { maxRetries: 3 }
-        );
+      const response = await executeMutation({ data });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error?.message || 'Помилка при створенні завдання');
-        }
-
-        const result = await response.json();
-        const task = result.data;
-
-        if (task) {
-          addTask(task);
-        }
-
-        return task;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Помилка при створенні завдання';
-        console.error('Failed to create task:', err);
-        setError(message);
+      if (response.error) {
+        console.error('Failed to create task:', response.error);
         return null;
-      } finally {
-        setLoading(false);
       }
+
+      const task = response.data?.createDailyTask;
+      if (task) {
+        addTask(task);
+      }
+
+      return task;
     },
-    [addTask]
+    [executeMutation, addTask, user?.documentId]
   );
 
   return {
     createTask,
-    loading,
-    error,
+    loading: result.fetching,
+    error: result.error?.message || null,
   };
 }
 
 /**
  * Update an existing task
- * Uses REST API for reliable task updates
+ * Uses GraphQL mutation for reliable task updates
  *
  * @returns { updateTask, loading, error }
  */
 export function useUpdateTask() {
   const { updateTask: updateInStore } = useDailyTasksStore();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [result, executeMutation] = useMutation(UPDATE_DAILY_TASK);
 
   const updateTask = useCallback(
     async (documentId: string, input: UpdateTaskInput): Promise<DailyTask | null> => {
-      setLoading(true);
-      setError(null);
-
       // Optimistic update
       updateInStore(documentId, input);
 
-      try {
-        const response = await fetchWithRetry(
-          () => authFetch(`${STRAPI_URL}/api/daily-tasks/${documentId}`, {
-            method: 'PUT',
-            body: JSON.stringify({ data: input }),
-          }),
-          { maxRetries: 3 }
-        );
+      const response = await executeMutation({ documentId, data: input });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error?.message || 'Помилка при оновленні завдання');
-        }
-
-        const result = await response.json();
-        const task = result.data;
-
-        if (task) {
-          updateInStore(documentId, task);
-        }
-
-        return task;
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Помилка при оновленні завдання';
-        console.error('Failed to update task:', err);
-        setError(message);
+      if (response.error) {
+        console.error('Failed to update task:', response.error);
         return null;
-      } finally {
-        setLoading(false);
       }
+
+      const task = response.data?.updateDailyTask;
+      if (task) {
+        updateInStore(documentId, task);
+      }
+
+      return task;
     },
-    [updateInStore]
+    [executeMutation, updateInStore]
   );
 
   return {
     updateTask,
-    loading,
-    error,
+    loading: result.fetching,
+    error: result.error?.message || null,
   };
 }
 

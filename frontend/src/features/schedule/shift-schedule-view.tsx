@@ -207,10 +207,6 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
     setCurrentDate(newDate);
   };
 
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
-
   const formatTime = (time: string) => time?.slice(0, 5) || "";
 
   const isToday = (date: Date) => {
@@ -220,96 +216,86 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
 
   return (
     <div className={cn("flex flex-col h-full bg-slate-50", className)}>
-      {/* Toolbar */}
+      {/* Toolbar - compact single row */}
       <div className={cn(
-        "flex flex-col gap-3 px-4 py-3 border-b bg-white shadow-sm",
-        compact && "py-2 gap-2"
+        "flex items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b bg-white shadow-sm",
+        compact && "py-1.5"
       )}>
-        {/* Row 1: Navigation + Actions */}
-        <div className="flex items-center justify-between gap-2">
-          {/* Week Navigation */}
-          <div className="flex items-center gap-1 rounded-xl border bg-slate-50 p-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-lg"
-              onClick={navigatePrev}
+        {/* Left: Shift Types Legend */}
+        <div className="hidden md:flex items-center gap-1.5">
+          <span className="text-xs text-slate-500 mr-1">Типи змін:</span>
+          {SHIFT_TYPES.map((type) => (
+            <div
+              key={type.value}
+              className={cn(
+                "text-[10px] px-2 py-0.5 rounded-lg font-medium",
+                SHIFT_TYPE_COLORS[type.value]
+              )}
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-
-            <button
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium hover:bg-white rounded-lg transition-colors"
-              onClick={goToToday}
-              title="Перейти до поточного тижня"
-            >
-              <Calendar className="h-4 w-4 text-blue-500" />
-              <span className="hidden sm:inline font-semibold">
-                {weekDates[0].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
-                {" — "}
-                {weekDates[6].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
-              </span>
-              <span className="sm:hidden font-semibold">
-                {weekDates[0].getDate()}-{weekDates[6].getDate()}.{weekDates[0].getMonth() + 1}
-              </span>
-            </button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-lg"
-              onClick={navigateNext}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Department filter */}
-            <Select value={department} onValueChange={setDepartment}>
-              <SelectTrigger className="w-[140px] h-9 text-sm rounded-xl">
-                <Users className="h-4 w-4 text-slate-400 mr-1" />
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DEPARTMENTS.map((dept) => (
-                  <SelectItem key={dept.value} value={dept.value}>
-                    {dept.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Refresh */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-9 w-9 rounded-xl"
-              onClick={() => refetchSchedule({ requestPolicy: "network-only" })}
-              disabled={scheduleFetching}
-              title="Оновити"
-            >
-              <RefreshCw className={cn("h-4 w-4", scheduleFetching && "animate-spin")} />
-            </Button>
-          </div>
+              {type.label}
+            </div>
+          ))}
         </div>
 
-        {/* Row 2: Shift Types Legend - compact pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
-          <span className="text-xs text-slate-400 shrink-0">Типи змін:</span>
-          <div className="flex gap-1.5">
-            {SHIFT_TYPES.map((type) => (
-              <span
-                key={type.value}
-                className={cn(
-                  "text-xs px-2 py-1 rounded-lg font-medium whitespace-nowrap",
-                  SHIFT_TYPE_COLORS[type.value]
-                )}
-              >
-                {type.label}
-              </span>
-            ))}
+        {/* Center: Week Navigation */}
+        <div className="flex items-center gap-0.5 rounded-xl border bg-slate-50 p-0.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-lg"
+            onClick={navigatePrev}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+
+          <div className="flex items-center gap-1.5 px-2 py-1">
+            <Calendar className="h-3.5 w-3.5 text-blue-500 hidden sm:block" />
+            <span className="hidden sm:inline font-semibold text-xs">
+              {weekDates[0].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
+              {" — "}
+              {weekDates[6].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
+            </span>
+            <span className="sm:hidden font-semibold text-xs">
+              {weekDates[0].getDate()}-{weekDates[6].getDate()}.{weekDates[0].getMonth() + 1}
+            </span>
           </div>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-lg"
+            onClick={navigateNext}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Right: Department Filter + Refresh */}
+        <div className="flex items-center gap-1.5">
+          <Select value={department} onValueChange={setDepartment}>
+            <SelectTrigger className="w-[120px] sm:w-[140px] h-8 text-xs sm:text-sm rounded-xl">
+              <Users className="h-3.5 w-3.5 text-slate-400 mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DEPARTMENTS.map((dept) => (
+                <SelectItem key={dept.value} value={dept.value}>
+                  {dept.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-xl"
+            onClick={() => refetchSchedule({ requestPolicy: "network-only" })}
+            disabled={scheduleFetching}
+            title="Оновити"
+          >
+            <RefreshCw className={cn("h-4 w-4", scheduleFetching && "animate-spin")} />
+          </Button>
         </div>
       </div>
 

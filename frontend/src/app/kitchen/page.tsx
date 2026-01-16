@@ -18,7 +18,6 @@ import {
   ChefHat,
   Menu,
   Calendar,
-  ListTodo,
   ChevronDown,
 } from "lucide-react";
 import {
@@ -32,7 +31,6 @@ import { StationQueue, StationOverview, AllKitchenView } from "@/features/kitche
 import { ChefLeftSidebar, type ChefView } from "@/features/kitchen/chef-left-sidebar";
 import { ChefRecipesView } from "@/features/kitchen/chef-recipes-view";
 import { PlannedOrdersView } from "@/features/orders/planned-orders-view";
-import { DailiesView } from "@/features/dailies";
 import { WorkersChat } from "@/features/admin/workers-chat";
 import { WorkerProfileCard } from "@/features/profile";
 import { ShiftScheduleView } from "@/features/schedule";
@@ -398,7 +396,6 @@ export default function KitchenDisplayPage() {
     { id: 'stations' as ChefView, icon: Flame, label: 'Станції' },
     { id: 'calendar' as ChefView, icon: Calendar, label: 'Заплановані' },
     { id: 'recipes' as ChefView, icon: ChefHat, label: 'Рецепти' },
-    { id: 'dailies' as ChefView, icon: ListTodo, label: 'Завдання' },
   ];
 
   return (
@@ -459,8 +456,6 @@ export default function KitchenDisplayPage() {
           <ChefRecipesView onOpenSidebar={() => setIsSidebarOpen(true)} />
         ) : activeView === "calendar" ? (
           <PlannedOrdersView variant="kitchen" onOpenSidebar={() => setIsSidebarOpen(true)} />
-        ) : activeView === "dailies" ? (
-          <DailiesView compact className="h-full" variant="kitchen" onOpenSidebar={() => setIsSidebarOpen(true)} />
         ) : activeView === "chat" ? (
           <div className="flex-1 overflow-hidden p-3 sm:p-4">
             <WorkersChat />

@@ -189,8 +189,8 @@ function BatchCard({
       )}
     >
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div
             className={cn(
               "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
@@ -199,29 +199,29 @@ function BatchCard({
           >
             <Package className={cn("h-5 w-5", isActive ? "text-emerald-600" : "text-slate-500")} />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="font-medium text-slate-900 truncate">
               {batch.productName || `Партія ${batch.batchNumber}`}
             </p>
             <div className="flex items-center gap-2 text-xs text-slate-500">
-              <span>#{batch.batchNumber}</span>
+              <span className="truncate">#{batch.batchNumber}</span>
               {batch.invoiceNumber && (
                 <>
                   <span className="text-slate-300">•</span>
-                  <span>{batch.invoiceNumber}</span>
+                  <span className="truncate">{batch.invoiceNumber}</span>
                 </>
               )}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
           {batch.isLocked && (
-            <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50">
+            <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50 text-[10px] px-4.5 py-0.5">
               <Lock className="h-3 w-3" />
-              {batch.lockedBy}
+              <span className="truncate max-w-[60px]">{batch.lockedBy}</span>
             </Badge>
           )}
-          <Badge variant="outline" className={cn("text-xs", statusConfig.bgColor, statusConfig.color)}>
+          <Badge variant="outline" className={cn("text-[10px] px-4.5 py-0.5 whitespace-nowrap", statusConfig.bgColor, statusConfig.color)}>
             {statusConfig.label}
           </Badge>
         </div>
@@ -293,13 +293,18 @@ function BatchCard({
             Обробки ({batch.processes.length})
           </p>
           <div className="flex flex-wrap gap-1">
-            {batch.processes.slice(0, 3).map((process, idx) => (
-              <Badge key={idx} variant="secondary" className="text-[10px]">
-                {PROCESS_TYPES.find((p) => p.value === process.processType)?.label ||
-                  process.processType}
-                : {(process.actualYield * 100).toFixed(0)}%
-              </Badge>
-            ))}
+            {batch.processes.slice(0, 3).map((process, idx) => {
+              const yieldPercent = typeof process.actualYield === 'number' && !isNaN(process.actualYield)
+                ? (process.actualYield * 100).toFixed(0)
+                : '—';
+              return (
+                <Badge key={idx} variant="secondary" className="text-[10px]">
+                  {PROCESS_TYPES.find((p) => p.value === process.processType)?.label ||
+                    process.processType}
+                  : {yieldPercent}%
+                </Badge>
+              );
+            })}
             {batch.processes.length > 3 && (
               <Badge variant="secondary" className="text-[10px]">
                 +{batch.processes.length - 3}
@@ -418,7 +423,7 @@ function ProcessDialog({ batch, open, onClose, onConfirm }: ProcessDialogProps) 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 px-4">
           <div className="space-y-2">
             <Label>Тип обробки</Label>
             <Select value={processType} onValueChange={(v) => setProcessType(v as ProcessType)}>
@@ -462,7 +467,7 @@ function ProcessDialog({ batch, open, onClose, onConfirm }: ProcessDialogProps) 
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-4">
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Скасувати
           </Button>
@@ -525,7 +530,7 @@ function WriteOffDialog({ batch, open, onClose, onConfirm }: WriteOffDialogProps
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 px-4">
           <div className="rounded-lg bg-amber-50 border border-amber-200 p-3">
             <div className="flex items-start gap-2">
               <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -578,7 +583,7 @@ function WriteOffDialog({ batch, open, onClose, onConfirm }: WriteOffDialogProps
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-4">
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Скасувати
           </Button>
@@ -646,7 +651,7 @@ function CountDialog({ batch, open, onClose, onConfirm }: CountDialogProps) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 px-4">
           <div className="space-y-2">
             <Label>Фактична кількість (кг)</Label>
             <Input
@@ -689,7 +694,7 @@ function CountDialog({ batch, open, onClose, onConfirm }: CountDialogProps) {
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="px-4">
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Скасувати
           </Button>
@@ -913,7 +918,7 @@ export function BatchView({
           title={searchQuery || statusFilter !== "all" ? "Нічого не знайдено" : "Немає партій"}
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
           {filteredBatches.map((batch) => (
             <BatchCard
               key={batch.documentId}

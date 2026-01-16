@@ -48,6 +48,7 @@ export function AddProductDialog({
   existingIds,
 }: AddProductDialogProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [categoryFilter, setCategoryFilter] = React.useState<StorageMainCategory | "all">("all");
   const [selectedIngredient, setSelectedIngredient] = React.useState<DeliveryIngredient | null>(null);
   const [quantity, setQuantity] = React.useState("");
 
@@ -59,11 +60,27 @@ export function AddProductDialog({
   const { data, fetching } = result;
   const ingredients: DeliveryIngredient[] = data?.ingredients || [];
 
-  // Filter ingredients based on search and exclude already added
+  // Get available categories from ingredients
+  const availableCategories = React.useMemo(() => {
+    const categories = new Set<StorageMainCategory>();
+    ingredients.forEach((ing) => {
+      if (ing.mainCategory) {
+        categories.add(ing.mainCategory as StorageMainCategory);
+      }
+    });
+    return Array.from(categories).sort();
+  }, [ingredients]);
+
+  // Filter ingredients based on search, category and exclude already added
   const filteredIngredients = React.useMemo(() => {
     return ingredients.filter((ing) => {
       // Exclude already added
       if (existingIds.includes(ing.documentId)) return false;
+
+      // Category filter
+      if (categoryFilter !== "all" && ing.mainCategory !== categoryFilter) {
+        return false;
+      }
 
       // Search filter
       if (searchQuery) {
@@ -76,12 +93,13 @@ export function AddProductDialog({
       }
       return true;
     });
-  }, [ingredients, searchQuery, existingIds]);
+  }, [ingredients, searchQuery, categoryFilter, existingIds]);
 
   // Reset form on close
   React.useEffect(() => {
     if (!open) {
       setSearchQuery("");
+      setCategoryFilter("all");
       setSelectedIngredient(null);
       setQuantity("");
     }
@@ -128,18 +146,49 @@ export function AddProductDialog({
         </DialogHeader>
 
         <div className="flex flex-col overflow-hidden">
-          {/* Search */}
-          <div className="p-4 border-b">
+          {/* Search & Category Filter */}
+          <div className="p-4 border-b space-y-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Пошук за назвою або SKU..."
-                className="pl-10 h-11"
+                className="pl-10 h-10"
                 autoFocus
               />
             </div>
+
+            {/* Category Filter Tabs */}
+            {availableCategories.length > 0 && (
+              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+                <button
+                  onClick={() => setCategoryFilter("all")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
+                    categoryFilter === "all"
+                      ? "bg-blue-600 text-white"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  )}
+                >
+                  Всі
+                </button>
+                {availableCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => setCategoryFilter(cat)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap",
+                      categoryFilter === cat
+                        ? "bg-blue-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    )}
+                  >
+                    {STORAGE_MAIN_CATEGORY_LABELS[cat]?.uk || cat}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Ingredient List */}

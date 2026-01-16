@@ -14,6 +14,8 @@ import { OrderConfirmDialog } from "@/features/orders/order-confirm-dialog";
 import { useCartStore } from "@/stores/cart-store";
 import { useTableStore, type TableStore } from "@/stores/table-store";
 import { useScheduledOrderModeStore, type ScheduledOrderModeStore } from "@/stores/scheduled-order-mode-store";
+import { TransferGuestsDialog } from "@/features/tables/transfer-guests-dialog";
+import { toast } from "sonner";
 import { ordersApi } from "@/lib/api";
 import { useMenu } from "@/hooks/use-menu";
 import { DailiesView } from "@/features/dailies";
@@ -68,6 +70,24 @@ function WaiterPOSContent() {
   } = useCartStore();
 
   const selectedTable = useTableStore((s: TableStore) => s.selectedTable);
+  const tables = useTableStore((s: TableStore) => s.tables);
+  const selectTable = useTableStore((s: TableStore) => s.selectTable);
+  const updateTableStatus = useTableStore((s: TableStore) => s.updateTableStatus);
+
+  // Get all tables being served by this waiter (occupied tables)
+  const activeTables = React.useMemo(() => {
+    return tables
+      .filter((t) => t.status === 'occupied')
+      .map((t) => ({
+        id: t.id,
+        number: t.number,
+        occupiedAt: t.occupiedAt,
+        guestCount: t.guestCount,
+      }));
+  }, [tables]);
+
+  // Transfer dialog state
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = React.useState(false);
 
   // Scheduled mode
   const isScheduledMode = useScheduledOrderModeStore((s: ScheduledOrderModeStore) => s.isScheduledMode);
@@ -177,6 +197,42 @@ function WaiterPOSContent() {
     return counts;
   }, [categories, menuItems]);
 
+  // Handle table switch
+  const handleTableSwitch = (tableId: string) => {
+    const table = tables.find((t) => t.id === tableId);
+    if (table) {
+      selectTable(table);
+    }
+  };
+
+  // Handle request check
+  const handleRequestCheck = () => {
+    toast.success(`Запит рахунку для столу ${selectedTable?.number} надіслано`);
+    // TODO: Implement actual check request logic
+  };
+
+  // Handle transfer table
+  const handleTransferTable = () => {
+    setIsTransferDialogOpen(true);
+  };
+
+  // Handle add note
+  const handleAddNote = () => {
+    toast.info("Функція нотаток в розробці");
+    // TODO: Implement table notes dialog
+  };
+
+  // Handle close table
+  const handleCloseTable = () => {
+    if (selectedTable && getTotalItems() === 0) {
+      updateTableStatus(selectedTable.id, 'free');
+      router.push('/pos/waiter/tables');
+      toast.success(`Стіл ${selectedTable.number} закрито`);
+    } else if (getTotalItems() > 0) {
+      toast.error("Спочатку завершіть замовлення");
+    }
+  };
+
   // Handle order confirmation
   const handleConfirmOrder = async () => {
     const orderItems = cartItems.map((item) => ({
@@ -233,6 +289,12 @@ function WaiterPOSContent() {
           onMenuClick={() => setIsSidebarOpen(true)}
           tableNumber={displayTableNumber || undefined}
           tableOccupiedAt={displayTableOccupiedAt}
+          activeTables={activeTables}
+          onTableSwitch={handleTableSwitch}
+          onRequestCheck={handleRequestCheck}
+          onTransferTable={handleTransferTable}
+          onAddNote={handleAddNote}
+          onCloseTable={handleCloseTable}
         />
 
         {/* Content with Menu and Invoice Sidebar */}
@@ -337,6 +399,25 @@ function WaiterPOSContent() {
         open={isConfirmOpen}
         onOpenChange={setIsConfirmOpen}
         onSuccess={handleConfirmOrder}
+      />
+
+      {/* Transfer Guests Dialog */}
+      <TransferGuestsDialog
+        sourceTable={selectedTable}
+        availableTables={tables}
+        isOpen={isTransferDialogOpen}
+        onClose={() => setIsTransferDialogOpen(false)}
+        onConfirm={async (targetTableId) => {
+          const targetTable = tables.find((t) => t.id === targetTableId || t.documentId === targetTableId);
+          if (targetTable && selectedTable) {
+            // Update statuses
+            updateTableStatus(selectedTable.id, 'free');
+            updateTableStatus(targetTable.id, 'occupied');
+            // Select new table
+            selectTable({ ...targetTable, status: 'occupied', occupiedAt: new Date() });
+            toast.success(`Гостей перенесено на стіл ${targetTable.number}`);
+          }
+        }}
       />
     </div>
   );

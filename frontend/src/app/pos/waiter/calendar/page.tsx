@@ -201,13 +201,6 @@ export default function WaiterCalendarPage() {
     setSelectedDate(newDate);
   };
 
-  // Quick jump to today
-  const goToToday = () => {
-    setSelectedDate(new Date());
-  };
-
-  const isToday = isSameDay(selectedDate, new Date());
-
   return (
     <div className="flex h-screen bg-slate-100">
       <LeftSidebar
@@ -290,16 +283,6 @@ export default function WaiterCalendarPage() {
             >
               <ChevronRight className="w-5 h-5 text-slate-600" />
             </button>
-
-            {/* Today button - show only if not today */}
-            {!isToday && (
-              <button
-                onClick={goToToday}
-                className="ml-2 px-4 py-2.5 rounded-xl text-sm font-medium text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors"
-              >
-                Сьогодні
-              </button>
-            )}
           </div>
         </div>
 

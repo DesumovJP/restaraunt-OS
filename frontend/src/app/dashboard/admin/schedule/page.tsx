@@ -150,10 +150,6 @@ export default function ScheduleManagementPage() {
     setCurrentDate(newDate);
   };
 
-  const goToToday = () => {
-    setCurrentDate(new Date());
-  };
-
   // Reset form
   const resetForm = () => {
     setFormWorker("");
@@ -438,59 +434,67 @@ export default function ScheduleManagementPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
-              <SelectTrigger className="w-[100px] sm:w-[140px] h-9 text-xs sm:text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DEPARTMENTS.map((dept) => (
-                  <SelectItem key={dept.value} value={dept.value}>
-                    {dept.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-9 w-9"
-              onClick={() => refetch()}
-              disabled={fetching}
-            >
-              <RefreshCw className={`h-4 w-4 ${fetching ? "animate-spin" : ""}`} />
-            </Button>
-          </div>
         </div>
       </header>
 
+      {/* Schedule Toolbar */}
+      <div className="flex items-center justify-between gap-2 px-3 sm:px-4 py-2 border-b bg-background">
+        {/* Left: Shift Types Legend */}
+        <div className="hidden md:flex items-center gap-1.5">
+          <span className="text-xs text-muted-foreground mr-1">Типи змін:</span>
+          {SHIFT_TYPES.map((type) => (
+            <Badge key={type.value} variant="secondary" className={`text-[10px] px-2 py-0.5 ${SHIFT_TYPE_COLORS[type.value]}`}>
+              {type.label}
+            </Badge>
+          ))}
+        </div>
+
+        {/* Center: Week Navigation */}
+        <div className="flex items-center gap-0.5 rounded-xl border bg-muted/50 p-0.5">
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={navigatePrev}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex items-center gap-1.5 px-2 py-1">
+            <Calendar className="h-3.5 w-3.5 text-primary hidden sm:block" />
+            <span className="font-semibold text-xs whitespace-nowrap">
+              {weekDates[0].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
+              {" — "}
+              {weekDates[6].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
+            </span>
+          </div>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={navigateNext}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Right: Department Filter */}
+        <div className="flex items-center gap-1.5">
+          <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+            <SelectTrigger className="w-[120px] sm:w-[140px] h-8 text-xs sm:text-sm rounded-xl">
+              <Users className="h-3.5 w-3.5 text-muted-foreground mr-1" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {DEPARTMENTS.map((dept) => (
+                <SelectItem key={dept.value} value={dept.value}>
+                  {dept.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 rounded-xl"
+            onClick={() => refetch()}
+            disabled={fetching}
+          >
+            <RefreshCw className={`h-4 w-4 ${fetching ? "animate-spin" : ""}`} />
+          </Button>
+        </div>
+      </div>
+
       <main className="flex-1 p-3 sm:p-4">
-        {/* Week Navigation */}
-        <Card className="mb-3 sm:mb-4">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center justify-between gap-2">
-              <Button variant="outline" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 shrink-0" onClick={navigatePrev}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground hidden sm:block" />
-                  <span className="font-medium text-sm sm:text-base whitespace-nowrap">
-                    {weekDates[0].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
-                    {" - "}
-                    {weekDates[6].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
-                  </span>
-                </div>
-                <Button variant="ghost" size="sm" className="h-7 text-xs px-2" onClick={goToToday}>
-                  Сьогодні
-                </Button>
-              </div>
-              <Button variant="outline" size="icon" className="h-9 w-9 sm:h-10 sm:w-10 shrink-0" onClick={navigateNext}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Mobile: Card-based Schedule View */}
         <div className="md:hidden space-y-3">
@@ -664,27 +668,6 @@ export default function ScheduleManagementPage() {
           </CardContent>
         </Card>
 
-        {/* Legend */}
-        <Card className="mt-4">
-          <CardContent className="p-4">
-            <p className="text-sm font-medium mb-2">Легенда:</p>
-            <div className="flex flex-wrap gap-3">
-              {SHIFT_TYPES.map((type) => (
-                <Badge key={type.value} className={SHIFT_TYPE_COLORS[type.value]}>
-                  {type.label}
-                </Badge>
-              ))}
-            </div>
-            <div className="flex flex-wrap gap-3 mt-2">
-              {Object.entries(SHIFT_STATUS_LABELS).map(([status, label]) => (
-                <div key={status} className="flex items-center gap-1.5 text-xs">
-                  <div className={`w-3 h-3 rounded border-l-2 ${SHIFT_STATUS_COLORS[status as ShiftStatus]}`} />
-                  <span className="text-muted-foreground">{label}</span>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </main>
 
       {/* Add Shift Dialog */}

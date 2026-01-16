@@ -14,6 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Download,
@@ -30,6 +31,14 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
+  Clock,
+  ThermometerSnowflake,
+  AlertTriangle,
+  Bug,
+  CircleDollarSign,
+  BarChart3,
+  PieChart as PieChartIcon,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StorageLeftSidebar, type StorageView } from "@/features/storage/storage-left-sidebar";
@@ -39,6 +48,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  Legend,
+} from "recharts";
 
 interface InventoryMovement {
   documentId: string;
@@ -76,6 +97,42 @@ const MOVEMENT_TYPES = [
   { value: "write_off", label: "Списання", icon: Trash2, color: "text-red-600", bgColor: "bg-red-100" },
   { value: "recipe_use", label: "Використання", icon: Package, color: "text-blue-600", bgColor: "bg-blue-100" },
 ];
+
+// Waste Analytics Constants
+const WRITE_OFF_REASONS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; description: string }> = {
+  expired: { label: "Прострочено", icon: Clock, color: "#ef4444", description: "Товар вийшов з терміну придатності" },
+  spoiled: { label: "Зіпсовано", icon: ThermometerSnowflake, color: "#f97316", description: "Порушення умов зберігання" },
+  damaged: { label: "Пошкоджено", icon: AlertTriangle, color: "#eab308", description: "Механічні пошкодження упаковки" },
+  theft: { label: "Крадіжка", icon: Bug, color: "#8b5cf6", description: "Нестача при інвентаризації" },
+  cooking_loss: { label: "Втрати готування", icon: Package, color: "#3b82f6", description: "Природні втрати при приготуванні" },
+  quality_fail: { label: "Брак якості", icon: Trash2, color: "#ec4899", description: "Не відповідає стандартам якості" },
+  inventory_adjust: { label: "Інвентаризація", icon: BarChart3, color: "#6b7280", description: "Коригування після перерахунку" },
+  other: { label: "Інше", icon: Trash2, color: "#9ca3af", description: "Інші причини списання" },
+};
+
+const CATEGORY_COLORS: Record<string, string> = {
+  raw: "#ef4444",
+  prep: "#f97316",
+  "dry-goods": "#eab308",
+  seasonings: "#84cc16",
+  "oils-fats": "#22c55e",
+  dairy: "#14b8a6",
+  beverages: "#06b6d4",
+  frozen: "#3b82f6",
+  "ready-made": "#8b5cf6",
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  raw: "Сировина",
+  prep: "Заготовки",
+  "dry-goods": "Бакалія",
+  seasonings: "Приправи",
+  "oils-fats": "Олії та жири",
+  dairy: "Молочні",
+  beverages: "Напої",
+  frozen: "Заморожені",
+  "ready-made": "Готові",
+};
 
 function getDateRange(preset: DatePreset): { from: Date; to: Date } {
   const now = new Date();
@@ -115,8 +172,18 @@ function formatDate(dateString: string): string {
   });
 }
 
+function formatPercent(value: number): string {
+  return value.toLocaleString("uk-UA", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }) + "%";
+}
+
+type ReportTab = "movements" | "waste";
+
 export default function StorageReportsPage() {
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<ReportTab>("movements");
   const [datePreset, setDatePreset] = React.useState<DatePreset>("week");
   const [customFromDate, setCustomFromDate] = React.useState("");
   const [customToDate, setCustomToDate] = React.useState("");
@@ -188,6 +255,117 @@ export default function StorageReportsPage() {
     return stats;
   }, [filteredMovements]);
 
+  // Waste Analytics calculations
+  const writeOffs = React.useMemo(() => {
+    return allMovements.filter((m) => {
+      const date = new Date(m.createdAt);
+      const inDateRange = date >= dateRange.from && date <= dateRange.to;
+      return inDateRange && m.movementType === "write_off";
+    });
+  }, [allMovements, dateRange]);
+
+  const wasteAnalytics = React.useMemo(() => {
+    const totalWasteCost = writeOffs.reduce((sum, m) => sum + (m.totalCost || 0), 0);
+
+    // By reason
+    const byReason: Record<string, { count: number; cost: number }> = {};
+    for (const m of writeOffs) {
+      const reason = m.reasonCode || "other";
+      if (!byReason[reason]) {
+        byReason[reason] = { count: 0, cost: 0 };
+      }
+      byReason[reason].count++;
+      byReason[reason].cost += m.totalCost || 0;
+    }
+
+    // By category
+    const byCategory: Record<string, { count: number; cost: number }> = {};
+    for (const m of writeOffs) {
+      const category = m.ingredient?.mainCategory || "other";
+      if (!byCategory[category]) {
+        byCategory[category] = { count: 0, cost: 0 };
+      }
+      byCategory[category].count++;
+      byCategory[category].cost += m.totalCost || 0;
+    }
+
+    // By ingredient (top 10)
+    const byIngredient: Record<string, { name: string; count: number; cost: number; quantity: number; unit: string }> = {};
+    for (const m of writeOffs) {
+      const ingredientId = m.ingredient?.name || "unknown";
+      if (!byIngredient[ingredientId]) {
+        byIngredient[ingredientId] = {
+          name: m.ingredient?.name || "Невідомо",
+          count: 0,
+          cost: 0,
+          quantity: 0,
+          unit: m.unit || "kg",
+        };
+      }
+      byIngredient[ingredientId].count++;
+      byIngredient[ingredientId].cost += m.totalCost || 0;
+      byIngredient[ingredientId].quantity += m.quantity || 0;
+    }
+
+    // Daily trend
+    const dailyTrend: Record<string, { date: string; cost: number; count: number }> = {};
+    for (const m of writeOffs) {
+      const date = new Date(m.createdAt).toISOString().split("T")[0];
+      if (!dailyTrend[date]) {
+        dailyTrend[date] = { date, cost: 0, count: 0 };
+      }
+      dailyTrend[date].cost += m.totalCost || 0;
+      dailyTrend[date].count++;
+    }
+
+    // Format for charts
+    const reasonChartData = Object.entries(byReason)
+      .map(([reason, data]) => ({
+        name: WRITE_OFF_REASONS[reason]?.label || reason,
+        value: data.cost,
+        count: data.count,
+        color: WRITE_OFF_REASONS[reason]?.color || "#9ca3af",
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    const categoryChartData = Object.entries(byCategory)
+      .map(([category, data]) => ({
+        name: CATEGORY_LABELS[category] || category,
+        value: data.cost,
+        count: data.count,
+        color: CATEGORY_COLORS[category] || "#9ca3af",
+      }))
+      .sort((a, b) => b.value - a.value);
+
+    const topIngredients = Object.values(byIngredient)
+      .sort((a, b) => b.cost - a.cost)
+      .slice(0, 10);
+
+    const trendData = Object.values(dailyTrend)
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map((d) => ({
+        ...d,
+        dateLabel: new Date(d.date).toLocaleDateString("uk-UA", { day: "2-digit", month: "2-digit" }),
+      }));
+
+    // Calculate averages
+    const dayCount = Math.max(1, Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24)));
+    const avgDailyCost = totalWasteCost / dayCount;
+    const avgDailyCount = writeOffs.length / dayCount;
+
+    return {
+      totalWasteCost,
+      totalCount: writeOffs.length,
+      avgDailyCost,
+      avgDailyCount,
+      reasonChartData,
+      categoryChartData,
+      topIngredients,
+      trendData,
+      byReason,
+    };
+  }, [writeOffs, dateRange]);
+
   const handleExport = () => {
     const csvContent = [
       ["Дата", "Тип", "Продукт", "Кількість", "Одиниця", "Вартість", "Причина", "Постачальник"].join(","),
@@ -243,7 +421,7 @@ export default function StorageReportsPage() {
               <div>
                 <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2">
                   <FileText className="h-5 w-5 text-emerald-600" />
-                  Звіти витрат
+                  Журнал руху
                 </h1>
                 <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                   Аналіз руху товарів на складі
@@ -268,8 +446,22 @@ export default function StorageReportsPage() {
           </div>
         </header>
 
-        {/* Filters */}
-        <div className="p-3 sm:p-4 border-b bg-slate-50/50">
+        {/* Tabs & Filters */}
+        <div className="p-3 sm:p-4 border-b bg-slate-50/50 space-y-3">
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ReportTab)}>
+            <TabsList className="grid w-full max-w-[400px] grid-cols-2 h-10">
+              <TabsTrigger value="movements" className="gap-2 text-sm">
+                <Package className="h-4 w-4" />
+                Журнал
+              </TabsTrigger>
+              <TabsTrigger value="waste" className="gap-2 text-sm">
+                <Trash2 className="h-4 w-4" />
+                Аналітика втрат
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <div className="flex flex-wrap gap-3 items-end">
             {/* Date Preset */}
             <div className="space-y-1.5">
@@ -316,29 +508,31 @@ export default function StorageReportsPage() {
               </div>
             )}
 
-            {/* Movement Type Filter */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">Тип операції</label>
-              <Select value={movementTypeFilter} onValueChange={setMovementTypeFilter}>
-                <SelectTrigger className="w-[170px] h-10 rounded-xl">
-                  <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {MOVEMENT_TYPES.map((type) => {
-                    const Icon = type.icon;
-                    return (
-                      <SelectItem key={type.value} value={type.value}>
-                        <div className="flex items-center gap-2">
-                          <Icon className={cn("h-4 w-4", type.color)} />
-                          {type.label}
-                        </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Movement Type Filter - only for movements tab */}
+            {activeTab === "movements" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Тип операції</label>
+                <Select value={movementTypeFilter} onValueChange={setMovementTypeFilter}>
+                  <SelectTrigger className="w-[170px] h-10 rounded-xl">
+                    <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MOVEMENT_TYPES.map((type) => {
+                      const Icon = type.icon;
+                      return (
+                        <SelectItem key={type.value} value={type.value}>
+                          <div className="flex items-center gap-2">
+                            <Icon className={cn("h-4 w-4", type.color)} />
+                            {type.label}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             {/* Date range info */}
             <div className="flex-1" />
@@ -350,110 +544,389 @@ export default function StorageReportsPage() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
-          {/* Summary Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-            <TooltipProvider>
-              <SummaryCard
-                title="Поставки"
-                value={formatCurrency(summary.totalPurchases)}
-                count={summary.purchaseCount}
-                icon={ArrowDownToLine}
-                color="emerald"
-                tooltip="Загальна вартість отриманих товарів за період"
-              />
-              <SummaryCard
-                title="Списання"
-                value={formatCurrency(summary.totalWriteOffs)}
-                count={summary.writeOffCount}
-                icon={Trash2}
-                color="red"
-                tooltip="Вартість списаних товарів (втрати)"
-              />
-              <SummaryCard
-                title="Використання"
-                value={formatCurrency(summary.totalUsage)}
-                count={summary.usageCount}
-                icon={Package}
-                color="blue"
-                tooltip="Вартість товарів, використаних для приготування"
-              />
-              <SummaryCard
-                title="Баланс"
-                value={formatCurrency(summary.netChange)}
-                trend={summary.netChange >= 0 ? "up" : "down"}
-                icon={summary.netChange >= 0 ? TrendingUp : TrendingDown}
-                color={summary.netChange >= 0 ? "emerald" : "amber"}
-                tooltip="Поставки мінус (списання + використання)"
-              />
-            </TooltipProvider>
-          </div>
-
-          {/* Movements Table */}
-          <Card className="rounded-xl overflow-hidden">
-            <CardHeader className="bg-slate-50/80 py-3 px-4">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                  Журнал операцій
-                  <Badge variant="secondary" className="font-normal">
-                    {filteredMovements.length}
-                  </Badge>
-                </CardTitle>
-                {filteredMovements.length > 20 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowAllMovements(!showAllMovements)}
-                    className="gap-1 text-xs"
-                  >
-                    {showAllMovements ? (
-                      <>
-                        <ChevronUp className="h-3 w-3" />
-                        Згорнути
-                      </>
-                    ) : (
-                      <>
-                        <ChevronDown className="h-3 w-3" />
-                        Показати всі ({filteredMovements.length})
-                      </>
-                    )}
-                  </Button>
-                )}
+          {activeTab === "movements" && (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <TooltipProvider>
+                  <SummaryCard
+                    title="Поставки"
+                    value={formatCurrency(summary.totalPurchases)}
+                    count={summary.purchaseCount}
+                    icon={ArrowDownToLine}
+                    color="emerald"
+                    tooltip="Загальна вартість отриманих товарів за період"
+                  />
+                  <SummaryCard
+                    title="Списання"
+                    value={formatCurrency(summary.totalWriteOffs)}
+                    count={summary.writeOffCount}
+                    icon={Trash2}
+                    color="red"
+                    tooltip="Вартість списаних товарів (втрати)"
+                  />
+                  <SummaryCard
+                    title="Використання"
+                    value={formatCurrency(summary.totalUsage)}
+                    count={summary.usageCount}
+                    icon={Package}
+                    color="blue"
+                    tooltip="Вартість товарів, використаних для приготування"
+                  />
+                  <SummaryCard
+                    title="Баланс"
+                    value={formatCurrency(summary.netChange)}
+                    trend={summary.netChange >= 0 ? "up" : "down"}
+                    icon={summary.netChange >= 0 ? TrendingUp : TrendingDown}
+                    color={summary.netChange >= 0 ? "emerald" : "amber"}
+                    tooltip="Поставки мінус (списання + використання)"
+                  />
+                </TooltipProvider>
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              {fetching ? (
-                <div className="p-4 space-y-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
-                  ))}
-                </div>
-              ) : error ? (
-                <div className="p-8 text-center">
-                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
-                    <Trash2 className="h-6 w-6 text-red-600" />
+
+              {/* Movements Table */}
+              <Card className="rounded-xl overflow-hidden">
+                <CardHeader className="bg-slate-50/80 py-3 px-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      Журнал операцій
+                      <Badge variant="secondary" className="font-normal">
+                        {filteredMovements.length}
+                      </Badge>
+                    </CardTitle>
+                    {filteredMovements.length > 20 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowAllMovements(!showAllMovements)}
+                        className="gap-1 text-xs"
+                      >
+                        {showAllMovements ? (
+                          <>
+                            <ChevronUp className="h-3 w-3" />
+                            Згорнути
+                          </>
+                        ) : (
+                          <>
+                            <ChevronDown className="h-3 w-3" />
+                            Показати всі ({filteredMovements.length})
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
-                  <p className="text-red-600 font-medium">Помилка завантаження</p>
-                  <p className="text-sm text-muted-foreground mt-1">Спробуйте оновити сторінку</p>
-                </div>
-              ) : filteredMovements.length === 0 ? (
-                <div className="p-8 text-center">
-                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
-                    <Package className="h-6 w-6 text-slate-400" />
+                </CardHeader>
+                <CardContent className="p-0">
+                  {fetching ? (
+                    <div className="p-4 space-y-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                      ))}
+                    </div>
+                  ) : error ? (
+                    <div className="p-8 text-center">
+                      <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                        <Trash2 className="h-6 w-6 text-red-600" />
+                      </div>
+                      <p className="text-red-600 font-medium">Помилка завантаження</p>
+                      <p className="text-sm text-muted-foreground mt-1">Спробуйте оновити сторінку</p>
+                    </div>
+                  ) : filteredMovements.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                        <Package className="h-6 w-6 text-slate-400" />
+                      </div>
+                      <p className="font-medium text-slate-600">Немає операцій</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        За обраний період операції відсутні
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {displayedMovements.map((movement) => (
+                        <MovementRow key={movement.documentId} movement={movement} />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+
+          {activeTab === "waste" && (
+            <>
+              {/* Waste Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <TooltipProvider>
+                  <SummaryCard
+                    title="Загальні втрати"
+                    value={formatCurrency(wasteAnalytics.totalWasteCost)}
+                    icon={CircleDollarSign}
+                    color="red"
+                    tooltip="Сумарна вартість всіх списаних товарів за період"
+                  />
+                  <SummaryCard
+                    title="Списань"
+                    value={wasteAnalytics.totalCount.toString()}
+                    count={wasteAnalytics.totalCount}
+                    icon={Trash2}
+                    color="amber"
+                    tooltip="Кількість операцій списання"
+                  />
+                  <SummaryCard
+                    title="Середнє/день"
+                    value={formatCurrency(wasteAnalytics.avgDailyCost)}
+                    icon={TrendingDown}
+                    color="blue"
+                    tooltip="Середня сума втрат за день"
+                  />
+                  <SummaryCard
+                    title="Списань/день"
+                    value={wasteAnalytics.avgDailyCount.toFixed(1)}
+                    icon={BarChart3}
+                    color="emerald"
+                    tooltip="Середня кількість списань за день"
+                  />
+                </TooltipProvider>
+              </div>
+
+              {/* Charts Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Waste by Reason */}
+                <Card className="rounded-xl overflow-hidden">
+                  <CardHeader className="py-3 px-4 bg-slate-50/80">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+                      За причиною списання
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    {wasteAnalytics.reasonChartData.length > 0 ? (
+                      <div className="h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={wasteAnalytics.reasonChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={45}
+                              outerRadius={80}
+                              paddingAngle={2}
+                              dataKey="value"
+                            >
+                              {wasteAnalytics.reasonChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip
+                              formatter={(value) => [`${formatCurrency(value as number)} грн`, "Сума"]}
+                            />
+                            <Legend
+                              layout="vertical"
+                              align="right"
+                              verticalAlign="middle"
+                              wrapperStyle={{ fontSize: "12px" }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                        <Package className="h-8 w-8 mb-2 opacity-40" />
+                        <p>Немає даних за обраний період</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Waste by Category */}
+                <Card className="rounded-xl overflow-hidden">
+                  <CardHeader className="py-3 px-4 bg-slate-50/80">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+                      За категорією товарів
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    {wasteAnalytics.categoryChartData.length > 0 ? (
+                      <div className="h-[250px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={wasteAnalytics.categoryChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={45}
+                              outerRadius={80}
+                              paddingAngle={2}
+                              dataKey="value"
+                            >
+                              {wasteAnalytics.categoryChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip
+                              formatter={(value) => [`${formatCurrency(value as number)} грн`, "Сума"]}
+                            />
+                            <Legend
+                              layout="vertical"
+                              align="right"
+                              verticalAlign="middle"
+                              wrapperStyle={{ fontSize: "12px" }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                        <Package className="h-8 w-8 mb-2 opacity-40" />
+                        <p>Немає даних за обраний період</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Trend Chart */}
+              <Card className="rounded-xl overflow-hidden">
+                <CardHeader className="py-3 px-4 bg-slate-50/80">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    Динаміка втрат по днях
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {wasteAnalytics.trendData.length > 0 ? (
+                    <div className="h-[250px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={wasteAnalytics.trendData}>
+                          <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}`} />
+                          <RechartsTooltip
+                            formatter={(value, name) => {
+                              if (name === "cost") return [`${formatCurrency(value as number)} грн`, "Сума"];
+                              return [value, "Операцій"];
+                            }}
+                            labelFormatter={(label) => `Дата: ${String(label)}`}
+                          />
+                          <Bar dataKey="cost" fill="#ef4444" name="cost" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                      <Package className="h-8 w-8 mb-2 opacity-40" />
+                      <p>Немає даних за обраний період</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Top Wasted Ingredients */}
+              <Card className="rounded-xl overflow-hidden">
+                <CardHeader className="py-3 px-4 bg-slate-50/80">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                      Топ-10 втрачених продуктів
+                    </CardTitle>
+                    <Badge variant="secondary">{wasteAnalytics.topIngredients.length}</Badge>
                   </div>
-                  <p className="font-medium text-slate-600">Немає операцій</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    За обраний період операції відсутні
-                  </p>
-                </div>
-              ) : (
-                <div className="divide-y">
-                  {displayedMovements.map((movement) => (
-                    <MovementRow key={movement.documentId} movement={movement} />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {wasteAnalytics.topIngredients.length > 0 ? (
+                    <div className="divide-y">
+                      {wasteAnalytics.topIngredients.map((item, index) => (
+                        <div key={index} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-slate-50/50 transition-colors">
+                          <div className={cn(
+                            "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+                            index < 3 ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"
+                          )}>
+                            {index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {item.quantity.toFixed(2)} {item.unit} • {item.count} списань
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="font-semibold text-red-600">{formatCurrency(item.cost)} грн</p>
+                            <div className="flex items-center gap-2 justify-end">
+                              <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-red-500 rounded-full transition-all"
+                                  style={{ width: `${Math.min(100, wasteAnalytics.totalWasteCost > 0 ? (item.cost / wasteAnalytics.totalWasteCost) * 100 : 0)}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground w-10 text-right">
+                                {formatPercent(wasteAnalytics.totalWasteCost > 0 ? (item.cost / wasteAnalytics.totalWasteCost) * 100 : 0)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                      <Package className="h-8 w-8 mb-2 opacity-40" />
+                      <p>Немає списань за обраний період</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Reason Breakdown Table */}
+              <Card className="rounded-xl overflow-hidden">
+                <CardHeader className="py-3 px-4 bg-slate-50/80">
+                  <CardTitle className="text-base font-semibold">Розбивка за причинами</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {Object.entries(wasteAnalytics.byReason)
+                      .sort(([, a], [, b]) => b.cost - a.cost)
+                      .map(([reason, data]) => {
+                        const config = WRITE_OFF_REASONS[reason] || WRITE_OFF_REASONS.other;
+                        const Icon = config.icon;
+                        const percent = wasteAnalytics.totalWasteCost > 0
+                          ? (data.cost / wasteAnalytics.totalWasteCost) * 100
+                          : 0;
+
+                        return (
+                          <div key={reason} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-slate-50/50 transition-colors">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className="p-2.5 rounded-xl shrink-0 cursor-help"
+                                    style={{ backgroundColor: `${config.color}15` }}
+                                  >
+                                    <span style={{ color: config.color }}>
+                                      <Icon className="h-5 w-5" />
+                                    </span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{config.description}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium">{config.label}</p>
+                              <p className="text-sm text-muted-foreground">{data.count} списань</p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="font-semibold text-red-600">{formatCurrency(data.cost)} грн</p>
+                              <p className="text-xs text-muted-foreground">{formatPercent(percent)}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </main>
       </div>
     </div>

@@ -17,7 +17,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { cn } from "@/lib/utils";
 import {
-  Clock,
   Users,
   Phone,
   CheckCircle2,
@@ -27,7 +26,6 @@ import {
   Calendar,
   RefreshCw,
   ShoppingBag,
-  Plus,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -53,13 +51,67 @@ const STATUS_CONFIG: Record<ReservationStatus, {
   label: string;
   variant: "default" | "secondary" | "destructive" | "outline";
   icon: React.ElementType;
+  color: string;
+  bgColor: string;
+  borderColor: string;
 }> = {
-  pending: { label: "Очікує", variant: "outline", icon: Clock },
-  confirmed: { label: "Підтверджено", variant: "default", icon: CheckCircle2 },
-  seated: { label: "За столом", variant: "secondary", icon: UserCheck },
-  completed: { label: "Завершено", variant: "secondary", icon: CheckCircle2 },
-  cancelled: { label: "Скасовано", variant: "destructive", icon: XCircle },
-  no_show: { label: "Не з'явився", variant: "destructive", icon: XCircle },
+  pending: {
+    label: "Очікує",
+    variant: "outline",
+    icon: Clock,
+    color: "text-amber-600",
+    bgColor: "bg-amber-50",
+    borderColor: "border-l-amber-400",
+  },
+  confirmed: {
+    label: "Підтверджено",
+    variant: "default",
+    icon: CheckCircle2,
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50",
+    borderColor: "border-l-emerald-500",
+  },
+  seated: {
+    label: "За столом",
+    variant: "secondary",
+    icon: UserCheck,
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    borderColor: "border-l-blue-500",
+  },
+  completed: {
+    label: "Завершено",
+    variant: "secondary",
+    icon: CheckCircle2,
+    color: "text-slate-500",
+    bgColor: "bg-slate-50",
+    borderColor: "border-l-slate-400",
+  },
+  cancelled: {
+    label: "Скасовано",
+    variant: "destructive",
+    icon: XCircle,
+    color: "text-red-600",
+    bgColor: "bg-red-50",
+    borderColor: "border-l-red-400",
+  },
+  no_show: {
+    label: "Не з'явився",
+    variant: "destructive",
+    icon: XCircle,
+    color: "text-orange-600",
+    bgColor: "bg-orange-50",
+    borderColor: "border-l-orange-400",
+  },
+};
+
+const OCCASION_CONFIG: Record<string, { label: string; emoji: string }> = {
+  birthday: { label: "День народження", emoji: "🎂" },
+  anniversary: { label: "Річниця", emoji: "💕" },
+  business: { label: "Бізнес-зустріч", emoji: "💼" },
+  romantic: { label: "Романтична вечеря", emoji: "🌹" },
+  celebration: { label: "Святкування", emoji: "🎉" },
+  other: { label: "Інше", emoji: "✨" },
 };
 
 // ==========================================
@@ -76,6 +128,9 @@ function ReservationCard({ reservation, onStatusChange, isUpdating }: Reservatio
   const router = useRouter();
   const statusConfig = STATUS_CONFIG[reservation.status as ReservationStatus] || STATUS_CONFIG.pending;
   const StatusIcon = statusConfig.icon;
+  const occasionConfig = reservation.occasion && reservation.occasion !== "none"
+    ? OCCASION_CONFIG[reservation.occasion]
+    : null;
 
   // Navigate to POS in scheduled mode
   const handleAddPreOrder = () => {
@@ -96,188 +151,199 @@ function ReservationCard({ reservation, onStatusChange, isUpdating }: Reservatio
     router.push(`/pos/waiter?${params.toString()}`);
   };
 
-  const isUpcoming = React.useMemo(() => {
+  // Time calculations
+  const { isUpcoming, isPast, timeUntil, isNow } = React.useMemo(() => {
     const now = new Date();
-    const resDate = new Date(`${reservation.date}T${reservation.startTime}`);
-    const diffMs = resDate.getTime() - now.getTime();
+    const resStart = new Date(`${reservation.date}T${reservation.startTime}`);
+    const resEnd = new Date(`${reservation.date}T${reservation.endTime}`);
+    const diffMs = resStart.getTime() - now.getTime();
     const diffMins = Math.round(diffMs / 60000);
-    return diffMins > 0 && diffMins <= 60;
+
+    const isNow = now >= resStart && now <= resEnd;
+    const isUpcoming = diffMins > 0 && diffMins <= 60;
+    const isPast = resEnd < now;
+
+    let timeUntil: string | null = null;
+    if (diffMins > 0) {
+      if (diffMins < 60) {
+        timeUntil = `${diffMins} хв`;
+      } else {
+        const hours = Math.floor(diffMins / 60);
+        if (hours < 24) {
+          const mins = diffMins % 60;
+          timeUntil = mins > 0 ? `${hours} год ${mins} хв` : `${hours} год`;
+        }
+      }
+    } else if (diffMins < 0 && !isPast) {
+      timeUntil = `${Math.abs(diffMins)} хв тому`;
+    }
+
+    return { isUpcoming, isPast, timeUntil, isNow };
   }, [reservation]);
 
-  const isPast = React.useMemo(() => {
-    const now = new Date();
-    const resDate = new Date(`${reservation.date}T${reservation.endTime}`);
-    return resDate < now;
-  }, [reservation]);
-
-  // Calculate time until reservation
-  const timeUntil = React.useMemo(() => {
-    const now = new Date();
-    const resDate = new Date(`${reservation.date}T${reservation.startTime}`);
-    const diffMs = resDate.getTime() - now.getTime();
-    const diffMins = Math.round(diffMs / 60000);
-    if (diffMins <= 0) return null;
-    if (diffMins < 60) return `через ${diffMins} хв`;
-    const hours = Math.floor(diffMins / 60);
-    if (hours < 24) return `через ${hours} год`;
-    return null;
-  }, [reservation]);
+  const isActive = reservation.status === "pending" || reservation.status === "confirmed";
+  const isSeated = reservation.status === "seated";
+  const isFinished = reservation.status === "completed" || reservation.status === "cancelled" || reservation.status === "no_show";
 
   return (
     <div
       className={cn(
-        "relative rounded-2xl border bg-white overflow-hidden transition-all hover:shadow-md",
-        isUpcoming && "border-amber-300 bg-gradient-to-r from-amber-50 to-white ring-1 ring-amber-200",
-        isPast && reservation.status === "pending" && "border-red-200 bg-gradient-to-r from-red-50 to-white"
+        "group relative bg-white rounded-xl border transition-all",
+        isNow && "ring-2 ring-blue-500 border-blue-200",
+        isUpcoming && !isNow && "border-amber-200",
+        !isNow && !isUpcoming && "border-slate-200",
+        isFinished && "opacity-50",
+        "hover:shadow-md"
       )}
     >
-      {/* Upcoming indicator */}
-      {isUpcoming && timeUntil && (
-        <div className="absolute top-0 right-0 bg-amber-500 text-white text-xs font-semibold px-3 py-1 rounded-bl-lg">
-          {timeUntil}
-        </div>
-      )}
-
-      <div className="flex items-stretch">
-        {/* Time block */}
-        <div className={cn(
-          "flex flex-col items-center justify-center px-5 py-4 border-r",
-          isUpcoming ? "bg-amber-100/50 border-amber-200" : "bg-slate-50 border-slate-100"
-        )}>
-          <div className="text-2xl font-bold text-slate-900 leading-none">
-            {reservation.startTime.slice(0, 5)}
-          </div>
-          <div className="text-xs text-slate-400 mt-1">
-            до {reservation.endTime.slice(0, 5)}
-          </div>
-        </div>
-
-        {/* Main content */}
-        <div className="flex-1 p-4 min-w-0">
-          {/* Top row: Table + Status */}
-          <div className="flex items-center gap-2 mb-2">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-bold text-slate-900">
-                Стіл {reservation.tableNumber}
-              </span>
-              <Badge variant="outline" className="text-xs font-medium">
-                <Users className="w-3 h-3 mr-1" />
-                {reservation.guestCount}
-              </Badge>
+      <div className="p-3 sm:p-4">
+        {/* Main row: Time | Info | Status */}
+        <div className="flex items-center gap-3">
+          {/* Time - primary focus */}
+          <div className={cn(
+            "text-center px-3 py-2 rounded-lg min-w-[60px]",
+            isNow ? "bg-blue-500 text-white" :
+            isUpcoming ? "bg-amber-100 text-amber-800" :
+            "bg-slate-100 text-slate-700"
+          )}>
+            <div className="text-lg font-bold tabular-nums leading-tight">
+              {reservation.startTime.slice(0, 5)}
             </div>
-            <Badge variant={statusConfig.variant} className="text-xs gap-1 ml-auto">
-              <StatusIcon className="w-3 h-3" />
-              {statusConfig.label}
-            </Badge>
-          </div>
-
-          {/* Contact info */}
-          <div className="flex items-center gap-4 text-sm">
-            <span className="font-medium text-slate-700">{reservation.contactName}</span>
-            {reservation.contactPhone && (
-              <a
-                href={`tel:${reservation.contactPhone}`}
-                className="flex items-center gap-1.5 text-blue-600 hover:text-blue-700 transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Phone className="w-3.5 h-3.5" />
-                <span className="font-medium">{reservation.contactPhone}</span>
-              </a>
+            {timeUntil && !isNow && (
+              <div className={cn(
+                "text-[10px] leading-tight mt-0.5",
+                isUpcoming ? "text-amber-600" : "text-slate-500"
+              )}>
+                {timeUntil}
+              </div>
+            )}
+            {isNow && (
+              <div className="text-[10px] leading-tight mt-0.5 font-medium">
+                зараз
+              </div>
             )}
           </div>
 
-          {/* Occasion */}
-          {reservation.occasion && reservation.occasion !== "none" && (
-            <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
-              <span className="px-2 py-0.5 bg-slate-100 rounded-full">
-                {reservation.occasion === "birthday" && "День народження"}
-                {reservation.occasion === "anniversary" && "Річниця"}
-                {reservation.occasion === "business" && "Бізнес-зустріч"}
-                {reservation.occasion === "romantic" && "Романтична вечеря"}
+          {/* Core info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Table */}
+              <span className="font-semibold text-slate-900">
+                Стіл {reservation.tableNumber}
               </span>
+              {/* Guests */}
+              <span className="text-slate-400">·</span>
+              <span className="text-slate-600 flex items-center gap-1">
+                <Users className="w-3.5 h-3.5" />
+                {reservation.guestCount}
+              </span>
+              {/* Occasion */}
+              {occasionConfig && (
+                <>
+                  <span className="text-slate-400">·</span>
+                  <span title={occasionConfig.label}>{occasionConfig.emoji}</span>
+                </>
+              )}
             </div>
-          )}
-        </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 px-3 border-l border-slate-100">
-          {/* Pre-order button - visible for pending/confirmed reservations */}
-          {(reservation.status === "pending" || reservation.status === "confirmed") && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddPreOrder}
-              className="text-purple-600 border-purple-200 hover:bg-purple-50 hover:border-purple-300 h-9"
-            >
-              <ShoppingBag className="w-4 h-4 mr-1.5" />
-              Замовлення
-            </Button>
-          )}
+            {/* Contact */}
+            <div className="flex items-center gap-2 mt-1 text-sm">
+              <span className="text-slate-600 truncate">
+                {reservation.contactName || "Без імені"}
+              </span>
+              {reservation.contactPhone && (
+                <a
+                  href={`tel:${reservation.contactPhone}`}
+                  className="text-blue-600 hover:text-blue-700 flex items-center gap-1 shrink-0"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Phone className="w-3 h-3" />
+                  <span className="hidden sm:inline">{reservation.contactPhone}</span>
+                </a>
+              )}
+            </div>
+          </div>
 
-          {onStatusChange && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9" disabled={isUpdating}>
-                  {isUpdating ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <MoreVertical className="w-4 h-4" />
+          {/* Status + Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Status badge - compact */}
+            <span className={cn(
+              "inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium",
+              statusConfig.bgColor,
+              statusConfig.color
+            )}>
+              <StatusIcon className="w-3 h-3" />
+              <span className="hidden sm:inline">{statusConfig.label}</span>
+            </span>
+
+            {/* Quick actions */}
+            {onStatusChange && !isFinished && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" disabled={isUpdating}>
+                    {isUpdating ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <MoreVertical className="w-4 h-4" />
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  {isActive && (
+                    <DropdownMenuItem onClick={handleAddPreOrder}>
+                      <ShoppingBag className="w-4 h-4 mr-2 text-purple-600" />
+                      Попереднє замовлення
+                    </DropdownMenuItem>
                   )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                {/* Pre-order option in menu too */}
-                {(reservation.status === "pending" || reservation.status === "confirmed") && (
-                  <>
-                    <DropdownMenuItem onClick={handleAddPreOrder} className="text-purple-600">
-                      <Plus className="w-4 h-4 mr-2" />
-                      Додати попереднє замовлення
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
+                  {isActive && <DropdownMenuSeparator />}
 
-                {reservation.status === "pending" && (
-                  <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "confirmed")}>
-                    <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
-                    Підтвердити
-                  </DropdownMenuItem>
-                )}
-                {(reservation.status === "pending" || reservation.status === "confirmed") && (
-                  <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "seated")}>
-                    <UserCheck className="w-4 h-4 mr-2 text-blue-600" />
-                    Гість за столом
-                  </DropdownMenuItem>
-                )}
-                {reservation.status === "seated" && (
-                  <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "completed")}>
-                    <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
-                    Завершити
-                  </DropdownMenuItem>
-                )}
-                {reservation.status !== "cancelled" && reservation.status !== "completed" && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onClick={() => onStatusChange(reservation.documentId, "no_show")}
-                      className="text-amber-600"
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Не з'явився
+                  {reservation.status === "pending" && (
+                    <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "confirmed")}>
+                      <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                      Підтвердити
                     </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onStatusChange(reservation.documentId, "cancelled")}
-                      className="text-red-600"
-                    >
-                      <XCircle className="w-4 h-4 mr-2" />
-                      Скасувати
+                  )}
+                  {isActive && (
+                    <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "seated")}>
+                      <UserCheck className="w-4 h-4 mr-2 text-blue-600" />
+                      За столом
                     </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+                  )}
+                  {isSeated && (
+                    <DropdownMenuItem onClick={() => onStatusChange(reservation.documentId, "completed")}>
+                      <CheckCircle2 className="w-4 h-4 mr-2 text-emerald-600" />
+                      Завершити
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onStatusChange(reservation.documentId, "no_show")}
+                    className="text-amber-600"
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Не з'явився
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => onStatusChange(reservation.documentId, "cancelled")}
+                    className="text-red-600"
+                  >
+                    <XCircle className="w-4 h-4 mr-2" />
+                    Скасувати
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
+
+        {/* Notes - only if present, compact */}
+        {reservation.notes && (
+          <div className="mt-2 pt-2 border-t border-slate-100">
+            <p className="text-xs text-slate-500 line-clamp-1">
+              {reservation.notes}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

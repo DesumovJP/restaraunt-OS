@@ -222,9 +222,9 @@ export function DeliveryOrderForm({ onOrderChange }: DeliveryOrderFormProps) {
               {!isMobile && (
                 <div className="hidden sm:flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-slate-50 border-b text-xs font-medium text-muted-foreground">
                   <div className="flex-1">Назва</div>
-                  <div className="w-16 text-center">Од.</div>
-                  <div className="w-28 text-center">Кількість</div>
-                  <div className="w-9"></div>
+                  <div className="w-12 text-center">Од.</div>
+                  <div className="w-[152px] text-center">Кількість</div>
+                  <div className="w-8"></div>
                 </div>
               )}
 

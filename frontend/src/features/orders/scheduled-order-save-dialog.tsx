@@ -138,7 +138,7 @@ export function ScheduledOrderSaveDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="space-y-4 p-4">
           {/* Reservation info */}
           <div className="p-4 rounded-lg bg-purple-50 border border-purple-100 space-y-2">
             <div className="flex items-center justify-between">
@@ -236,7 +236,7 @@ export function ScheduledOrderSaveDialog({
 
         {/* Actions */}
         {status !== "success" && (
-          <div className="pt-4 border-t">
+          <div className="p-4 pt-4 border-t">
             <Button
               onClick={handleSave}
               disabled={status === "saving" || items.length === 0}

@@ -332,6 +332,7 @@ export function ChefRecipesView({ onOpenSidebar }: ChefRecipesViewProps = {}) {
         onOpenChange={setIsFormOpen}
         recipe={editingRecipe}
         onSave={handleSaveRecipe}
+        defaultOutputType={selectedOutputType !== "all" ? selectedOutputType : undefined}
       />
 
       {/* Recipe Detail Modal */}

@@ -7,7 +7,6 @@ import {
   MessageSquare,
   CalendarDays,
   FileBarChart,
-  Trash2,
   ListTodo,
   Truck,
 } from 'lucide-react';
@@ -24,8 +23,7 @@ const defaultNavigationItems: NavigationItem<StorageView>[] = [
 // Reports and analytics - directly related to storage functionality
 const analyticsItems: NavigationItem<string>[] = [
   { id: 'delivery', icon: Truck, label: 'Поставки', path: '/storage/delivery' },
-  { id: 'reports', icon: FileBarChart, label: 'Звіти витрат', path: '/storage/reports' },
-  { id: 'waste', icon: Trash2, label: 'Аналітика втрат', path: '/storage/waste' },
+  { id: 'reports', icon: FileBarChart, label: 'Журнал руху', path: '/storage/reports' },
 ];
 
 // Common items - tasks, communication, scheduling

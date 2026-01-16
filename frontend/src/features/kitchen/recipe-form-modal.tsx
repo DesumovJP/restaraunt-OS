@@ -55,6 +55,8 @@ interface RecipeFormModalProps {
   onOpenChange: (open: boolean) => void;
   recipe: Recipe | null;
   onSave: (recipe: Recipe) => void;
+  /** Default output type for new recipes (e.g., pre-selected from filter) */
+  defaultOutputType?: OutputType;
 }
 
 interface IngredientFormData {
@@ -69,6 +71,7 @@ export function RecipeFormModal({
   onOpenChange,
   recipe,
   onSave,
+  defaultOutputType,
 }: RecipeFormModalProps) {
   // Fetch real data from Strapi
   const { categories, menuItems, isLoading: menuLoading } = useMenu();
@@ -133,7 +136,7 @@ export function RecipeFormModal({
       setSelectedCategoryId(categories[0]?.documentId || categories[0]?.id || "");
       setPrice(0);
       setDescription("");
-      setOutputType("kitchen");
+      setOutputType(defaultOutputType || "kitchen");
       setServingCourse(3);
       setInstructions("");
       setPortionYield(1);
@@ -142,7 +145,7 @@ export function RecipeFormModal({
       setIngredients([]);
       setCreateMenuItem(true);
     }
-  }, [recipe, open, categories]);
+  }, [recipe, open, categories, defaultOutputType]);
 
   const selectedMenuItem = menuItems.find((m) => (m.documentId || m.id) === selectedMenuItemId);
 
