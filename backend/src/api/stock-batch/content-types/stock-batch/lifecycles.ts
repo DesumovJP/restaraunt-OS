@@ -5,6 +5,19 @@
 
 import { logAction } from '../../../../utils/action-logger';
 
+// Ukrainian status descriptions
+const STATUS_UK: Record<string, string> = {
+  received: 'отримано',
+  inspecting: 'на перевірці',
+  processing: 'обробляється',
+  available: 'доступно',
+  reserved: 'зарезервовано',
+  depleted: 'вичерпано',
+  expired: 'прострочено',
+  quarantine: 'на карантині',
+  written_off: 'списано',
+};
+
 const VALID_TRANSITIONS: Record<string, string[]> = {
   received: ['inspecting', 'available', 'quarantine'],
   inspecting: ['available', 'quarantine', 'written_off'],
@@ -118,6 +131,26 @@ export default {
       });
     }
 
+    // Get ingredient info for better logging
+    let ingredientName = '';
+    let ingredientNameUk = '';
+    let unit = 'од.';
+    if (result.ingredient) {
+      const ingredientDocId = typeof result.ingredient === 'string'
+        ? result.ingredient
+        : result.ingredient.documentId;
+      try {
+        const ing = await strapi.documents('api::ingredient.ingredient').findOne({
+          documentId: ingredientDocId
+        });
+        ingredientName = ing?.name || '';
+        ingredientNameUk = ing?.nameUk || ingredientName;
+        unit = ing?.unit || 'од.';
+      } catch {
+        // Ignore
+      }
+    }
+
     // Log action
     await logAction(strapi, {
       action: 'receive',
@@ -125,8 +158,19 @@ export default {
       entityId: result.documentId,
       entityName: result.batchNumber,
       description: `Received batch: ${result.batchNumber}`,
+      descriptionUk: `Надходження партії: ${result.batchNumber}${ingredientNameUk ? ` (${ingredientNameUk})` : ''} - ${result.grossIn} ${unit}`,
       dataAfter: result,
       module: 'storage',
+      metadata: {
+        batchNumber: result.batchNumber,
+        ingredientName,
+        ingredientNameUk,
+        grossIn: result.grossIn,
+        unit,
+        unitCost: result.unitCost,
+        totalCost: result.totalCost,
+        expiryDate: result.expiryDate,
+      },
     });
   },
 
@@ -150,8 +194,25 @@ export default {
     // Log action - determine action type based on status
     const original = event.state?.original;
     let action: 'update' | 'write_off' = 'update';
+    let descriptionUk = `Оновлено партію: ${result.batchNumber}`;
+    let severity: 'info' | 'warning' = 'info';
+
+    // Check for specific status changes
     if (result.status === 'written_off' && original?.status !== 'written_off') {
       action = 'write_off';
+      descriptionUk = `Списано партію: ${result.batchNumber}`;
+      severity = 'warning';
+    } else if (result.status === 'expired' && original?.status !== 'expired') {
+      descriptionUk = `⚠️ Партія прострочена: ${result.batchNumber}`;
+      severity = 'warning';
+    } else if (result.status === 'depleted' && original?.status !== 'depleted') {
+      descriptionUk = `Партію вичерпано: ${result.batchNumber}`;
+    } else if (result.status === 'quarantine' && original?.status !== 'quarantine') {
+      descriptionUk = `⚠️ Партію поставлено на карантин: ${result.batchNumber}`;
+      severity = 'warning';
+    } else if (result.status !== original?.status) {
+      const statusUk = STATUS_UK[result.status] || result.status;
+      descriptionUk = `Партія ${result.batchNumber}: ${statusUk}`;
     }
 
     await logAction(strapi, {
@@ -162,10 +223,18 @@ export default {
       description: action === 'write_off'
         ? `Wrote off batch: ${result.batchNumber}`
         : `Updated batch: ${result.batchNumber}`,
+      descriptionUk,
       dataBefore: original,
       dataAfter: result,
       module: 'storage',
-      severity: action === 'write_off' ? 'warning' : 'info',
+      severity,
+      metadata: {
+        batchNumber: result.batchNumber,
+        status: result.status,
+        previousStatus: original?.status,
+        netAvailable: result.netAvailable,
+        expiryDate: result.expiryDate,
+      },
     });
   },
 
@@ -193,9 +262,14 @@ export default {
       entityId: params.where?.documentId || 'unknown',
       entityName: entity?.batchNumber,
       description: `Deleted batch: ${entity?.batchNumber || params.where?.documentId}`,
+      descriptionUk: `Видалено партію: ${entity?.batchNumber || params.where?.documentId}`,
       dataBefore: entity,
       module: 'storage',
       severity: 'warning',
+      metadata: entity ? {
+        batchNumber: entity.batchNumber,
+        status: entity.status,
+      } : undefined,
     });
   }
 };

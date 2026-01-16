@@ -5,6 +5,15 @@
 
 import { logAction } from '../../../../utils/action-logger';
 
+// Ukrainian descriptions for movement types
+const MOVEMENT_TYPE_UK: Record<string, string> = {
+  receive: 'Надходження',
+  consume: 'Витрата',
+  write_off: 'Списання',
+  transfer: 'Переміщення',
+  adjustment: 'Коригування',
+};
+
 export default {
   async afterCreate(event) {
     const { result } = event;
@@ -26,13 +35,17 @@ export default {
 
     const action = actionMap[result.movementType] || 'create';
     const ingredientName = movement?.ingredient?.name || 'Unknown';
+    const ingredientNameUk = movement?.ingredient?.nameUk || ingredientName;
+    const unit = movement?.ingredient?.unit || 'од.';
+    const movementTypeUk = MOVEMENT_TYPE_UK[result.movementType] || result.movementType;
 
     await logAction(strapi, {
       action: action as any,
       entityType: 'inventory_movement',
       entityId: result.documentId,
       entityName: `${result.movementType} - ${ingredientName} (${result.quantity})`,
-      description: `Inventory ${result.movementType}: ${ingredientName} - ${result.quantity} ${movement?.ingredient?.unit || 'units'}`,
+      description: `Inventory ${result.movementType}: ${ingredientName} - ${result.quantity} ${unit}`,
+      descriptionUk: `${movementTypeUk}: ${ingredientNameUk} - ${result.quantity} ${unit}${result.reason ? ` (${result.reason})` : ''}`,
       dataAfter: movement || result,
       module: 'storage',
       severity: result.movementType === 'write_off' ? 'warning' : 'info',
@@ -40,8 +53,9 @@ export default {
         movementType: result.movementType,
         ingredientId: movement?.ingredient?.documentId,
         ingredientName,
+        ingredientNameUk,
         quantity: result.quantity,
-        unit: movement?.ingredient?.unit,
+        unit,
         reason: result.reason,
         batchNumber: movement?.stockBatch?.batchNumber,
         performedBy: movement?.operator?.username
@@ -75,6 +89,9 @@ export default {
     }) as any;
 
     const ingredientName = movement?.ingredient?.name || original?.ingredient?.name || 'Unknown';
+    const ingredientNameUk = movement?.ingredient?.nameUk || ingredientName;
+    const unit = movement?.ingredient?.unit || 'од.';
+    const movementTypeUk = MOVEMENT_TYPE_UK[result.movementType] || result.movementType;
 
     await logAction(strapi, {
       action: 'update',
@@ -82,14 +99,17 @@ export default {
       entityId: result.documentId,
       entityName: `${result.movementType} - ${ingredientName}`,
       description: `Updated inventory movement: ${result.movementType} - ${ingredientName}`,
+      descriptionUk: `Оновлено рух: ${movementTypeUk} ${ingredientNameUk} - ${result.quantity} ${unit}`,
       dataBefore: original,
       dataAfter: movement || result,
       module: 'storage',
       metadata: {
         movementType: result.movementType,
         ingredientName,
+        ingredientNameUk,
         quantity: result.quantity,
         previousQuantity: original?.quantity,
+        unit,
         reason: result.reason
       }
     });
@@ -115,6 +135,8 @@ export default {
     const entity = state?.entity;
 
     const ingredientName = entity?.ingredient?.name || 'Unknown';
+    const ingredientNameUk = entity?.ingredient?.nameUk || ingredientName;
+    const movementTypeUk = entity?.movementType ? (MOVEMENT_TYPE_UK[entity.movementType] || entity.movementType) : '';
 
     await logAction(strapi, {
       action: 'delete',
@@ -122,12 +144,14 @@ export default {
       entityId: params.where?.documentId || 'unknown',
       entityName: entity ? `${entity.movementType} - ${ingredientName}` : undefined,
       description: `Deleted inventory movement: ${entity?.movementType} - ${ingredientName}`,
+      descriptionUk: `Видалено рух: ${movementTypeUk} ${ingredientNameUk}`,
       dataBefore: entity,
       module: 'storage',
       severity: 'warning',
       metadata: {
         movementType: entity?.movementType,
         ingredientName,
+        ingredientNameUk,
         quantity: entity?.quantity,
         reason: entity?.reason
       }

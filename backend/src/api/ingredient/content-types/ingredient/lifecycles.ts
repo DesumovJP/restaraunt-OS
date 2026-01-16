@@ -33,10 +33,18 @@ export default {
       action: 'create',
       entityType: 'ingredient',
       entityId: result.documentId,
-      entityName: result.name,
+      entityName: result.name || result.nameUk,
       description: `Created ingredient: ${result.name}`,
+      descriptionUk: `Новий інгредієнт: ${result.nameUk || result.name}`,
       dataAfter: result,
       module: 'storage',
+      metadata: {
+        name: result.name,
+        nameUk: result.nameUk,
+        unit: result.unit,
+        currentStock: result.currentStock,
+        minStock: result.minStock,
+      },
     });
 
     // Check if newly created ingredient is low stock
@@ -57,15 +65,78 @@ export default {
     const { result, state } = event;
     const original = state?.original;
 
+    // Check for low stock alert
+    const hitLowStock = result.minStock && result.currentStock !== undefined &&
+      result.currentStock <= result.minStock &&
+      original?.currentStock > result.minStock;
+
+    if (hitLowStock) {
+      await logAction(strapi, {
+        action: 'update',
+        entityType: 'ingredient',
+        entityId: result.documentId,
+        entityName: result.name || result.nameUk,
+        description: `Low stock alert: ${result.name}`,
+        descriptionUk: `⚠️ Низький запас: ${result.nameUk || result.name} (${result.currentStock} ${result.unit || 'од.'} - нижче мінімуму ${result.minStock})`,
+        dataBefore: original,
+        dataAfter: result,
+        module: 'storage',
+        severity: 'warning',
+        metadata: {
+          name: result.name,
+          nameUk: result.nameUk,
+          unit: result.unit,
+          currentStock: result.currentStock,
+          minStock: result.minStock,
+          previousStock: original?.currentStock,
+        },
+      });
+      return;
+    }
+
+    // Check for stock replenishment
+    const wasLow = original?.minStock && original?.currentStock <= original.minStock;
+    const isNowOk = result.minStock && result.currentStock > result.minStock;
+
+    if (wasLow && isNowOk) {
+      await logAction(strapi, {
+        action: 'update',
+        entityType: 'ingredient',
+        entityId: result.documentId,
+        entityName: result.name || result.nameUk,
+        description: `Stock replenished: ${result.name}`,
+        descriptionUk: `✓ Запас поповнено: ${result.nameUk || result.name} (${result.currentStock} ${result.unit || 'од.'})`,
+        dataBefore: original,
+        dataAfter: result,
+        module: 'storage',
+        metadata: {
+          name: result.name,
+          nameUk: result.nameUk,
+          unit: result.unit,
+          currentStock: result.currentStock,
+          previousStock: original?.currentStock,
+        },
+      });
+      return;
+    }
+
+    // Default update
     await logAction(strapi, {
       action: 'update',
       entityType: 'ingredient',
       entityId: result.documentId,
-      entityName: result.name,
+      entityName: result.name || result.nameUk,
       description: `Updated ingredient: ${result.name}`,
+      descriptionUk: `Оновлено інгредієнт: ${result.nameUk || result.name}`,
       dataBefore: original,
       dataAfter: result,
       module: 'storage',
+      metadata: {
+        name: result.name,
+        nameUk: result.nameUk,
+        unit: result.unit,
+        currentStock: result.currentStock,
+      },
     });
 
     // Check if stock dropped below threshold
@@ -119,11 +190,17 @@ export default {
       action: 'delete',
       entityType: 'ingredient',
       entityId: params.where?.documentId || 'unknown',
-      entityName: entity?.name,
+      entityName: entity?.name || entity?.nameUk,
       description: `Deleted ingredient: ${entity?.name || params.where?.documentId}`,
+      descriptionUk: `Видалено інгредієнт: ${entity?.nameUk || entity?.name || params.where?.documentId}`,
       dataBefore: entity,
       module: 'storage',
       severity: 'warning',
+      metadata: entity ? {
+        name: entity.name,
+        nameUk: entity.nameUk,
+        unit: entity.unit,
+      } : undefined,
     });
   },
 };
