@@ -144,7 +144,7 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
   const handleCloseTable = async (reason: any, comment?: string) => {
     setIsClosing(true);
     try {
-      await closeTable(table.id, reason, comment);
+      await closeTable(table.documentId || table.id, reason, comment);
       toast.success(`Стіл №${table.number} закрито`);
       setIsCloseDialogOpen(false);
     } catch (error) {
@@ -157,7 +157,7 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
 
   const handleExtendSession = async (minutes: number) => {
     try {
-      extendTableSession(table.id, minutes);
+      extendTableSession(table.documentId || table.id, minutes);
       toast.success(`Сесію столу №${table.number} подовжено`);
     } catch (error) {
       toast.error('Помилка при подовженні сесії');
@@ -167,7 +167,7 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
 
   const handleMergeTables = async (tableIds: string[]) => {
     try {
-      mergeTables(table.id, tableIds);
+      mergeTables(table.documentId || table.id, tableIds);
       toast.success(`Столи успішно об'єднано (${tableIds.length + 1} столів)`);
     } catch (error) {
       toast.error("Помилка при об'єднанні столів");

@@ -178,7 +178,7 @@ export function OrderConfirmDialog({
         barItems.forEach((item) => {
           storageHistoryApi.addEntry({
             operationType: "use",
-            productDocumentId: `menu_${item.menuItem.id}`,
+            productDocumentId: `menu_${item.menuItem.documentId || item.menuItem.id}`,
             productName: item.menuItem.name,
             quantity: item.quantity,
             unit: "pcs",
@@ -194,7 +194,7 @@ export function OrderConfirmDialog({
       // ============================================
       // STEP 5: Log Analytics Event
       // ============================================
-      const sessionId = `session_${selectedTable.id}_${Date.now()}`;
+      const sessionId = `session_${selectedTable.documentId || selectedTable.id}_${Date.now()}`;
       tableSessionEventsApi.createEvent({
         tableNumber: selectedTable.number,
         sessionId,
@@ -222,7 +222,7 @@ export function OrderConfirmDialog({
 
       // Update table status to occupied (if not already)
       if (selectedTable.status !== "occupied") {
-        updateTableStatus(selectedTable.id, "occupied");
+        updateTableStatus(selectedTable.documentId || selectedTable.id, "occupied");
       }
 
       // Save order info for success message BEFORE clearing cart
@@ -319,13 +319,14 @@ export function OrderConfirmDialog({
                 </thead>
                 <tbody>
                   {items.map((item) => {
-                    const comment = itemComments[item.menuItem.id];
+                    const menuItemKey = item.menuItem.documentId || item.menuItem.id;
+                    const comment = itemComments[menuItemKey];
                     const commentPreview = getCommentPreview(comment);
                     // Determine unit for weight/volume
                     const weightUnit = item.menuItem.outputType === 'bar' ? 'мл' : 'г';
 
                     return (
-                      <tr key={item.menuItem.id} className="border-t">
+                      <tr key={menuItemKey} className="border-t">
                         <td className="py-2 px-3">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{item.menuItem.name}</span>

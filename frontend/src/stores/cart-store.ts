@@ -34,14 +34,15 @@ export const useCartStore = create<CartState>()(
 
       addItem: (menuItem) => {
         set((state) => {
+          const menuItemKey = menuItem.documentId || menuItem.id;
           const existingItem = state.items.find(
-            (item) => item.menuItem.id === menuItem.id
+            (item) => (item.menuItem.documentId || item.menuItem.id) === menuItemKey
           );
 
           if (existingItem) {
             return {
               items: state.items.map((item) =>
-                item.menuItem.id === menuItem.id
+                (item.menuItem.documentId || item.menuItem.id) === menuItemKey
                   ? { ...item, quantity: item.quantity + 1 }
                   : item
               ),
@@ -56,7 +57,7 @@ export const useCartStore = create<CartState>()(
 
       removeItem: (menuItemId) => {
         set((state) => ({
-          items: state.items.filter((item) => item.menuItem.id !== menuItemId),
+          items: state.items.filter((item) => (item.menuItem.documentId || item.menuItem.id) !== menuItemId),
         }));
       },
 
@@ -68,7 +69,7 @@ export const useCartStore = create<CartState>()(
 
         set((state) => ({
           items: state.items.map((item) =>
-            item.menuItem.id === menuItemId ? { ...item, quantity } : item
+            (item.menuItem.documentId || item.menuItem.id) === menuItemId ? { ...item, quantity } : item
           ),
         }));
       },
@@ -76,7 +77,7 @@ export const useCartStore = create<CartState>()(
       updateNotes: (menuItemId, notes) => {
         set((state) => ({
           items: state.items.map((item) =>
-            item.menuItem.id === menuItemId ? { ...item, notes } : item
+            (item.menuItem.documentId || item.menuItem.id) === menuItemId ? { ...item, notes } : item
           ),
         }));
       },

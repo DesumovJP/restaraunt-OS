@@ -98,8 +98,8 @@ export function RecipeFormModal({
   React.useEffect(() => {
     if (recipe) {
       setRecipeName(recipe.name || "");
-      setSelectedMenuItemId(recipe.menuItem?.id || "");
-      setSelectedCategoryId(recipe.menuItem?.categoryId || "");
+      setSelectedMenuItemId(recipe.menuItem?.documentId || recipe.menuItem?.id || "");
+      setSelectedCategoryId(recipe.menuItem?.categoryDocumentId || recipe.menuItem?.categoryId || "");
       setPrice(recipe.menuItem?.price || 0);
       setDescription(recipe.menuItem?.description || "");
       setOutputType(recipe.outputType || "kitchen");
@@ -111,10 +111,10 @@ export function RecipeFormModal({
       setCreateMenuItem(false); // Existing recipe already has menu item
       setIngredients(
         recipe.ingredients?.map((ing) => ({
-          ingredientId: ing.product.id,
+          ingredientId: ing.product.documentId || ing.product.id,
           ingredient: {
             id: ing.product.id,
-            documentId: ing.product.id,
+            documentId: ing.product.documentId || ing.product.id,
             name: ing.product.name,
             slug: "",
             sku: "",
@@ -130,7 +130,7 @@ export function RecipeFormModal({
       // Reset form for new recipe
       setRecipeName("");
       setSelectedMenuItemId("");
-      setSelectedCategoryId(categories[0]?.id || "");
+      setSelectedCategoryId(categories[0]?.documentId || categories[0]?.id || "");
       setPrice(0);
       setDescription("");
       setOutputType("kitchen");
@@ -144,7 +144,7 @@ export function RecipeFormModal({
     }
   }, [recipe, open, categories]);
 
-  const selectedMenuItem = menuItems.find((m) => m.id === selectedMenuItemId);
+  const selectedMenuItem = menuItems.find((m) => (m.documentId || m.id) === selectedMenuItemId);
 
   // Filter ingredients by search
   const filteredIngredients = React.useMemo(() => {
@@ -161,7 +161,7 @@ export function RecipeFormModal({
     setIngredients((prev) => [
       ...prev,
       {
-        ingredientId: ingredient.id,
+        ingredientId: ingredient.documentId || ingredient.id,
         ingredient,
         quantity: 0.1,
         unit: ingredient.unit,

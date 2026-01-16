@@ -75,14 +75,17 @@ export function ScheduledOrderSaveDialog({
       const prepStartDate = new Date(scheduledDate.getTime() - 30 * 60 * 1000);
 
       // Format items for scheduled order
-      const orderItems = items.map((item) => ({
-        menuItemId: item.menuItem.documentId || item.menuItem.id,
-        menuItemName: item.menuItem.name,
-        quantity: item.quantity,
-        price: item.menuItem.price,
-        notes: item.notes || "",
-        comment: itemComments[item.menuItem.id] || null,
-      }));
+      const orderItems = items.map((item) => {
+        const menuItemKey = item.menuItem.documentId || item.menuItem.id;
+        return {
+          menuItemId: menuItemKey,
+          menuItemName: item.menuItem.name,
+          quantity: item.quantity,
+          price: item.menuItem.price,
+          notes: item.notes || "",
+          comment: itemComments[menuItemKey] || null,
+        };
+      });
 
       const totalAmount = getTotalAmount();
 
@@ -193,7 +196,7 @@ export function ScheduledOrderSaveDialog({
             <div className="space-y-1 max-h-32 overflow-y-auto">
               {items.map((item) => (
                 <div
-                  key={item.menuItem.id}
+                  key={item.menuItem.documentId || item.menuItem.id}
                   className="flex items-center justify-between text-sm"
                 >
                   <span className="text-slate-600">

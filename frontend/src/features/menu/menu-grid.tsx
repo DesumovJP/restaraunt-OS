@@ -28,7 +28,8 @@ export function MenuGrid({
   const quantityMap = React.useMemo(() => {
     const map = new Map<string, number>();
     cartItems.forEach((cartItem) => {
-      map.set(cartItem.menuItem.id, cartItem.quantity);
+      const key = cartItem.menuItem.documentId || cartItem.menuItem.id;
+      map.set(key, cartItem.quantity);
     });
     return map;
   }, [cartItems]);
@@ -37,7 +38,8 @@ export function MenuGrid({
   const categoryMap = React.useMemo(() => {
     const map = new Map<string, Category>();
     categories.forEach((category) => {
-      map.set(category.id, category);
+      const key = category.documentId || category.id;
+      map.set(key, category);
     });
     return map;
   }, [categories]);
@@ -76,25 +78,29 @@ export function MenuGrid({
       role="list"
       aria-label="Меню страв"
     >
-      {items.map((item, index) => (
-        <div
-          key={item.id}
-          role="listitem"
-          className="flex animate-fade-in-up"
-          style={{
-            animationDelay: `${Math.min(index * 30, 300)}ms`,
-            animationFillMode: 'both',
-          }}
-        >
-          <MenuItemCard
-            item={item}
-            category={categoryMap.get(item.categoryId)}
-            onAdd={onAddItem}
-            quantity={quantityMap.get(item.id) || 0}
-            className="w-full"
-          />
-        </div>
-      ))}
+      {items.map((item, index) => {
+        const itemKey = item.documentId || item.id;
+        const categoryKey = item.categoryDocumentId || item.categoryId;
+        return (
+          <div
+            key={itemKey}
+            role="listitem"
+            className="flex animate-fade-in-up"
+            style={{
+              animationDelay: `${Math.min(index * 30, 300)}ms`,
+              animationFillMode: 'both',
+            }}
+          >
+            <MenuItemCard
+              item={item}
+              category={categoryMap.get(categoryKey)}
+              onAdd={onAddItem}
+              quantity={quantityMap.get(itemKey) || 0}
+              className="w-full"
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

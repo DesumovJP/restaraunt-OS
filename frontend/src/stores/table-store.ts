@@ -36,14 +36,14 @@ export const useTableStore = create<TableStore>()(
       updateTableStatus: (tableId, status) => {
         // Get current table state before update
         const currentTables = useTableStore.getState().tables;
-        const currentTable = currentTables.find((t) => t.id === tableId);
+        const currentTable = currentTables.find((t) => t.documentId === tableId || t.id === tableId);
         const wasOccupied = currentTable?.status === 'occupied' || currentTable?.status === 'reserved';
         const isBecomingOccupied = (status === 'occupied' || status === 'reserved') && !wasOccupied;
         const isBecomingFree = status === 'free' && wasOccupied;
 
         set((state) => ({
           tables: state.tables.map((table) => {
-            if (table.id === tableId) {
+            if (table.documentId === tableId || table.id === tableId) {
               // При зайнятті або резервуванні зберігаємо час початку
               let occupiedAt: Date | undefined;
               if ((status === 'occupied' || status === 'reserved') && !table.occupiedAt) {
@@ -122,7 +122,7 @@ export const useTableStore = create<TableStore>()(
 
       closeTable: async (tableId, reason, comment) => {
         const currentTables = useTableStore.getState().tables;
-        const currentTable = currentTables.find((t) => t.id === tableId);
+        const currentTable = currentTables.find((t) => t.documentId === tableId || t.id === tableId);
 
         if (!currentTable) {
           throw new Error('Стіл не знайдено');
@@ -152,7 +152,7 @@ export const useTableStore = create<TableStore>()(
           // Update local state
           set((state) => ({
             tables: state.tables.map((table) => {
-              if (table.id === tableId) {
+              if (table.documentId === tableId || table.id === tableId) {
                 return {
                   ...table,
                   status: 'free' as const,
@@ -166,7 +166,7 @@ export const useTableStore = create<TableStore>()(
               return table;
             }),
             // Clear selected table if it was this one
-            selectedTable: state.selectedTable?.id === tableId ? null : state.selectedTable,
+            selectedTable: (state.selectedTable?.documentId === tableId || state.selectedTable?.id === tableId) ? null : state.selectedTable,
           }));
 
           // Log analytics event
@@ -197,7 +197,7 @@ export const useTableStore = create<TableStore>()(
       extendTableSession: (tableId, subtractMinutes) => {
         set((state) => ({
           tables: state.tables.map((table) => {
-            if (table.id === tableId && table.occupiedAt) {
+            if ((table.documentId === tableId || table.id === tableId) && table.occupiedAt) {
               const now = new Date();
               let newOccupiedAt: Date;
 
@@ -240,7 +240,7 @@ export const useTableStore = create<TableStore>()(
             return table;
           }),
           // Update selected table if it's the one being extended
-          selectedTable: state.selectedTable?.id === tableId && state.selectedTable.occupiedAt
+          selectedTable: (state.selectedTable?.documentId === tableId || state.selectedTable?.id === tableId) && state.selectedTable.occupiedAt
             ? (() => {
                 const now = new Date();
                 let newOccupiedAt: Date;
@@ -267,7 +267,7 @@ export const useTableStore = create<TableStore>()(
 
       mergeTables: (primaryTableId, tableIds) => {
         set((state) => {
-          const primaryTable = state.tables.find((t) => t.id === primaryTableId);
+          const primaryTable = state.tables.find((t) => t.documentId === primaryTableId || t.id === primaryTableId);
           if (!primaryTable) return state;
 
           // Log analytics event
@@ -286,14 +286,14 @@ export const useTableStore = create<TableStore>()(
 
           return {
             tables: state.tables.map((table) => {
-              if (table.id === primaryTableId) {
+              if (table.documentId === primaryTableId || table.id === primaryTableId) {
                 // Update primary table with merged table IDs
                 return {
                   ...table,
                   mergedWith: [...(table.mergedWith || []), ...tableIds],
                 };
               }
-              if (tableIds.includes(table.id)) {
+              if (tableIds.includes(table.documentId || '') || tableIds.includes(table.id)) {
                 // Mark merged tables as merged with primary table ID
                 return {
                   ...table,
@@ -309,7 +309,7 @@ export const useTableStore = create<TableStore>()(
 
       unmergeTables: (primaryTableId) => {
         set((state) => {
-          const primaryTable = state.tables.find((t) => t.id === primaryTableId);
+          const primaryTable = state.tables.find((t) => t.documentId === primaryTableId || t.id === primaryTableId);
           if (!primaryTable || !primaryTable.mergedWith?.length) return state;
 
           const mergedTableIds = primaryTable.mergedWith;
@@ -330,14 +330,14 @@ export const useTableStore = create<TableStore>()(
 
           return {
             tables: state.tables.map((table) => {
-              if (table.id === primaryTableId) {
+              if (table.documentId === primaryTableId || table.id === primaryTableId) {
                 // Clear merged table IDs from primary table
                 return {
                   ...table,
                   mergedWith: undefined,
                 };
               }
-              if (mergedTableIds.includes(table.id)) {
+              if (mergedTableIds.includes(table.documentId || '') || mergedTableIds.includes(table.id)) {
                 // Restore merged tables to their original state
                 return {
                   ...table,

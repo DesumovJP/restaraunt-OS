@@ -113,7 +113,7 @@ export function CartPanel({
           <div className="space-y-3">
             {items.map((item) => (
               <CartItemRow
-                key={item.menuItem.id}
+                key={item.menuItem.documentId || item.menuItem.id}
                 item={item}
                 onUpdateQuantity={onUpdateQuantity}
                 onRemove={onRemoveItem}
@@ -178,6 +178,7 @@ interface CartItemRowProps {
 function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
   const { menuItem, quantity } = item;
   const itemTotal = menuItem.price * quantity;
+  const menuItemKey = menuItem.documentId || menuItem.id;
 
   return (
     <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
@@ -195,7 +196,7 @@ function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
           variant="outline"
           size="icon"
           className="h-8 w-8"
-          onClick={() => onUpdateQuantity(menuItem.id, quantity - 1)}
+          onClick={() => onUpdateQuantity(menuItemKey, quantity - 1)}
           aria-label={`Зменшити кількість ${menuItem.name}`}
         >
           <Minus className="h-3 w-3" />
@@ -210,7 +211,7 @@ function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
           variant="outline"
           size="icon"
           className="h-8 w-8"
-          onClick={() => onUpdateQuantity(menuItem.id, quantity + 1)}
+          onClick={() => onUpdateQuantity(menuItemKey, quantity + 1)}
           aria-label={`Збільшити кількість ${menuItem.name}`}
         >
           <Plus className="h-3 w-3" />
@@ -227,7 +228,7 @@ function CartItemRow({ item, onUpdateQuantity, onRemove }: CartItemRowProps) {
         variant="ghost"
         size="icon"
         className="h-8 w-8 text-muted-foreground hover:text-danger"
-        onClick={() => onRemove(menuItem.id)}
+        onClick={() => onRemove(menuItemKey)}
         aria-label={`Видалити ${menuItem.name}`}
       >
         <Trash2 className="h-4 w-4" />

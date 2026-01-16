@@ -179,11 +179,12 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
           </div>
         ) : (
           items.map((item, index) => {
-            const comment = itemComments[item.menuItem.id];
+            const menuItemKey = item.menuItem.documentId || item.menuItem.id;
+            const comment = itemComments[menuItemKey];
 
             return (
               <div
-                key={item.menuItem.id}
+                key={menuItemKey}
                 className="p-3.5 rounded-xl bg-gradient-to-br from-slate-50 to-white border border-slate-200/80 shadow-sm animate-fade-in-up hover-lift transition-all"
                 style={{
                   animationDelay: `${index * 30}ms`,
@@ -211,7 +212,7 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
                   {/* Кількість */}
                   <div className="flex items-center gap-1">
                     <button
-                      onClick={() => updateQuantity(item.menuItem.id, item.quantity - 1)}
+                      onClick={() => updateQuantity(menuItemKey, item.quantity - 1)}
                       className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors touch-feedback"
                     >
                       <Minus className="w-4 h-4 text-slate-600" />
@@ -220,7 +221,7 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => updateQuantity(item.menuItem.id, item.quantity + 1)}
+                      onClick={() => updateQuantity(menuItemKey, item.quantity + 1)}
                       className="w-9 h-9 rounded-lg border border-slate-200 flex items-center justify-center hover:bg-slate-100 active:bg-slate-200 transition-colors touch-feedback"
                     >
                       <Plus className="w-4 h-4 text-slate-600" />
@@ -229,7 +230,7 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
 
                   {/* Видалити */}
                   <button
-                    onClick={() => removeItem(item.menuItem.id)}
+                    onClick={() => removeItem(menuItemKey)}
                     className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors touch-feedback"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -239,7 +240,7 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
                 {/* Коментар */}
                 <div className="mt-2.5 pt-2.5 border-t border-slate-100">
                   <button
-                    onClick={() => setEditingCommentId(item.menuItem.id)}
+                    onClick={() => setEditingCommentId(menuItemKey)}
                     className={cn(
                       "flex items-center gap-1.5 text-xs px-2.5 py-2 rounded-lg max-w-full transition-colors touch-feedback",
                       comment
@@ -315,7 +316,7 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
         <CommentEditor
           value={itemComments[editingCommentId] || null}
           onChange={handleCommentSave}
-          menuItemName={items.find((i) => i.menuItem.id === editingCommentId)?.menuItem.name || ''}
+          menuItemName={items.find((i) => (i.menuItem.documentId || i.menuItem.id) === editingCommentId)?.menuItem.name || ''}
           isOpen={!!editingCommentId}
           onClose={() => setEditingCommentId(null)}
         />
@@ -393,8 +394,9 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
         tableNumber={selectedTable?.number || null}
         onSuccess={() => {
           // Update table status to free and clear selected table
-          if (selectedTable?.id) {
-            useTableStore.getState().updateTableStatus(selectedTable.id, 'free');
+          const tableKey = selectedTable?.documentId || selectedTable?.id;
+          if (tableKey) {
+            useTableStore.getState().updateTableStatus(tableKey, 'free');
           }
           useTableStore.getState().clearSelectedTable();
           // Navigate to tables view after successful checkout

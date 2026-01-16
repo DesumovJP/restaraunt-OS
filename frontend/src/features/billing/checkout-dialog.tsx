@@ -146,7 +146,7 @@ export function CheckoutDialog({
       setReceipt(newReceipt);
 
       // Free the table
-      updateTableStatus(selectedTable.id, "free");
+      updateTableStatus(selectedTable.documentId || selectedTable.id, "free");
 
       // Clear the cart
       clearCart();
