@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Table, TableZone } from '@/types/table';
-import { ZONE_LABELS, ZONE_ICONS } from '@/lib/constants/tables';
+import { ZONE_LABELS, ZONE_LABELS_SHORT, ZONE_ICONS } from '@/lib/constants/tables';
 import { ReservationDialog } from '@/features/reservations';
 
 export default function TableSelectionPage() {
@@ -238,6 +238,7 @@ export default function TableSelectionPage() {
                     )}
                   >
                     <Icon className="h-4 w-4" />
+                    <span className="sm:hidden">{ZONE_LABELS_SHORT[zone]}</span>
                     <span className="hidden sm:inline">{ZONE_LABELS[zone]}</span>
                     <span className={cn(
                       'px-1.5 py-0.5 rounded text-xs font-semibold',

@@ -11,22 +11,23 @@ import {
 } from 'lucide-react';
 import { AppSidebar, type NavigationItem } from '@/components/layout/app-sidebar';
 
-export type StorageView = 'inventory' | 'batches' | 'chat' | 'schedule' | 'profile';
+export type StorageView = 'inventory' | 'batches' | 'reports' | 'waste' | 'chat' | 'schedule' | 'profile';
 
 const defaultNavigationItems: NavigationItem<StorageView>[] = [
   { id: 'inventory', icon: Layers, label: 'Інвентар' },
   { id: 'batches', icon: Archive, label: 'Партії' },
 ];
 
+// Reports and analytics - directly related to storage functionality
+const analyticsItems: NavigationItem<string>[] = [
+  { id: 'reports', icon: FileBarChart, label: 'Звіти витрат', path: '/storage/reports' },
+  { id: 'waste', icon: Trash2, label: 'Аналітика втрат', path: '/storage/waste' },
+];
+
+// Secondary items - communication and scheduling
 const secondaryItems: NavigationItem<StorageView>[] = [
   { id: 'chat', icon: MessageSquare, label: 'Чат' },
   { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
-];
-
-// External page links (use 'reports' and 'waste' as ids for typing, with path for navigation)
-const externalPageLinks: NavigationItem<string>[] = [
-  { id: 'reports', icon: FileBarChart, label: 'Звіти витрат', path: '/storage/reports' },
-  { id: 'waste', icon: Trash2, label: 'Аналітика втрат', path: '/storage/waste' },
 ];
 
 interface StorageLeftSidebarProps {
@@ -54,8 +55,8 @@ export function StorageLeftSidebar({
       open={open}
       onOpenChange={onOpenChange}
       navigationItems={navigationItems}
-      secondaryItems={secondaryItems}
-      externalLinks={externalPageLinks}
+      secondaryItems={analyticsItems}
+      externalLinks={secondaryItems}
       activeView={activeView}
       onViewChange={onViewChange as (view: StorageView | string) => void}
       userName={userName}

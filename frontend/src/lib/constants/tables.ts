@@ -21,6 +21,14 @@ export const ZONE_LABELS: Record<TableZone, string> = {
   bar: "Бар",
 };
 
+// Short zone labels for mobile
+export const ZONE_LABELS_SHORT: Record<TableZone, string> = {
+  main: "Зал",
+  terrace: "Тераса",
+  vip: "VIP",
+  bar: "Бар",
+};
+
 export const ZONE_ICONS: Record<TableZone, LucideIcon> = {
   main: Hash,
   terrace: Sun,

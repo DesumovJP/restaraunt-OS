@@ -6,6 +6,7 @@ import { GET_INVENTORY_MOVEMENTS } from "@/graphql/queries";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft,
   Download,
   Calendar,
   TrendingDown,
@@ -28,9 +28,19 @@ import {
   CircleDollarSign,
   BarChart3,
   PieChart as PieChartIcon,
+  Menu,
+  RefreshCw,
+  Info,
+  HelpCircle,
 } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { StorageLeftSidebar } from "@/features/storage/storage-left-sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   PieChart,
   Pie,
@@ -40,7 +50,7 @@ import {
   Bar,
   XAxis,
   YAxis,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
 } from "recharts";
 
@@ -77,23 +87,23 @@ type DatePreset = "today" | "week" | "month" | "quarter" | "custom";
 // CONSTANTS
 // ==========================================
 
-const DATE_PRESETS: { value: DatePreset; label: string }[] = [
-  { value: "today", label: "Сьогодні" },
-  { value: "week", label: "Цей тиждень" },
-  { value: "month", label: "Цей місяць" },
-  { value: "quarter", label: "Квартал" },
-  { value: "custom", label: "Обрати дати" },
+const DATE_PRESETS: { value: DatePreset; label: string; description: string }[] = [
+  { value: "today", label: "Сьогодні", description: "Списання за сьогодні" },
+  { value: "week", label: "Тиждень", description: "З понеділка по сьогодні" },
+  { value: "month", label: "Місяць", description: "З 1-го числа по сьогодні" },
+  { value: "quarter", label: "Квартал", description: "Останні 3 місяці" },
+  { value: "custom", label: "Обрати", description: "Вибрати діапазон" },
 ];
 
-const WRITE_OFF_REASONS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string }> = {
-  expired: { label: "Прострочено", icon: Clock, color: "#ef4444" },
-  spoiled: { label: "Зіпсовано", icon: ThermometerSnowflake, color: "#f97316" },
-  damaged: { label: "Пошкоджено", icon: AlertTriangle, color: "#eab308" },
-  theft: { label: "Крадіжка", icon: Bug, color: "#8b5cf6" },
-  cooking_loss: { label: "Втрати при готуванні", icon: Package, color: "#3b82f6" },
-  quality_fail: { label: "Невідповідна якість", icon: Trash2, color: "#ec4899" },
-  inventory_adjust: { label: "Інвентаризація", icon: BarChart3, color: "#6b7280" },
-  other: { label: "Інше", icon: Trash2, color: "#9ca3af" },
+const WRITE_OFF_REASONS: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; color: string; description: string }> = {
+  expired: { label: "Прострочено", icon: Clock, color: "#ef4444", description: "Товар вийшов з терміну придатності" },
+  spoiled: { label: "Зіпсовано", icon: ThermometerSnowflake, color: "#f97316", description: "Порушення умов зберігання" },
+  damaged: { label: "Пошкоджено", icon: AlertTriangle, color: "#eab308", description: "Механічні пошкодження упаковки" },
+  theft: { label: "Крадіжка", icon: Bug, color: "#8b5cf6", description: "Нестача при інвентаризації" },
+  cooking_loss: { label: "Втрати готування", icon: Package, color: "#3b82f6", description: "Природні втрати при приготуванні" },
+  quality_fail: { label: "Брак якості", icon: Trash2, color: "#ec4899", description: "Не відповідає стандартам якості" },
+  inventory_adjust: { label: "Інвентаризація", icon: BarChart3, color: "#6b7280", description: "Коригування після перерахунку" },
+  other: { label: "Інше", icon: Trash2, color: "#9ca3af", description: "Інші причини списання" },
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -168,6 +178,7 @@ function formatPercent(value: number): string {
 // ==========================================
 
 export default function WasteAnalyticsPage() {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [datePreset, setDatePreset] = React.useState<DatePreset>("month");
   const [customFromDate, setCustomFromDate] = React.useState("");
   const [customToDate, setCustomToDate] = React.useState("");
@@ -182,8 +193,7 @@ export default function WasteAnalyticsPage() {
     return getDateRange(datePreset);
   }, [datePreset, customFromDate, customToDate]);
 
-  // Fetch movements
-  const [result] = useQuery({
+  const [result, refetch] = useQuery({
     query: GET_INVENTORY_MOVEMENTS,
     variables: {
       limit: 1000,
@@ -194,7 +204,6 @@ export default function WasteAnalyticsPage() {
   const { data, fetching, error } = result;
   const allMovements: InventoryMovement[] = data?.inventoryMovements || [];
 
-  // Filter only write-offs
   const writeOffs = React.useMemo(() => {
     return allMovements.filter((m) => {
       const date = new Date(m.createdAt);
@@ -203,9 +212,7 @@ export default function WasteAnalyticsPage() {
     });
   }, [allMovements, dateRange]);
 
-  // Analytics calculations
   const analytics = React.useMemo(() => {
-    // Total waste cost
     const totalWasteCost = writeOffs.reduce((sum, m) => sum + (m.totalCost || 0), 0);
     const totalWasteQuantity = writeOffs.reduce((sum, m) => sum + (m.quantity || 0), 0);
 
@@ -311,7 +318,6 @@ export default function WasteAnalyticsPage() {
     };
   }, [writeOffs, dateRange]);
 
-  // Export to CSV
   const handleExport = () => {
     const csvContent = [
       ["Дата", "Продукт", "Кількість", "Одиниця", "Вартість", "Причина", "Категорія"].join(","),
@@ -337,291 +343,413 @@ export default function WasteAnalyticsPage() {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen p-4">
-        <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-        <p className="text-destructive">Помилка завантаження даних</p>
+      <div className="flex h-screen-safe bg-background overflow-hidden">
+        <StorageLeftSidebar
+          open={sidebarOpen}
+          onOpenChange={setSidebarOpen}
+          activeView="waste"
+          onViewChange={() => {}}
+        />
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+            <AlertTriangle className="h-8 w-8 text-red-600" />
+          </div>
+          <p className="text-red-600 font-semibold text-lg">Помилка завантаження</p>
+          <p className="text-muted-foreground mt-1">Спробуйте оновити сторінку</p>
+          <Button onClick={() => refetch({ requestPolicy: "network-only" })} className="mt-4">
+            Спробувати знову
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b px-4 py-3 safe-top">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/storage">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl font-bold">Аналітика втрат</h1>
-              <p className="text-sm text-muted-foreground">Списання та втрати продуктів</p>
-            </div>
-          </div>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Експорт
-          </Button>
-        </div>
-      </header>
-
-      {/* Filters */}
-      <div className="p-4 border-b space-y-4">
-        <div className="flex flex-wrap gap-3">
-          <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
-            <SelectTrigger className="w-[140px]">
-              <Calendar className="h-4 w-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DATE_PRESETS.map((preset) => (
-                <SelectItem key={preset.value} value={preset.value}>
-                  {preset.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {datePreset === "custom" && (
-            <>
-              <Input
-                type="date"
-                value={customFromDate}
-                onChange={(e) => setCustomFromDate(e.target.value)}
-                className="w-[140px]"
-              />
-              <Input
-                type="date"
-                value={customToDate}
-                onChange={(e) => setCustomToDate(e.target.value)}
-                className="w-[140px]"
-              />
-            </>
-          )}
-        </div>
-      </div>
+    <div className="flex h-screen-safe bg-background overflow-hidden">
+      {/* Sidebar */}
+      <StorageLeftSidebar
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+        activeView="waste"
+        onViewChange={() => {}}
+      />
 
       {/* Main Content */}
-      <main className="flex-1 p-4 space-y-6">
-        {fetching ? (
-          <LoadingSkeleton />
-        ) : (
-          <>
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <SummaryCard
-                title="Загальні втрати"
-                value={formatCurrency(analytics.totalWasteCost)}
-                suffix=" грн"
-                icon={CircleDollarSign}
-                color="destructive"
-              />
-              <SummaryCard
-                title="Кількість списань"
-                value={analytics.totalCount.toString()}
-                subtitle="операцій"
-                icon={Trash2}
-                color="warning"
-              />
-              <SummaryCard
-                title="Середнє/день"
-                value={formatCurrency(analytics.avgDailyCost)}
-                suffix=" грн"
-                icon={TrendingDown}
-                color="info"
-              />
-              <SummaryCard
-                title="Списань/день"
-                value={analytics.avgDailyCount.toFixed(1)}
-                subtitle="в середньому"
-                icon={BarChart3}
-                color="muted"
-              />
-            </div>
-
-            {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Waste by Reason */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <PieChartIcon className="h-5 w-5 text-muted-foreground" />
-                  <h2 className="font-semibold">За причиною списання</h2>
-                </div>
-                {analytics.reasonChartData.length > 0 ? (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={analytics.reasonChartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={100}
-                          paddingAngle={2}
-                          dataKey="value"
-                        >
-                          {analytics.reasonChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value) => [`${formatCurrency(value as number)} грн`, "Сума"]}
-                          labelFormatter={(label) => String(label)}
-                        />
-                        <Legend
-                          layout="vertical"
-                          align="right"
-                          verticalAlign="middle"
-                          formatter={(value, entry) => (
-                            <span className="text-sm">{value}</span>
-                          )}
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <EmptyState message="Немає даних за обраний період" />
-                )}
-              </div>
-
-              {/* Waste by Category */}
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <PieChartIcon className="h-5 w-5 text-muted-foreground" />
-                  <h2 className="font-semibold">За категорією</h2>
-                </div>
-                {analytics.categoryChartData.length > 0 ? (
-                  <div className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={analytics.categoryChartData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={60}
-                          outerRadius={100}
-                          paddingAngle={2}
-                          dataKey="value"
-                        >
-                          {analytics.categoryChartData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value) => [`${formatCurrency(value as number)} грн`, "Сума"]}
-                        />
-                        <Legend
-                          layout="vertical"
-                          align="right"
-                          verticalAlign="middle"
-                        />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <EmptyState message="Немає даних за обраний період" />
-                )}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm">
+          <div className="flex items-center justify-between px-3 sm:px-4 py-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden h-10 w-10 rounded-xl"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                  <Trash2 className="h-5 w-5 text-red-600" />
+                  Аналітика втрат
+                </h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+                  Моніторинг та аналіз списань
+                </p>
               </div>
             </div>
-
-            {/* Trend Chart */}
-            <div className="border rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-4">
-                <BarChart3 className="h-5 w-5 text-muted-foreground" />
-                <h2 className="font-semibold">Динаміка втрат</h2>
-              </div>
-              {analytics.trendData.length > 0 ? (
-                <div className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={analytics.trendData}>
-                      <XAxis dataKey="dateLabel" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${v} грн`} />
-                      <Tooltip
-                        formatter={(value, name) => {
-                          const numValue = value as number;
-                          if (name === "cost") return [`${formatCurrency(numValue)} грн`, "Сума"];
-                          return [numValue, "Операцій"];
-                        }}
-                        labelFormatter={(label) => `Дата: ${String(label)}`}
-                      />
-                      <Bar dataKey="cost" fill="#ef4444" name="cost" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <EmptyState message="Немає даних за обраний період" />
-              )}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => refetch({ requestPolicy: "network-only" })}
+                className="h-10 w-10 rounded-xl"
+                disabled={fetching}
+              >
+                <RefreshCw className={cn("h-4 w-4", fetching && "animate-spin")} />
+              </Button>
+              <Button variant="outline" onClick={handleExport} className="gap-2 h-10 rounded-xl">
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Експорт</span>
+              </Button>
             </div>
+          </div>
+        </header>
 
-            {/* Top Wasted Ingredients */}
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-muted/50 px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <TrendingDown className="h-5 w-5 text-destructive" />
-                  <h2 className="font-semibold">Топ-10 втрачених продуктів</h2>
-                </div>
-                <Badge variant="outline">{analytics.topIngredients.length}</Badge>
-              </div>
-              {analytics.topIngredients.length > 0 ? (
-                <div className="divide-y">
-                  {analytics.topIngredients.map((item, index) => (
-                    <TopIngredientRow key={index} item={item} index={index} totalCost={analytics.totalWasteCost} />
-                  ))}
-                </div>
-              ) : (
-                <EmptyState message="Немає списань за обраний період" />
-              )}
-            </div>
-
-            {/* Reason Breakdown Table */}
-            <div className="border rounded-lg overflow-hidden">
-              <div className="bg-muted/50 px-4 py-3">
-                <h2 className="font-semibold">Детальна розбивка за причинами</h2>
-              </div>
-              <div className="divide-y">
-                {Object.entries(analytics.byReason)
-                  .sort(([, a], [, b]) => b.cost - a.cost)
-                  .map(([reason, data]) => {
-                    const config = WRITE_OFF_REASONS[reason] || WRITE_OFF_REASONS.other;
-                    const Icon = config.icon;
-                    const percent = analytics.totalWasteCost > 0
-                      ? (data.cost / analytics.totalWasteCost) * 100
-                      : 0;
-
-                    return (
-                      <div key={reason} className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
-                        <div
-                          className="p-2 rounded-lg"
-                          style={{ backgroundColor: `${config.color}20` }}
-                        >
-                          <span style={{ color: config.color }}>
-                            <Icon className="h-5 w-5" />
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium">{config.label}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {data.count} списань
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-destructive">
-                            {formatCurrency(data.cost)} грн
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatPercent(percent)}
-                          </p>
-                        </div>
+        {/* Filters */}
+        <div className="p-3 sm:p-4 border-b bg-slate-50/50">
+          <div className="flex flex-wrap gap-3 items-end">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Період аналізу</label>
+              <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
+                <SelectTrigger className="w-[130px] h-10 rounded-xl">
+                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_PRESETS.map((preset) => (
+                    <SelectItem key={preset.value} value={preset.value}>
+                      <div>
+                        <div className="font-medium">{preset.label}</div>
+                        <div className="text-xs text-muted-foreground">{preset.description}</div>
                       </div>
-                    );
-                  })}
-              </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          </>
-        )}
-      </main>
+
+            {datePreset === "custom" && (
+              <div className="flex gap-2 items-end">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Від</label>
+                  <Input
+                    type="date"
+                    value={customFromDate}
+                    onChange={(e) => setCustomFromDate(e.target.value)}
+                    className="w-[130px] h-10 rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">До</label>
+                  <Input
+                    type="date"
+                    value={customToDate}
+                    onChange={(e) => setCustomToDate(e.target.value)}
+                    className="w-[130px] h-10 rounded-xl"
+                  />
+                </div>
+              </div>
+            )}
+
+            <div className="flex-1" />
+            <div className="text-xs text-muted-foreground bg-white px-3 py-2 rounded-lg border">
+              {dateRange.from.toLocaleDateString("uk-UA")} — {dateRange.to.toLocaleDateString("uk-UA")}
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
+          {fetching ? (
+            <LoadingSkeleton />
+          ) : (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                <TooltipProvider>
+                  <SummaryCard
+                    title="Загальні втрати"
+                    value={formatCurrency(analytics.totalWasteCost)}
+                    suffix=" грн"
+                    icon={CircleDollarSign}
+                    color="red"
+                    tooltip="Сумарна вартість всіх списаних товарів за період"
+                  />
+                  <SummaryCard
+                    title="Списань"
+                    value={analytics.totalCount.toString()}
+                    subtitle="операцій"
+                    icon={Trash2}
+                    color="amber"
+                    tooltip="Кількість операцій списання"
+                  />
+                  <SummaryCard
+                    title="Середнє/день"
+                    value={formatCurrency(analytics.avgDailyCost)}
+                    suffix=" грн"
+                    icon={TrendingDown}
+                    color="blue"
+                    tooltip="Середня сума втрат за день"
+                  />
+                  <SummaryCard
+                    title="Списань/день"
+                    value={analytics.avgDailyCount.toFixed(1)}
+                    subtitle="в середньому"
+                    icon={BarChart3}
+                    color="slate"
+                    tooltip="Середня кількість списань за день"
+                  />
+                </TooltipProvider>
+              </div>
+
+              {/* Charts Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Waste by Reason */}
+                <Card className="rounded-xl overflow-hidden">
+                  <CardHeader className="py-3 px-4 bg-slate-50/80">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+                      За причиною списання
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>Розподіл втрат за причинами. Найбільша категорія потребує уваги.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    {analytics.reasonChartData.length > 0 ? (
+                      <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={analytics.reasonChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={50}
+                              outerRadius={90}
+                              paddingAngle={2}
+                              dataKey="value"
+                            >
+                              {analytics.reasonChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip
+                              formatter={(value) => [`${formatCurrency(value as number)} грн`, "Сума"]}
+                            />
+                            <Legend
+                              layout="vertical"
+                              align="right"
+                              verticalAlign="middle"
+                              wrapperStyle={{ fontSize: "12px" }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <EmptyState message="Немає даних за обраний період" />
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Waste by Category */}
+                <Card className="rounded-xl overflow-hidden">
+                  <CardHeader className="py-3 px-4 bg-slate-50/80">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <PieChartIcon className="h-4 w-4 text-muted-foreground" />
+                      За категорією товарів
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>Які категорії товарів найчастіше списуються. Допомагає оптимізувати закупки.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4">
+                    {analytics.categoryChartData.length > 0 ? (
+                      <div className="h-[280px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={analytics.categoryChartData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={50}
+                              outerRadius={90}
+                              paddingAngle={2}
+                              dataKey="value"
+                            >
+                              {analytics.categoryChartData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <RechartsTooltip
+                              formatter={(value) => [`${formatCurrency(value as number)} грн`, "Сума"]}
+                            />
+                            <Legend
+                              layout="vertical"
+                              align="right"
+                              verticalAlign="middle"
+                              wrapperStyle={{ fontSize: "12px" }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    ) : (
+                      <EmptyState message="Немає даних за обраний період" />
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Trend Chart */}
+              <Card className="rounded-xl overflow-hidden">
+                <CardHeader className="py-3 px-4 bg-slate-50/80">
+                  <CardTitle className="text-base font-semibold flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                    Динаміка втрат по днях
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <p>Графік показує суму втрат по днях. Піки можуть вказувати на проблемні дні.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  {analytics.trendData.length > 0 ? (
+                    <div className="h-[280px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={analytics.trendData}>
+                          <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
+                          <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `${v}`} />
+                          <RechartsTooltip
+                            formatter={(value, name) => {
+                              const numValue = value as number;
+                              if (name === "cost") return [`${formatCurrency(numValue)} грн`, "Сума"];
+                              return [numValue, "Операцій"];
+                            }}
+                            labelFormatter={(label) => `Дата: ${String(label)}`}
+                          />
+                          <Bar dataKey="cost" fill="#ef4444" name="cost" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <EmptyState message="Немає даних за обраний період" />
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Top Wasted Ingredients */}
+              <Card className="rounded-xl overflow-hidden">
+                <CardHeader className="py-3 px-4 bg-slate-50/80">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-red-500" />
+                      Топ-10 втрачених продуктів
+                    </CardTitle>
+                    <Badge variant="secondary">{analytics.topIngredients.length}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {analytics.topIngredients.length > 0 ? (
+                    <div className="divide-y">
+                      {analytics.topIngredients.map((item, index) => (
+                        <TopIngredientRow key={index} item={item} index={index} totalCost={analytics.totalWasteCost} />
+                      ))}
+                    </div>
+                  ) : (
+                    <EmptyState message="Немає списань за обраний період" />
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Reason Breakdown Table */}
+              <Card className="rounded-xl overflow-hidden">
+                <CardHeader className="py-3 px-4 bg-slate-50/80">
+                  <CardTitle className="text-base font-semibold">Детальна розбивка за причинами</CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="divide-y">
+                    {Object.entries(analytics.byReason)
+                      .sort(([, a], [, b]) => b.cost - a.cost)
+                      .map(([reason, data]) => {
+                        const config = WRITE_OFF_REASONS[reason] || WRITE_OFF_REASONS.other;
+                        const Icon = config.icon;
+                        const percent = analytics.totalWasteCost > 0
+                          ? (data.cost / analytics.totalWasteCost) * 100
+                          : 0;
+
+                        return (
+                          <div key={reason} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-slate-50/50 transition-colors">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className="p-2.5 rounded-xl shrink-0 cursor-help"
+                                    style={{ backgroundColor: `${config.color}15` }}
+                                  >
+                                    <span style={{ color: config.color }}>
+                                      <Icon className="h-5 w-5" />
+                                    </span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{config.description}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium">{config.label}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {data.count} списань
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="font-semibold text-red-600">
+                                {formatCurrency(data.cost)} грн
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatPercent(percent)}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
@@ -636,32 +764,50 @@ interface SummaryCardProps {
   suffix?: string;
   subtitle?: string;
   icon: React.ComponentType<{ className?: string }>;
-  color: "success" | "destructive" | "info" | "warning" | "muted";
+  color: "red" | "amber" | "blue" | "slate";
+  tooltip: string;
 }
 
-function SummaryCard({ title, value, suffix, subtitle, icon: Icon, color }: SummaryCardProps) {
-  const colorClasses = {
-    success: "border-l-success text-success",
-    destructive: "border-l-destructive text-destructive",
-    info: "border-l-info text-info",
-    warning: "border-l-warning text-warning",
-    muted: "border-l-muted-foreground text-muted-foreground",
+function SummaryCard({ title, value, suffix, subtitle, icon: Icon, color, tooltip }: SummaryCardProps) {
+  const colorConfig = {
+    red: { border: "border-l-red-500", bg: "bg-red-50", text: "text-red-600", icon: "text-red-500" },
+    amber: { border: "border-l-amber-500", bg: "bg-amber-50", text: "text-amber-600", icon: "text-amber-500" },
+    blue: { border: "border-l-blue-500", bg: "bg-blue-50", text: "text-blue-600", icon: "text-blue-500" },
+    slate: { border: "border-l-slate-400", bg: "bg-slate-100", text: "text-slate-600", icon: "text-slate-500" },
   };
 
+  const config = colorConfig[color];
+
   return (
-    <div className={cn("p-4 bg-card rounded-lg border border-l-4", colorClasses[color])}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-muted-foreground">{title}</span>
-        <Icon className="h-4 w-4 opacity-70" />
-      </div>
-      <p className="text-xl font-bold">
-        {value}
-        {suffix && <span className="text-base font-normal">{suffix}</span>}
-      </p>
-      {subtitle && (
-        <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
-      )}
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Card className={cn("rounded-xl border-l-4 cursor-help transition-shadow hover:shadow-md", config.border)}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-muted-foreground flex items-center gap-1">
+                  {title}
+                  <Info className="h-3 w-3 opacity-50" />
+                </span>
+                <div className={cn("p-1.5 rounded-lg", config.bg)}>
+                  <Icon className={cn("h-4 w-4", config.icon)} />
+                </div>
+              </div>
+              <p className={cn("text-xl sm:text-2xl font-bold", config.text)}>
+                {value}
+                {suffix && <span className="text-sm font-normal text-muted-foreground">{suffix}</span>}
+              </p>
+              {subtitle && (
+                <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
+              )}
+            </CardContent>
+          </Card>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -681,10 +827,10 @@ function TopIngredientRow({ item, index, totalCost }: TopIngredientRowProps) {
   const percent = totalCost > 0 ? (item.cost / totalCost) * 100 : 0;
 
   return (
-    <div className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
+    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-slate-50/50 transition-colors">
       <div className={cn(
-        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold",
-        index < 3 ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground"
+        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
+        index < 3 ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"
       )}>
         {index + 1}
       </div>
@@ -694,16 +840,16 @@ function TopIngredientRow({ item, index, totalCost }: TopIngredientRowProps) {
           {item.quantity.toFixed(2)} {item.unit} • {item.count} списань
         </p>
       </div>
-      <div className="text-right">
-        <p className="font-medium text-destructive">{formatCurrency(item.cost)} грн</p>
-        <div className="flex items-center gap-2">
-          <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+      <div className="text-right shrink-0">
+        <p className="font-semibold text-red-600">{formatCurrency(item.cost)} грн</p>
+        <div className="flex items-center gap-2 justify-end">
+          <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-destructive rounded-full"
+              className="h-full bg-red-500 rounded-full transition-all"
               style={{ width: `${Math.min(100, percent)}%` }}
             />
           </div>
-          <span className="text-xs text-muted-foreground w-12 text-right">
+          <span className="text-xs text-muted-foreground w-10 text-right">
             {formatPercent(percent)}
           </span>
         </div>
@@ -715,7 +861,9 @@ function TopIngredientRow({ item, index, totalCost }: TopIngredientRowProps) {
 function EmptyState({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-      <Package className="h-12 w-12 mb-3 opacity-50" />
+      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+        <Package className="h-6 w-6 text-slate-400" />
+      </div>
       <p>{message}</p>
     </div>
   );
@@ -723,18 +871,18 @@ function EmptyState({ message }: { message: string }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-24" />
+          <Skeleton key={i} className="h-28 rounded-xl" />
         ))}
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Skeleton className="h-[360px]" />
-        <Skeleton className="h-[360px]" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <Skeleton className="h-[340px] rounded-xl" />
+        <Skeleton className="h-[340px] rounded-xl" />
       </div>
-      <Skeleton className="h-[360px]" />
-      <Skeleton className="h-96" />
+      <Skeleton className="h-[340px] rounded-xl" />
+      <Skeleton className="h-96 rounded-xl" />
     </div>
   );
 }

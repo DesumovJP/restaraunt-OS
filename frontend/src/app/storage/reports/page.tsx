@@ -6,6 +6,7 @@ import { GET_INVENTORY_MOVEMENTS } from "@/graphql/queries";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -15,7 +16,6 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft,
   Download,
   Calendar,
   TrendingUp,
@@ -24,9 +24,21 @@ import {
   Trash2,
   ArrowDownToLine,
   Filter,
+  Menu,
+  RefreshCw,
+  FileText,
+  Info,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { StorageLeftSidebar, type StorageView } from "@/features/storage/storage-left-sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface InventoryMovement {
   documentId: string;
@@ -51,18 +63,18 @@ interface InventoryMovement {
 
 type DatePreset = "today" | "week" | "month" | "custom";
 
-const DATE_PRESETS: { value: DatePreset; label: string }[] = [
-  { value: "today", label: "Сьогодні" },
-  { value: "week", label: "Цей тиждень" },
-  { value: "month", label: "Цей місяць" },
-  { value: "custom", label: "Обрати дати" },
+const DATE_PRESETS: { value: DatePreset; label: string; description: string }[] = [
+  { value: "today", label: "Сьогодні", description: "Операції за сьогодні" },
+  { value: "week", label: "Цей тиждень", description: "З понеділка по сьогодні" },
+  { value: "month", label: "Цей місяць", description: "З 1-го числа по сьогодні" },
+  { value: "custom", label: "Обрати дати", description: "Вибрати діапазон вручну" },
 ];
 
 const MOVEMENT_TYPES = [
-  { value: "all", label: "Всі операції" },
-  { value: "receive", label: "Поставки", icon: ArrowDownToLine, color: "text-success" },
-  { value: "write_off", label: "Списання", icon: Trash2, color: "text-destructive" },
-  { value: "recipe_use", label: "Використання", icon: Package, color: "text-info" },
+  { value: "all", label: "Всі операції", icon: Package, color: "text-slate-600", bgColor: "bg-slate-100" },
+  { value: "receive", label: "Поставки", icon: ArrowDownToLine, color: "text-emerald-600", bgColor: "bg-emerald-100" },
+  { value: "write_off", label: "Списання", icon: Trash2, color: "text-red-600", bgColor: "bg-red-100" },
+  { value: "recipe_use", label: "Використання", icon: Package, color: "text-blue-600", bgColor: "bg-blue-100" },
 ];
 
 function getDateRange(preset: DatePreset): { from: Date; to: Date } {
@@ -74,7 +86,7 @@ function getDateRange(preset: DatePreset): { from: Date; to: Date } {
       return { from: today, to: now };
     case "week": {
       const weekStart = new Date(today);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1); // Monday
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
       return { from: weekStart, to: now };
     }
     case "month": {
@@ -93,13 +105,24 @@ function formatCurrency(value: number): string {
   });
 }
 
+function formatDate(dateString: string): string {
+  return new Date(dateString).toLocaleDateString("uk-UA", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function StorageReportsPage() {
+  const [sidebarOpen, setSidebarOpen] = React.useState(false);
   const [datePreset, setDatePreset] = React.useState<DatePreset>("week");
   const [customFromDate, setCustomFromDate] = React.useState("");
   const [customToDate, setCustomToDate] = React.useState("");
   const [movementTypeFilter, setMovementTypeFilter] = React.useState("all");
+  const [showAllMovements, setShowAllMovements] = React.useState(false);
 
-  // Calculate date range
   const dateRange = React.useMemo(() => {
     if (datePreset === "custom" && customFromDate && customToDate) {
       return {
@@ -110,8 +133,7 @@ export default function StorageReportsPage() {
     return getDateRange(datePreset);
   }, [datePreset, customFromDate, customToDate]);
 
-  // Fetch movements
-  const [result] = useQuery({
+  const [result, refetch] = useQuery({
     query: GET_INVENTORY_MOVEMENTS,
     variables: {
       limit: 500,
@@ -122,7 +144,6 @@ export default function StorageReportsPage() {
   const { data, fetching, error } = result;
   const allMovements: InventoryMovement[] = data?.inventoryMovements || [];
 
-  // Filter movements
   const filteredMovements = React.useMemo(() => {
     return allMovements.filter((m) => {
       const date = new Date(m.createdAt);
@@ -133,7 +154,6 @@ export default function StorageReportsPage() {
     });
   }, [allMovements, dateRange, movementTypeFilter]);
 
-  // Calculate summary stats
   const summary = React.useMemo(() => {
     const stats = {
       totalPurchases: 0,
@@ -168,7 +188,6 @@ export default function StorageReportsPage() {
     return stats;
   }, [filteredMovements]);
 
-  // Export to CSV
   const handleExport = () => {
     const csvContent = [
       ["Дата", "Тип", "Продукт", "Кількість", "Одиниця", "Вартість", "Причина", "Постачальник"].join(","),
@@ -193,149 +212,250 @@ export default function StorageReportsPage() {
     link.click();
   };
 
+  const displayedMovements = showAllMovements
+    ? filteredMovements
+    : filteredMovements.slice(0, 20);
+
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background border-b px-4 py-3 safe-top">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/storage">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <h1 className="text-xl font-bold">Звіти витрат</h1>
-          </div>
-          <Button variant="outline" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-2" />
-            Експорт
-          </Button>
-        </div>
-      </header>
-
-      {/* Filters */}
-      <div className="p-4 border-b space-y-4">
-        <div className="flex flex-wrap gap-3">
-          {/* Date Preset */}
-          <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
-            <SelectTrigger className="w-[140px]">
-              <Calendar className="h-4 w-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DATE_PRESETS.map((preset) => (
-                <SelectItem key={preset.value} value={preset.value}>
-                  {preset.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Custom Date Range */}
-          {datePreset === "custom" && (
-            <>
-              <Input
-                type="date"
-                value={customFromDate}
-                onChange={(e) => setCustomFromDate(e.target.value)}
-                className="w-[140px]"
-              />
-              <Input
-                type="date"
-                value={customToDate}
-                onChange={(e) => setCustomToDate(e.target.value)}
-                className="w-[140px]"
-              />
-            </>
-          )}
-
-          {/* Movement Type Filter */}
-          <Select value={movementTypeFilter} onValueChange={setMovementTypeFilter}>
-            <SelectTrigger className="w-[160px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MOVEMENT_TYPES.map((type) => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+    <div className="flex h-screen-safe bg-background overflow-hidden">
+      {/* Sidebar */}
+      <StorageLeftSidebar
+        open={sidebarOpen}
+        onOpenChange={setSidebarOpen}
+        activeView="reports"
+        onViewChange={() => {}}
+      />
 
       {/* Main Content */}
-      <main className="flex-1 p-4 space-y-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <SummaryCard
-            title="Поставки"
-            value={formatCurrency(summary.totalPurchases)}
-            count={summary.purchaseCount}
-            icon={ArrowDownToLine}
-            color="success"
-          />
-          <SummaryCard
-            title="Списання"
-            value={formatCurrency(summary.totalWriteOffs)}
-            count={summary.writeOffCount}
-            icon={Trash2}
-            color="destructive"
-          />
-          <SummaryCard
-            title="Використання"
-            value={formatCurrency(summary.totalUsage)}
-            count={summary.usageCount}
-            icon={Package}
-            color="info"
-          />
-          <SummaryCard
-            title="Баланс"
-            value={formatCurrency(summary.netChange)}
-            trend={summary.netChange >= 0 ? "up" : "down"}
-            icon={summary.netChange >= 0 ? TrendingUp : TrendingDown}
-            color={summary.netChange >= 0 ? "success" : "warning"}
-          />
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        {/* Header */}
+        <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm">
+          <div className="flex items-center justify-between px-3 sm:px-4 py-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="lg:hidden h-10 w-10 rounded-xl"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-lg sm:text-xl font-bold flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-emerald-600" />
+                  Звіти витрат
+                </h1>
+                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
+                  Аналіз руху товарів на складі
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => refetch({ requestPolicy: "network-only" })}
+                className="h-10 w-10 rounded-xl"
+                disabled={fetching}
+              >
+                <RefreshCw className={cn("h-4 w-4", fetching && "animate-spin")} />
+              </Button>
+              <Button variant="outline" onClick={handleExport} className="gap-2 h-10 rounded-xl">
+                <Download className="h-4 w-4" />
+                <span className="hidden sm:inline">Експорт CSV</span>
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Filters */}
+        <div className="p-3 sm:p-4 border-b bg-slate-50/50">
+          <div className="flex flex-wrap gap-3 items-end">
+            {/* Date Preset */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Період</label>
+              <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
+                <SelectTrigger className="w-[150px] h-10 rounded-xl">
+                  <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_PRESETS.map((preset) => (
+                    <SelectItem key={preset.value} value={preset.value}>
+                      <div>
+                        <div className="font-medium">{preset.label}</div>
+                        <div className="text-xs text-muted-foreground">{preset.description}</div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Custom Date Range */}
+            {datePreset === "custom" && (
+              <div className="flex gap-2 items-end">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">Від</label>
+                  <Input
+                    type="date"
+                    value={customFromDate}
+                    onChange={(e) => setCustomFromDate(e.target.value)}
+                    className="w-[140px] h-10 rounded-xl"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-muted-foreground">До</label>
+                  <Input
+                    type="date"
+                    value={customToDate}
+                    onChange={(e) => setCustomToDate(e.target.value)}
+                    className="w-[140px] h-10 rounded-xl"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Movement Type Filter */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-muted-foreground">Тип операції</label>
+              <Select value={movementTypeFilter} onValueChange={setMovementTypeFilter}>
+                <SelectTrigger className="w-[170px] h-10 rounded-xl">
+                  <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {MOVEMENT_TYPES.map((type) => {
+                    const Icon = type.icon;
+                    return (
+                      <SelectItem key={type.value} value={type.value}>
+                        <div className="flex items-center gap-2">
+                          <Icon className={cn("h-4 w-4", type.color)} />
+                          {type.label}
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Date range info */}
+            <div className="flex-1" />
+            <div className="text-xs text-muted-foreground bg-white px-3 py-2 rounded-lg border">
+              {dateRange.from.toLocaleDateString("uk-UA")} — {dateRange.to.toLocaleDateString("uk-UA")}
+            </div>
+          </div>
         </div>
 
-        {/* Movements Table */}
-        <div className="border rounded-lg overflow-hidden">
-          <div className="bg-muted/50 px-4 py-3 flex items-center justify-between">
-            <h2 className="font-semibold">Операції</h2>
-            <Badge variant="outline">{filteredMovements.length}</Badge>
+        {/* Main Content */}
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <TooltipProvider>
+              <SummaryCard
+                title="Поставки"
+                value={formatCurrency(summary.totalPurchases)}
+                count={summary.purchaseCount}
+                icon={ArrowDownToLine}
+                color="emerald"
+                tooltip="Загальна вартість отриманих товарів за період"
+              />
+              <SummaryCard
+                title="Списання"
+                value={formatCurrency(summary.totalWriteOffs)}
+                count={summary.writeOffCount}
+                icon={Trash2}
+                color="red"
+                tooltip="Вартість списаних товарів (втрати)"
+              />
+              <SummaryCard
+                title="Використання"
+                value={formatCurrency(summary.totalUsage)}
+                count={summary.usageCount}
+                icon={Package}
+                color="blue"
+                tooltip="Вартість товарів, використаних для приготування"
+              />
+              <SummaryCard
+                title="Баланс"
+                value={formatCurrency(summary.netChange)}
+                trend={summary.netChange >= 0 ? "up" : "down"}
+                icon={summary.netChange >= 0 ? TrendingUp : TrendingDown}
+                color={summary.netChange >= 0 ? "emerald" : "amber"}
+                tooltip="Поставки мінус (списання + використання)"
+              />
+            </TooltipProvider>
           </div>
 
-          {fetching ? (
-            <div className="p-4 space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          ) : error ? (
-            <div className="p-4 text-center text-destructive">
-              Помилка завантаження даних
-            </div>
-          ) : filteredMovements.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">
-              <Package className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Немає операцій за обраний період</p>
-            </div>
-          ) : (
-            <div className="divide-y">
-              {filteredMovements.slice(0, 50).map((movement) => (
-                <MovementRow key={movement.documentId} movement={movement} />
-              ))}
-              {filteredMovements.length > 50 && (
-                <div className="p-4 text-center text-muted-foreground">
-                  Показано 50 з {filteredMovements.length} операцій
+          {/* Movements Table */}
+          <Card className="rounded-xl overflow-hidden">
+            <CardHeader className="bg-slate-50/80 py-3 px-4">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
+                  Журнал операцій
+                  <Badge variant="secondary" className="font-normal">
+                    {filteredMovements.length}
+                  </Badge>
+                </CardTitle>
+                {filteredMovements.length > 20 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAllMovements(!showAllMovements)}
+                    className="gap-1 text-xs"
+                  >
+                    {showAllMovements ? (
+                      <>
+                        <ChevronUp className="h-3 w-3" />
+                        Згорнути
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-3 w-3" />
+                        Показати всі ({filteredMovements.length})
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {fetching ? (
+                <div className="p-4 space-y-3">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Skeleton key={i} className="h-16 w-full rounded-lg" />
+                  ))}
+                </div>
+              ) : error ? (
+                <div className="p-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-3">
+                    <Trash2 className="h-6 w-6 text-red-600" />
+                  </div>
+                  <p className="text-red-600 font-medium">Помилка завантаження</p>
+                  <p className="text-sm text-muted-foreground mt-1">Спробуйте оновити сторінку</p>
+                </div>
+              ) : filteredMovements.length === 0 ? (
+                <div className="p-8 text-center">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                    <Package className="h-6 w-6 text-slate-400" />
+                  </div>
+                  <p className="font-medium text-slate-600">Немає операцій</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    За обраний період операції відсутні
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {displayedMovements.map((movement) => (
+                    <MovementRow key={movement.documentId} movement={movement} />
+                  ))}
                 </div>
               )}
-            </div>
-          )}
-        </div>
-      </main>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
     </div>
   );
 }
@@ -346,28 +466,68 @@ interface SummaryCardProps {
   count?: number;
   trend?: "up" | "down";
   icon: React.ComponentType<{ className?: string }>;
-  color: "success" | "destructive" | "info" | "warning";
+  color: "emerald" | "red" | "blue" | "amber";
+  tooltip: string;
 }
 
-function SummaryCard({ title, value, count, trend, icon: Icon, color }: SummaryCardProps) {
-  const colorClasses = {
-    success: "border-l-success text-success",
-    destructive: "border-l-destructive text-destructive",
-    info: "border-l-info text-info",
-    warning: "border-l-warning text-warning",
+function SummaryCard({ title, value, count, trend, icon: Icon, color, tooltip }: SummaryCardProps) {
+  const colorConfig = {
+    emerald: {
+      border: "border-l-emerald-500",
+      bg: "bg-emerald-50",
+      text: "text-emerald-600",
+      icon: "text-emerald-500",
+    },
+    red: {
+      border: "border-l-red-500",
+      bg: "bg-red-50",
+      text: "text-red-600",
+      icon: "text-red-500",
+    },
+    blue: {
+      border: "border-l-blue-500",
+      bg: "bg-blue-50",
+      text: "text-blue-600",
+      icon: "text-blue-500",
+    },
+    amber: {
+      border: "border-l-amber-500",
+      bg: "bg-amber-50",
+      text: "text-amber-600",
+      icon: "text-amber-500",
+    },
   };
 
+  const config = colorConfig[color];
+
   return (
-    <div className={cn("p-4 bg-card rounded-lg border border-l-4", colorClasses[color])}>
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-muted-foreground">{title}</span>
-        <Icon className="h-4 w-4 opacity-70" />
-      </div>
-      <p className="text-xl font-bold">{value} грн</p>
-      {count !== undefined && (
-        <p className="text-xs text-muted-foreground mt-1">{count} операцій</p>
-      )}
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Card className={cn("rounded-xl border-l-4 cursor-help transition-shadow hover:shadow-md", config.border)}>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                {title}
+                <Info className="h-3 w-3 opacity-50" />
+              </span>
+              <div className={cn("p-1.5 rounded-lg", config.bg)}>
+                <Icon className={cn("h-4 w-4", config.icon)} />
+              </div>
+            </div>
+            <p className={cn("text-xl sm:text-2xl font-bold", config.text)}>
+              {value}
+              <span className="text-sm font-normal text-muted-foreground ml-1">грн</span>
+            </p>
+            {count !== undefined && (
+              <p className="text-xs text-muted-foreground mt-1">{count} операцій</p>
+            )}
+          </CardContent>
+        </Card>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{tooltip}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -376,29 +536,34 @@ interface MovementRowProps {
 }
 
 function MovementRow({ movement }: MovementRowProps) {
-  const typeConfig = MOVEMENT_TYPES.find((t) => t.value === movement.movementType);
-  const Icon = typeConfig?.icon || Package;
-  const colorClass = typeConfig?.color || "text-muted-foreground";
+  const typeConfig = MOVEMENT_TYPES.find((t) => t.value === movement.movementType) || MOVEMENT_TYPES[0];
+  const Icon = typeConfig.icon;
 
   return (
-    <div className="flex items-center gap-4 p-4 hover:bg-muted/30 transition-colors">
-      <div className={cn("p-2 rounded-lg bg-muted", colorClass)}>
-        <Icon className="h-4 w-4" />
+    <div className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-slate-50/50 transition-colors">
+      <div className={cn("p-2.5 rounded-xl shrink-0", typeConfig.bgColor)}>
+        <Icon className={cn("h-4 w-4", typeConfig.color)} />
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{movement.ingredient?.name || "—"}</p>
-        <p className="text-sm text-muted-foreground">
-          {movement.quantity} {movement.unit}
-          {movement.reason && ` • ${movement.reason}`}
-        </p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{movement.quantity} {movement.unit}</span>
+          {movement.reason && (
+            <>
+              <span className="text-slate-300">•</span>
+              <span className="truncate">{movement.reason}</span>
+            </>
+          )}
+        </div>
       </div>
-      <div className="text-right">
-        <p className={cn("font-medium", colorClass)}>
+      <div className="text-right shrink-0">
+        <p className={cn("font-semibold", typeConfig.color)}>
           {movement.movementType === "receive" ? "+" : "-"}
-          {formatCurrency(movement.totalCost || 0)} грн
+          {formatCurrency(movement.totalCost || 0)}
+          <span className="text-xs font-normal text-muted-foreground ml-0.5">грн</span>
         </p>
         <p className="text-xs text-muted-foreground">
-          {new Date(movement.createdAt).toLocaleDateString("uk-UA")}
+          {formatDate(movement.createdAt)}
         </p>
       </div>
     </div>
