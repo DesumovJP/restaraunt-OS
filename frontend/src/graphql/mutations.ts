@@ -395,3 +395,28 @@ export const CANCEL_RESERVATION = gql`
     }
   }
 `;
+
+// ==========================================
+// INGREDIENTS
+// ==========================================
+
+// Create Ingredient (for new products in delivery orders)
+export const CREATE_INGREDIENT = gql`
+  mutation CreateIngredient($data: IngredientInput!) {
+    createIngredient(data: $data) {
+      documentId
+      name
+      nameUk
+      sku
+      unit
+      mainCategory
+      subCategory
+      costPerUnit
+      storageCondition
+      currentStock
+      minStock
+      maxStock
+      isActive
+    }
+  }
+`;

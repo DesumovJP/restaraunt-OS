@@ -9,6 +9,7 @@ import {
   FileBarChart,
   Trash2,
   ListTodo,
+  Truck,
 } from 'lucide-react';
 import { AppSidebar, type NavigationItem } from '@/components/layout/app-sidebar';
 
@@ -22,6 +23,7 @@ const defaultNavigationItems: NavigationItem<StorageView>[] = [
 
 // Reports and analytics - directly related to storage functionality
 const analyticsItems: NavigationItem<string>[] = [
+  { id: 'delivery', icon: Truck, label: 'Поставки', path: '/storage/delivery' },
   { id: 'reports', icon: FileBarChart, label: 'Звіти витрат', path: '/storage/reports' },
   { id: 'waste', icon: Trash2, label: 'Аналітика втрат', path: '/storage/waste' },
 ];
