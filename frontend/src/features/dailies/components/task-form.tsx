@@ -230,30 +230,120 @@ export function TaskForm({
             </div>
           </div>
 
-          {/* Date & Time */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* Date & Time - Quick Selection */}
+          <div className="space-y-3">
+            {/* Date */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 Дата
               </Label>
+              {/* Quick date buttons */}
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { label: "Сьогодні", offset: 0 },
+                  { label: "Завтра", offset: 1 },
+                  { label: "Післязавтра", offset: 2 },
+                ].map(({ label, offset }) => {
+                  const date = new Date();
+                  date.setDate(date.getDate() + offset);
+                  const dateStr = date.toISOString().split("T")[0];
+                  const isSelected = dueDate === dateStr;
+                  return (
+                    <button
+                      key={offset}
+                      type="button"
+                      onClick={() => setDueDate(dateStr)}
+                      className={cn(
+                        "px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                        "border touch-manipulation active:scale-95",
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-input hover:bg-muted"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setDueDate("")}
+                  className={cn(
+                    "px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                    "border touch-manipulation active:scale-95",
+                    !dueDate
+                      ? "bg-muted text-muted-foreground border-muted"
+                      : "bg-background border-input hover:bg-muted text-muted-foreground"
+                  )}
+                >
+                  Без дати
+                </button>
+              </div>
+              {/* Custom date picker */}
               <Input
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                className="w-full"
               />
             </div>
 
+            {/* Time */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Clock className="h-4 w-4" />
                 Час
               </Label>
-              <Input
-                type="time"
-                value={dueTime}
-                onChange={(e) => setDueTime(e.target.value)}
-              />
+              {/* Quick time buttons */}
+              <div className="flex gap-2 flex-wrap">
+                {[
+                  { label: "Ранок", time: "09:00" },
+                  { label: "Обід", time: "12:00" },
+                  { label: "День", time: "15:00" },
+                  { label: "Вечір", time: "18:00" },
+                  { label: "Ніч", time: "21:00" },
+                ].map(({ label, time }) => {
+                  const isSelected = dueTime === time;
+                  return (
+                    <button
+                      key={time}
+                      type="button"
+                      onClick={() => setDueTime(time)}
+                      className={cn(
+                        "px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                        "border touch-manipulation active:scale-95",
+                        isSelected
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background border-input hover:bg-muted"
+                      )}
+                    >
+                      <span className="block text-xs opacity-70">{time}</span>
+                      <span>{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Custom time picker */}
+              <div className="flex gap-2">
+                <Input
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                  className="flex-1"
+                />
+                {dueTime && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setDueTime("")}
+                    className="text-muted-foreground"
+                  >
+                    Очистити
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 

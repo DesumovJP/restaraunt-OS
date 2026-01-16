@@ -31,10 +31,15 @@ export interface PlannedOrder {
   prepStartTime: Date;
   guestCount: number;
   items: PlannedOrderItem[];
-  status: "scheduled" | "activating" | "activated" | "completed";
+  status: "scheduled" | "activating" | "activated" | "completed" | "reservation";
   specialRequests?: string;
   createdBy: string;
   priority?: "normal" | "vip";
+  /** Type of entry: scheduled order or reservation (table booking) */
+  entryType?: "order" | "reservation";
+  /** Reservation-specific fields */
+  reservationId?: string;
+  reservationStatus?: "pending" | "confirmed" | "seated" | "completed" | "cancelled" | "no_show";
   // HoReCa extensions
   eventType?: EventType;
   eventName?: string;

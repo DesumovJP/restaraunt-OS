@@ -27,6 +27,8 @@ import { useScheduledOrderMonitor } from "@/hooks/use-scheduled-order-monitor";
 import {
   useScheduledOrders,
   useUpdateScheduledOrderStatus,
+  useReservationsForDate,
+  type Reservation,
 } from "@/hooks/use-graphql-scheduled-orders";
 
 // Extracted components
@@ -37,6 +39,7 @@ import {
   TIME_SLOTS,
   EVENT_TYPES,
   convertToPlannedOrder,
+  convertReservationToPlannedOrder,
   isSameDay,
   formatDateFull,
   generateAvailableDates,
@@ -81,11 +84,26 @@ export function PlannedOrdersView({
 
   // GraphQL hooks
   const dateStr = selectedDate.toISOString().split("T")[0];
-  const { orders: graphqlOrders, isLoading, refetch } = useScheduledOrders({
+  const { orders: graphqlOrders, isLoading: ordersLoading, refetch } = useScheduledOrders({
     fromDate: `${dateStr}T00:00:00.000Z`,
     toDate: `${dateStr}T23:59:59.999Z`,
   });
   const { updateStatus: updateGraphQLStatus } = useUpdateScheduledOrderStatus();
+
+  // Fetch reservations for the same date
+  const { reservations, isLoading: reservationsLoading, error: reservationsError } = useReservationsForDate(dateStr);
+
+  // Debug: log reservations data
+  React.useEffect(() => {
+    console.log("[PlannedOrdersView] Date:", dateStr);
+    console.log("[PlannedOrdersView] Reservations count:", reservations.length);
+    console.log("[PlannedOrdersView] Reservations:", reservations);
+    if (reservationsError) {
+      console.error("[PlannedOrdersView] Reservations error:", reservationsError);
+    }
+  }, [dateStr, reservations, reservationsError]);
+
+  const isLoading = ordersLoading || reservationsLoading;
 
   // Date navigation helpers
   const goToToday = () => setSelectedDate(new Date());
@@ -129,14 +147,48 @@ export function PlannedOrdersView({
   // Available dates for selector
   const availableDates = React.useMemo(() => generateAvailableDates(30), []);
 
-  // Load orders for selected date
+  // Load orders for selected date (scheduled orders + reservations)
   const orders = React.useMemo((): PlannedOrder[] => {
     const currentDateStr = selectedDate.toISOString().split("T")[0];
+
+    // Convert scheduled orders
     const filteredByDate = scheduledOrders.filter((o: ScheduledOrder) =>
       o.scheduledFor.startsWith(currentDateStr)
     );
-    return filteredByDate.map(convertToPlannedOrder);
-  }, [selectedDate, scheduledOrders]);
+    const scheduledOrdersConverted = filteredByDate.map(convertToPlannedOrder);
+
+    // Convert reservations (only pending/confirmed - skip seated/completed/cancelled)
+    const activeReservations = reservations.filter((r: Reservation) =>
+      ["pending", "confirmed"].includes(r.status)
+    );
+
+    console.log("[PlannedOrdersView] Active reservations after filter:", activeReservations.length);
+
+    const reservationsConverted = activeReservations.map((r: Reservation) => {
+      console.log("[PlannedOrdersView] Converting reservation:", r.documentId, r.date, r.startTime, r.status);
+      return convertReservationToPlannedOrder({
+        documentId: r.documentId,
+        date: r.date,
+        startTime: r.startTime,
+        endTime: r.endTime,
+        guestCount: r.guestCount,
+        status: r.status,
+        contactName: r.contactName,
+        contactPhone: r.contactPhone,
+        contactEmail: r.contactEmail,
+        notes: r.notes,
+        specialRequests: r.specialRequests,
+        occasion: r.occasion,
+        tableId: r.tableId,
+        tableNumber: r.tableNumber,
+      });
+    });
+
+    console.log("[PlannedOrdersView] Total orders:", scheduledOrdersConverted.length + reservationsConverted.length);
+
+    // Merge and return
+    return [...scheduledOrdersConverted, ...reservationsConverted];
+  }, [selectedDate, scheduledOrders, reservations]);
 
   // Order being viewed
   const viewingOrder = React.useMemo((): PlannedOrder | null => {
@@ -149,7 +201,11 @@ export function PlannedOrdersView({
     let result = orders;
 
     if (statusFilter !== "all") {
-      result = result.filter((o: PlannedOrder) => o.status === statusFilter);
+      if (statusFilter === "reservation") {
+        result = result.filter((o: PlannedOrder) => o.entryType === "reservation");
+      } else {
+        result = result.filter((o: PlannedOrder) => o.status === statusFilter && o.entryType !== "reservation");
+      }
     }
 
     if (searchQuery.trim()) {
@@ -458,7 +514,8 @@ export function PlannedOrdersView({
             <div className="flex gap-1.5 flex-wrap">
               {[
                 { value: "all", label: "Всі", count: dayStats.total },
-                { value: "scheduled", label: "Заплановано", count: dayStats.scheduled },
+                { value: "reservation", label: "Бронювання", count: dayStats.reservations },
+                { value: "scheduled", label: "Замовлення", count: dayStats.scheduled },
                 { value: "activated", label: "На кухні", count: dayStats.activated },
                 { value: "completed", label: "Виконано", count: dayStats.completed },
               ].map((option) => (

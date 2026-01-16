@@ -35,13 +35,23 @@ import type { OrderCardProps, PlannedOrder } from "./types";
 /**
  * Get status badge for order
  */
-function getStatusBadge(status: PlannedOrder["status"]) {
+function getStatusBadge(status: PlannedOrder["status"], isReservation?: boolean) {
+  // Special badge for reservations (table bookings without pre-orders)
+  if (isReservation) {
+    return (
+      <Badge variant="outline" className="gap-1 border-blue-300 text-blue-700 bg-blue-50">
+        <Calendar className="h-3 w-3" />
+        Бронювання
+      </Badge>
+    );
+  }
+
   switch (status) {
     case "scheduled":
       return (
         <Badge variant="outline" className="gap-1 border-purple-300 text-purple-700 bg-purple-50">
           <Clock className="h-3 w-3" />
-          Заплановано
+          Замовлення
         </Badge>
       );
     case "activating":
@@ -65,6 +75,13 @@ function getStatusBadge(status: PlannedOrder["status"]) {
           Виконано
         </Badge>
       );
+    case "reservation":
+      return (
+        <Badge variant="outline" className="gap-1 border-blue-300 text-blue-700 bg-blue-50">
+          <Calendar className="h-3 w-3" />
+          Бронювання
+        </Badge>
+      );
   }
 }
 
@@ -86,6 +103,7 @@ export function OrderCard({
   const EventIcon = eventConfig?.icon || Calendar;
   const isOverdueScheduled = timeDisplay.isOverdue && order.status === "scheduled";
   const isEvent = order.eventType && order.eventType !== "regular";
+  const isReservation = order.entryType === "reservation";
 
   return (
     <Card
@@ -93,7 +111,8 @@ export function OrderCard({
         "overflow-hidden transition-all duration-200",
         "hover:shadow-md",
         isOverdueScheduled && "border-red-300 bg-red-50/50 dark:bg-red-950/20",
-        isEvent && "border-l-4 border-l-purple-400",
+        isReservation && "border-l-4 border-l-blue-400 bg-blue-50/30 dark:bg-blue-950/20",
+        isEvent && !isReservation && "border-l-4 border-l-purple-400",
         isExpanded && "ring-1 ring-primary/20"
       )}
     >
@@ -113,11 +132,13 @@ export function OrderCard({
                 "w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center font-bold text-white shadow-sm",
                 "transition-transform duration-200",
                 isExpanded && "scale-95",
-                isEvent
-                  ? "bg-gradient-to-br from-purple-500 to-purple-600"
-                  : variant === "kitchen"
-                    ? "bg-gradient-to-br from-orange-500 to-orange-600"
-                    : "bg-gradient-to-br from-blue-500 to-blue-600"
+                isReservation
+                  ? "bg-gradient-to-br from-blue-500 to-blue-600"
+                  : isEvent
+                    ? "bg-gradient-to-br from-purple-500 to-purple-600"
+                    : variant === "kitchen"
+                      ? "bg-gradient-to-br from-orange-500 to-orange-600"
+                      : "bg-gradient-to-br from-indigo-500 to-indigo-600"
               )}
             >
               {isEvent ? (
@@ -163,12 +184,17 @@ export function OrderCard({
                   {SEATING_AREAS[order.seatingArea]}
                 </span>
               )}
-              {order.items.length > 0 && (
+              {order.items.length > 0 ? (
                 <span className="flex items-center gap-1">
                   <UtensilsCrossed className="h-3 w-3" />
                   {order.items.length}
                 </span>
-              )}
+              ) : isReservation ? (
+                <span className="flex items-center gap-1 text-blue-500">
+                  <Calendar className="h-3 w-3" />
+                  Без замовл.
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -194,8 +220,8 @@ export function OrderCard({
               </div>
             </div>
 
-            {/* Quick action button for kitchen - visible without expanding */}
-            {variant === "kitchen" && order.status === "scheduled" && onActivate && (
+            {/* Quick action button for kitchen - visible without expanding (not for reservations) */}
+            {variant === "kitchen" && order.status === "scheduled" && onActivate && !isReservation && (
               <Button
                 size="icon"
                 onClick={(e) => {
@@ -216,9 +242,9 @@ export function OrderCard({
             {/* Status badge - hidden on mobile if quick action is shown */}
             <div className={cn(
               "shrink-0",
-              variant === "kitchen" && order.status === "scheduled" && "hidden sm:block"
+              variant === "kitchen" && order.status === "scheduled" && !isReservation && "hidden sm:block"
             )}>
-              {getStatusBadge(order.status)}
+              {getStatusBadge(order.status, isReservation)}
             </div>
           </div>
         </div>
@@ -310,7 +336,7 @@ export function OrderCard({
             )}
 
             {/* Items list - Enhanced */}
-            {order.items.length > 0 && (
+            {order.items.length > 0 ? (
               <div className="rounded-xl border bg-background p-2.5">
                 <div className="flex items-center gap-2 mb-2 px-1">
                   <UtensilsCrossed className="h-4 w-4 text-muted-foreground" />
@@ -339,42 +365,63 @@ export function OrderCard({
                   ))}
                 </div>
               </div>
-            )}
+            ) : isReservation ? (
+              <div className="rounded-xl border border-dashed border-blue-300 bg-blue-50/50 dark:bg-blue-950/30 p-4 text-center">
+                <UtensilsCrossed className="h-6 w-6 text-blue-400 mx-auto mb-2" />
+                <p className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                  Без попереднього замовлення
+                </p>
+                <p className="text-xs text-blue-500/70 mt-1">
+                  Гості оберуть страви на місці
+                </p>
+              </div>
+            ) : null}
 
             {/* Actions - Touch-optimized */}
             <div className="flex gap-2 pt-1">
               {variant === "kitchen" ? (
                 <>
-                  {order.status === "scheduled" && onActivate && (
-                    <Button
-                      size="lg"
-                      className={cn(
-                        "flex-1 h-11 rounded-xl",
-                        "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700",
-                        "shadow-md hover:shadow-lg transition-all"
+                  {isReservation ? (
+                    // For reservations in kitchen - just informational, no actions needed
+                    <div className="flex-1 text-center py-2">
+                      <span className="text-xs text-muted-foreground">
+                        Бронювання відображається для інформації
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      {order.status === "scheduled" && onActivate && (
+                        <Button
+                          size="lg"
+                          className={cn(
+                            "flex-1 h-11 rounded-xl",
+                            "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700",
+                            "shadow-md hover:shadow-lg transition-all"
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onActivate(order.id);
+                          }}
+                        >
+                          <Zap className="h-4 w-4 mr-1.5" />
+                          Активувати зараз
+                        </Button>
                       )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onActivate(order.id);
-                      }}
-                    >
-                      <Zap className="h-4 w-4 mr-1.5" />
-                      Активувати зараз
-                    </Button>
-                  )}
-                  {order.status === "activated" && onComplete && (
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      className="flex-1 h-11 rounded-xl border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onComplete(order.id);
-                      }}
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                      Позначити виконаним
-                    </Button>
+                      {order.status === "activated" && onComplete && (
+                        <Button
+                          size="lg"
+                          variant="outline"
+                          className="flex-1 h-11 rounded-xl border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onComplete(order.id);
+                          }}
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-1.5" />
+                          Позначити виконаним
+                        </Button>
+                      )}
+                    </>
                   )}
                 </>
               ) : (

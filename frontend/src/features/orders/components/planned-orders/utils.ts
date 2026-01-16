@@ -182,7 +182,68 @@ export function calculateDayStats(orders: PlannedOrder[]) {
     scheduled: orders.filter((o) => o.status === "scheduled").length,
     activated: orders.filter((o) => o.status === "activated").length,
     completed: orders.filter((o) => o.status === "completed").length,
+    reservations: orders.filter((o) => o.entryType === "reservation").length,
     totalGuests: orders.reduce((sum, o) => sum + o.guestCount, 0),
     events: orders.filter((o) => o.eventType && o.eventType !== "regular").length,
+  };
+}
+
+// ==========================================
+// RESERVATION CONVERSION
+// ==========================================
+
+export interface ReservationForConversion {
+  documentId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  guestCount: number;
+  status: string;
+  contactName: string;
+  contactPhone: string;
+  contactEmail?: string;
+  notes?: string;
+  specialRequests?: string;
+  occasion?: string;
+  tableId?: string;
+  tableNumber: number;
+}
+
+/**
+ * Convert a Reservation to PlannedOrder view model
+ * This allows showing reservations (table bookings) alongside scheduled orders
+ */
+export function convertReservationToPlannedOrder(res: ReservationForConversion): PlannedOrder {
+  // Parse start time
+  const [hours, minutes] = res.startTime.split(":").map(Number);
+  const scheduledTime = new Date(res.date);
+  scheduledTime.setHours(hours, minutes, 0, 0);
+
+  // Prep start is same as scheduled for reservations (no prep needed for just booking)
+  const prepStartTime = new Date(scheduledTime);
+
+  return {
+    id: `reservation_${res.documentId}`,
+    tableNumber: res.tableNumber,
+    scheduledTime,
+    prepStartTime,
+    guestCount: res.guestCount,
+    items: [], // Reservations have no items
+    status: "reservation",
+    specialRequests: res.specialRequests || res.notes,
+    createdBy: res.contactName || "Гість",
+    priority: "normal",
+    entryType: "reservation",
+    reservationId: res.documentId,
+    reservationStatus: res.status as any,
+    contact: {
+      name: res.contactName,
+      phone: res.contactPhone,
+      email: res.contactEmail,
+    },
+    eventType: res.occasion === "birthday" ? "birthday" :
+               res.occasion === "anniversary" ? "anniversary" :
+               res.occasion === "business" ? "corporate" :
+               res.occasion === "romantic" ? "wedding" : "regular",
   };
 }
