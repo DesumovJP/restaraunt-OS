@@ -14,6 +14,7 @@ import {
   Timer,
   RefreshCw,
   Calendar,
+  Undo2,
 } from "lucide-react";
 import { CourseBadge } from "@/features/orders/course-selector";
 import { CommentDisplay } from "@/features/orders/comment-editor";
@@ -33,6 +34,7 @@ export function TaskCard({
   onComplete,
   onReturn,
   onServed,
+  onRecall,
 }: TaskCardProps) {
   const [currentElapsed, setCurrentElapsed] = React.useState(task.elapsedMs);
   const [pickupWait, setPickupWait] = React.useState(0);
@@ -243,17 +245,47 @@ export function TaskCard({
 
       {/* Actions */}
       <div className="flex items-center justify-end gap-1.5 mt-2">
-        {!isActive && !isCompleted && onStart && (
-          <Button size="sm" className="h-7 text-xs" onClick={onStart}>
-            <Play className="h-3 w-3 mr-1" />
-            Почати
-          </Button>
+        {!isActive && !isCompleted && (
+          <>
+            {onRecall && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs text-amber-600 border-amber-300 hover:bg-amber-50"
+                onClick={onRecall}
+              >
+                <Undo2 className="h-3 w-3 mr-1" />
+                Відкликати
+              </Button>
+            )}
+            {onStart && (
+              <Button size="sm" className="h-7 text-xs" onClick={onStart}>
+                <Play className="h-3 w-3 mr-1" />
+                Почати
+              </Button>
+            )}
+          </>
         )}
-        {isActive && onComplete && (
-          <Button size="sm" variant="default" className="h-7 text-xs" onClick={onComplete}>
-            <Check className="h-3 w-3 mr-1" />
-            Готово
-          </Button>
+        {isActive && (
+          <>
+            {onRecall && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs text-amber-600 border-amber-300 hover:bg-amber-50"
+                onClick={onRecall}
+              >
+                <Undo2 className="h-3 w-3 mr-1" />
+                Відкликати
+              </Button>
+            )}
+            {onComplete && (
+              <Button size="sm" variant="default" className="h-7 text-xs" onClick={onComplete}>
+                <Check className="h-3 w-3 mr-1" />
+                Готово
+              </Button>
+            )}
+          </>
         )}
         {isCompleted && (
           <>

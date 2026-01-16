@@ -8,6 +8,7 @@ import {
   AlertTriangle,
   Settings,
   CheckCircle,
+  Zap,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { TableZone, CloseReason } from "@/types/table";
@@ -36,33 +37,45 @@ export const ZONE_COLORS: Record<TableZone, string> = {
 
 // Close reason labels and icons
 export const CLOSE_REASON_LABELS: Record<CloseReason, string> = {
+  normal: "Звичайне закриття",
   mistaken_open: "Помилково відкрито",
   no_show: "Гість не прийшов",
   walkout: "Пішов без оплати",
+  emergency: "Екстрене закриття",
   technical_error: "Технічна помилка",
-  normal: "Звичайне закриття",
 };
 
 export const CLOSE_REASON_ICONS: Record<CloseReason, LucideIcon> = {
+  normal: CheckCircle,
   mistaken_open: AlertCircle,
   no_show: UserX,
   walkout: AlertTriangle,
+  emergency: Zap,
   technical_error: Settings,
-  normal: CheckCircle,
 };
 
 export const CLOSE_REASON_DESCRIPTIONS: Record<CloseReason, string> = {
+  normal: "Гість розрахувався та пішов",
   mistaken_open: "Стіл було відкрито по помилці",
   no_show: "Гість зарезервував, але не прийшов",
   walkout: "Гість пішов без оплати рахунку",
+  emergency: "Термінове закриття без оплати",
   technical_error: "Помилка системи або обладнання",
-  normal: "Гість розрахувався та пішов",
 };
 
 export const CLOSE_REASON_COLORS: Record<CloseReason, string> = {
+  normal: "border-emerald-500 hover:bg-emerald-50",
   mistaken_open: "border-amber-500 hover:bg-amber-50",
   no_show: "border-blue-500 hover:bg-blue-50",
   walkout: "border-red-500 hover:bg-red-50",
+  emergency: "border-orange-500 hover:bg-orange-50",
   technical_error: "border-gray-500 hover:bg-gray-50",
-  normal: "border-emerald-500 hover:bg-emerald-50",
 };
+
+// Emergency close reasons (subset for emergency dialog)
+export const EMERGENCY_CLOSE_REASONS: CloseReason[] = [
+  'walkout',
+  'emergency',
+  'no_show',
+  'technical_error',
+];

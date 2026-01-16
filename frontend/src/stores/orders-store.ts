@@ -45,6 +45,37 @@ interface OrdersState {
   error: string | null;
 }
 
+interface AddItemsPayload {
+  menuItemId: string;
+  quantity: number;
+  notes?: string;
+  courseType?: CourseType;
+  modifiers?: string[];
+}
+
+interface AddItemsResult {
+  success: boolean;
+  items: Array<{
+    documentId: string;
+    menuItemName: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
+  tickets: Array<{
+    documentId: string;
+    ticketNumber: string;
+    station: string;
+  }>;
+  order: {
+    documentId: string;
+    orderNumber: string;
+    totalAmount: number;
+    version: number;
+    status: string;
+  };
+}
+
 interface OrdersActions {
   // Order CRUD
   setOrders: (orders: ExtendedOrder[]) => void;
@@ -54,6 +85,13 @@ interface OrdersActions {
 
   // Item management
   addItemToOrder: (orderId: string, item: ExtendedOrderItem) => void;
+
+  // API-based add items to existing order
+  addItemsToOrderAsync: (
+    orderDocumentId: string,
+    items: AddItemsPayload[],
+    version?: number
+  ) => Promise<AddItemsResult>;
   updateItem: (orderId: string, itemId: string, updates: Partial<ExtendedOrderItem>) => void;
   removeItem: (orderId: string, itemId: string) => void;
 
@@ -179,6 +217,56 @@ export const useOrdersStore = create<OrdersStore>()(
             };
           }),
         })),
+
+      addItemsToOrderAsync: async (orderDocumentId, items, version) => {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const response = await fetch(
+            `${apiUrl}/api/orders/${orderDocumentId}/items`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ items, version }),
+            }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            if (response.status === 409) {
+              throw new Error(errorData.error?.message || 'Версія замовлення змінилася. Перезавантажте дані.');
+            }
+            throw new Error(errorData.error?.message || 'Помилка при додаванні страв');
+          }
+
+          const result: AddItemsResult = await response.json();
+
+          // Update local state with new order info
+          set((state) => ({
+            orders: state.orders.map((order) => {
+              if (order.documentId !== orderDocumentId) return order;
+              return {
+                ...order,
+                totalAmount: result.order.totalAmount,
+                version: result.order.version,
+                status: result.order.status,
+                updatedAt: new Date().toISOString(),
+              };
+            }),
+            isLoading: false,
+          }));
+
+          return result;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Невідома помилка';
+          set({ error: message, isLoading: false });
+          throw error;
+        }
+      },
 
       updateItem: (orderId, itemId, updates) =>
         set((state) => ({

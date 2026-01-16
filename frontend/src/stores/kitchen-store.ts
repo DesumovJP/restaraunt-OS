@@ -111,9 +111,17 @@ function cleanupRemovedTasks() {
   }
 }
 
+interface RecallResult {
+  itemName: string;
+  itemTotal: number;
+  reversedMovements: number;
+}
+
 interface KitchenStore {
   tasks: KitchenTask[];
   lastSyncedAt: string | null;
+  isLoading: boolean;
+  error: string | null;
 
   // Actions
   addTask: (task: KitchenTask) => void;
@@ -123,6 +131,7 @@ interface KitchenStore {
   clearCompletedTasks: () => void;
   clearAllTasks: () => void;
   syncFromBackend: (tickets: BackendKitchenTicket[]) => void;
+  recallTicket: (ticketDocumentId: string, reason: string) => Promise<RecallResult>;
 
   // Getters
   getTasksByStation: (station: StationType) => KitchenTask[];
@@ -259,6 +268,8 @@ export const useKitchenStore = create<KitchenStore>()(
     (set, get) => ({
       tasks: [] as KitchenTask[],
       lastSyncedAt: null,
+      isLoading: false,
+      error: null,
 
       addTask: (task) => {
         set((state) => ({
@@ -389,6 +400,51 @@ export const useKitchenStore = create<KitchenStore>()(
 
       clearAllTasks: () => {
         set({ tasks: [], lastSyncedAt: null });
+      },
+
+      recallTicket: async (ticketDocumentId: string, reason: string) => {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:1337';
+
+        set({ isLoading: true, error: null });
+
+        try {
+          const response = await fetch(
+            `${apiUrl}/api/kitchen-tickets/${ticketDocumentId}/recall`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ reason }),
+            }
+          );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error?.message || 'Помилка при відкликанні тікета');
+          }
+
+          const result = await response.json();
+
+          // Remove the ticket from local state
+          set((state) => ({
+            tasks: state.tasks.filter((task) => task.documentId !== ticketDocumentId),
+            isLoading: false,
+          }));
+
+          // Track as removed to prevent sync from re-adding
+          recentlyRemovedTasks.set(ticketDocumentId, Date.now());
+
+          return {
+            itemName: result.orderItem?.menuItemName || 'Позиція',
+            itemTotal: result.orderItem?.totalPrice || 0,
+            reversedMovements: result.reversedMovementsCount || 0,
+          };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Невідома помилка';
+          set({ error: message, isLoading: false });
+          throw error;
+        }
       },
 
       syncFromBackend: (tickets: BackendKitchenTicket[]) => {

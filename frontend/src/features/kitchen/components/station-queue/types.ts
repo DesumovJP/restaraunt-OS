@@ -71,6 +71,7 @@ export interface StationQueueProps {
   onTaskPass: (taskDocumentId: string) => void;
   onTaskReturn?: (taskDocumentId: string) => void;
   onTaskServed?: (taskDocumentId: string) => void;
+  onTaskRecall?: (taskDocumentId: string) => void;
   onPauseToggle: () => void;
   className?: string;
 }
@@ -83,6 +84,7 @@ export interface TaskCardProps {
   onComplete?: () => void;
   onReturn?: () => void;
   onServed?: () => void;
+  onRecall?: () => void;
 }
 
 export interface TableGroupCardProps {
@@ -94,6 +96,7 @@ export interface TableGroupCardProps {
   onTaskComplete?: (taskId: string) => void;
   onTaskReturn?: (taskId: string) => void;
   onTaskServed?: (taskId: string) => void;
+  onTaskRecall?: (taskId: string) => void;
 }
 
 export interface TaskItemRowProps {
@@ -105,6 +108,7 @@ export interface TaskItemRowProps {
   onComplete?: () => void;
   onReturn?: () => void;
   onServed?: () => void;
+  onRecall?: () => void;
 }
 
 export interface StationOverviewProps {
@@ -129,6 +133,7 @@ export interface AllKitchenViewProps {
   onTaskPass: (taskDocumentId: string) => void;
   onTaskReturn?: (taskDocumentId: string) => void;
   onTaskServed?: (taskDocumentId: string) => void;
+  onTaskRecall?: (taskDocumentId: string) => void;
   className?: string;
 }
 
@@ -141,4 +146,5 @@ export interface AllKitchenTableCardProps {
   onTaskComplete?: (taskId: string) => void;
   onTaskReturn?: (taskId: string) => void;
   onTaskServed?: (taskId: string) => void;
+  onTaskRecall?: (taskId: string) => void;
 }

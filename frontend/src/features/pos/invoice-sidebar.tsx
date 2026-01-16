@@ -16,6 +16,7 @@ import {
   ChefHat,
   Calendar,
   Receipt,
+  ListPlus,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import {
@@ -25,7 +26,9 @@ import {
 import { CommentEditor, CommentDisplay } from '@/features/orders/comment-editor';
 import { OrderConfirmDialog } from '@/features/orders/order-confirm-dialog';
 import { ScheduledOrderSaveDialog } from '@/features/orders/scheduled-order-save-dialog';
+import { AddItemsToOrderDialog } from '@/features/orders/add-items-to-order-dialog';
 import { CheckoutDialog } from '@/features/pos/checkout-dialog';
+import { useOrdersStore } from '@/stores/orders-store';
 import type { ItemComment } from '@/types/extended';
 import { COMMENT_PRESETS } from '@/types/extended';
 
@@ -86,6 +89,19 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
   const [isOrderConfirmOpen, setIsOrderConfirmOpen] = React.useState(false);
   const [isScheduledSaveOpen, setIsScheduledSaveOpen] = React.useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = React.useState(false);
+  const [isAddItemsOpen, setIsAddItemsOpen] = React.useState(false);
+
+  // Check for active orders
+  const getOrdersForTable = useOrdersStore((state) => state.getOrdersForTable);
+  const hasActiveOrders = React.useMemo(() => {
+    if (!selectedTable) return false;
+    const orders = getOrdersForTable(selectedTable.number);
+    return orders.some(
+      (order) =>
+        order.status !== 'served' &&
+        order.status !== 'cancelled'
+    );
+  }, [selectedTable, getOrdersForTable]);
 
   // Comment state for each item
   const [itemComments, setItemComments] = React.useState<Record<string, ItemComment | null>>({});
@@ -295,6 +311,19 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
               {selectedTable && <span className="ml-1 opacity-75 flex-shrink-0">• Стіл {selectedTable.number}</span>}
             </Button>
 
+            {/* Add to existing order button - only when table has active orders */}
+            {selectedTable && hasActiveOrders && items.length > 0 && (
+              <Button
+                onClick={() => setIsAddItemsOpen(true)}
+                variant="outline"
+                className="w-full h-12 text-base font-semibold border-2 border-blue-500 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-xl transition-all touch-feedback flex-shrink-0"
+                size="lg"
+              >
+                <ListPlus className="w-5 h-5 mr-2 flex-shrink-0" />
+                <span>Додати до замовлення</span>
+              </Button>
+            )}
+
             {/* Checkout button - only when table is selected */}
             {selectedTable && (
               <Button
@@ -403,6 +432,21 @@ export function InvoiceSidebar({ open, onOpenChange, showDesktopSidebar = true }
           router.push('/pos/waiter/tables');
         }}
       />
+
+      {/* Add Items to Order Dialog */}
+      {selectedTable && (
+        <AddItemsToOrderDialog
+          tableNumber={selectedTable.number}
+          isOpen={isAddItemsOpen}
+          onClose={() => setIsAddItemsOpen(false)}
+          onSuccess={() => {
+            if (isMobile) {
+              setIsMobileOpen(false);
+            }
+          }}
+          itemComments={itemComments}
+        />
+      )}
     </>
   );
 }

@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/utils';
-import type { Table } from '@/types/table';
-import { Users, Clock, Calendar, MoreVertical, X, ArrowRightLeft, Link2 } from 'lucide-react';
+import type { Table, CloseReason } from '@/types/table';
+import { Users, Clock, Calendar, MoreVertical, X, ArrowRightLeft, Link2, AlertTriangle, CreditCard } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +17,8 @@ import { ZONE_LABELS, ZONE_ICONS, ZONE_COLORS } from '@/lib/constants/tables';
 import { CloseTableDialog } from './close-table-dialog';
 import { ExtendSessionDialog } from './extend-session-dialog';
 import { MergeTablesDialog } from './merge-tables-dialog';
+import { EmergencyCloseDialog } from './emergency-close-dialog';
+import { TransferGuestsDialog } from './transfer-guests-dialog';
 import { useTableStore } from '@/stores/table-store';
 import { toast } from 'sonner';
 
@@ -107,6 +109,13 @@ const statusConfig = {
     indicator: 'bg-blue-500',
     glow: 'shadow-blue-500/10',
   },
+  billing: {
+    bg: 'bg-gradient-to-br from-purple-50 to-purple-100/50 border-purple-200/80 hover:border-purple-400 hover:shadow-purple-100',
+    text: 'text-purple-800',
+    accent: 'text-purple-600',
+    indicator: 'bg-purple-500',
+    glow: 'shadow-purple-500/10',
+  },
 };
 
 export function TableCard({ table, onSelect, nextReservation }: TableCardProps) {
@@ -115,9 +124,13 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
   const closeTable = useTableStore((state) => state.closeTable);
   const extendTableSession = useTableStore((state) => state.extendTableSession);
   const mergeTables = useTableStore((state) => state.mergeTables);
+  const emergencyCloseTable = useTableStore((state) => state.emergencyCloseTable);
+  const transferGuests = useTableStore((state) => state.transferGuests);
   const [isCloseDialogOpen, setIsCloseDialogOpen] = React.useState(false);
+  const [isEmergencyCloseDialogOpen, setIsEmergencyCloseDialogOpen] = React.useState(false);
   const [isExtendDialogOpen, setIsExtendDialogOpen] = React.useState(false);
   const [isMergeDialogOpen, setIsMergeDialogOpen] = React.useState(false);
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = React.useState(false);
   const [isClosing, setIsClosing] = React.useState(false);
 
   const ZoneIcon = table.zone ? ZONE_ICONS[table.zone] : null;
@@ -129,11 +142,14 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
       case 'close':
         setIsCloseDialogOpen(true);
         break;
+      case 'emergency-close':
+        setIsEmergencyCloseDialogOpen(true);
+        break;
       case 'extend':
         setIsExtendDialogOpen(true);
         break;
-      case 'move':
-        toast.info('Функція переміщення гостей буде додана найближчим часом');
+      case 'transfer':
+        setIsTransferDialogOpen(true);
         break;
       case 'merge':
         setIsMergeDialogOpen(true);
@@ -167,10 +183,31 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
 
   const handleMergeTables = async (tableIds: string[]) => {
     try {
-      mergeTables(table.documentId || table.id, tableIds);
+      await mergeTables(table.documentId || table.id, tableIds);
       toast.success(`Столи успішно об'єднано (${tableIds.length + 1} столів)`);
     } catch (error) {
       toast.error("Помилка при об'єднанні столів");
+      throw error;
+    }
+  };
+
+  const handleEmergencyClose = async (reason: CloseReason, comment?: string) => {
+    try {
+      const result = await emergencyCloseTable(table.documentId || table.id, reason, comment);
+      toast.warning(`Стіл №${table.number} екстрено закрито`);
+      return result;
+    } catch (error) {
+      toast.error('Помилка при екстреному закритті');
+      throw error;
+    }
+  };
+
+  const handleTransferGuests = async (targetTableId: string) => {
+    try {
+      const result = await transferGuests(table.documentId || table.id, targetTableId);
+      toast.success(`Гостей перенесено (${result.ordersTransferred} замовлень)`);
+    } catch (error) {
+      toast.error('Помилка при перенесенні гостей');
       throw error;
     }
   };
@@ -206,7 +243,7 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
         )}
 
         {/* Quick Actions Menu - top right, shows on hover/touch */}
-        {table.status === 'occupied' && (
+        {(table.status === 'occupied' || table.status === 'billing') && (
           <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 sm:transition-opacity duration-200 sm:delay-75">
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -218,19 +255,23 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem onClick={(e) => handleQuickAction(e, 'close')} className="text-red-600">
+              <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onClick={(e) => handleQuickAction(e, 'close')} className="text-amber-600">
                   <X className="h-4 w-4 mr-2" />
                   Закрити стіл
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={(e) => handleQuickAction(e, 'emergency-close')} className="text-red-600">
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Екстрене закриття
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={(e) => handleQuickAction(e, 'extend')}>
                   <Clock className="h-4 w-4 mr-2" />
                   Подовжити сесію
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => handleQuickAction(e, 'move')}>
+                <DropdownMenuItem onClick={(e) => handleQuickAction(e, 'transfer')}>
                   <ArrowRightLeft className="h-4 w-4 mr-2" />
-                  Перемістити гостей
+                  Перенести гостей
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => handleQuickAction(e, 'merge')}>
                   <Link2 className="h-4 w-4 mr-2" />
@@ -276,13 +317,22 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
           </div>
 
           {/* Таймер для зайнятих - покращений */}
-          {table.status === 'occupied' && (
+          {(table.status === 'occupied' || table.status === 'billing') && (
             <div className={cn(
               'flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/40 mt-1',
               config.accent
             )}>
-              <Clock className="w-3.5 h-3.5" />
-              <TableTimer occupiedAt={table.occupiedAt} />
+              {table.status === 'billing' ? (
+                <>
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span className="text-xs font-semibold">Рахунок</span>
+                </>
+              ) : (
+                <>
+                  <Clock className="w-3.5 h-3.5" />
+                  <TableTimer occupiedAt={table.occupiedAt} />
+                </>
+              )}
             </div>
           )}
 
@@ -303,8 +353,8 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
             </div>
           )}
 
-          {/* Current guests count for occupied tables */}
-          {table.status === 'occupied' && table.currentGuests && (
+          {/* Current guests count for occupied/billing tables */}
+          {(table.status === 'occupied' || table.status === 'billing') && table.currentGuests && (
             <div className={cn(
               'flex items-center gap-1 text-xs font-medium mt-1',
               config.accent
@@ -339,6 +389,23 @@ export function TableCard({ table, onSelect, nextReservation }: TableCardProps) 
         isOpen={isMergeDialogOpen}
         onClose={() => setIsMergeDialogOpen(false)}
         onConfirm={handleMergeTables}
+      />
+
+      {/* Emergency Close Dialog */}
+      <EmergencyCloseDialog
+        table={table}
+        isOpen={isEmergencyCloseDialogOpen}
+        onClose={() => setIsEmergencyCloseDialogOpen(false)}
+        onConfirm={handleEmergencyClose}
+      />
+
+      {/* Transfer Guests Dialog */}
+      <TransferGuestsDialog
+        sourceTable={table}
+        availableTables={tables}
+        isOpen={isTransferDialogOpen}
+        onClose={() => setIsTransferDialogOpen(false)}
+        onConfirm={handleTransferGuests}
       />
     </>
   );
