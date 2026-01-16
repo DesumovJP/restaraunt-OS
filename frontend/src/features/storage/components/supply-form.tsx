@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useQuery, useMutation } from "urql";
 import { GET_ALL_INGREDIENTS, GET_ALL_SUPPLIERS } from "@/graphql/queries";
-import { CREATE_STOCK_BATCH, CREATE_INVENTORY_MOVEMENT } from "@/graphql/mutations";
+import { CREATE_STOCK_BATCH, CREATE_INVENTORY_MOVEMENT, UPDATE_INGREDIENT_STOCK } from "@/graphql/mutations";
 import {
   Dialog,
   DialogContent,
@@ -83,6 +83,7 @@ export function SupplyForm({ open, onOpenChange, onSuccess }: SupplyFormProps) {
   // Mutations
   const [, createStockBatch] = useMutation(CREATE_STOCK_BATCH);
   const [, createInventoryMovement] = useMutation(CREATE_INVENTORY_MOVEMENT);
+  const [, updateIngredientStock] = useMutation(UPDATE_INGREDIENT_STOCK);
 
   const ingredients: Ingredient[] = ingredientsResult.data?.ingredients || [];
   const suppliers: Supplier[] = suppliersResult.data?.suppliers || [];
@@ -174,6 +175,17 @@ export function SupplyForm({ open, onOpenChange, onSuccess }: SupplyFormProps) {
           notes: invoiceNumber ? `Накладна: ${invoiceNumber}` : undefined,
         },
       });
+
+      // Update ingredient's currentStock
+      const newStock = (selectedIngredient?.currentStock || 0) + quantity;
+      const stockResult = await updateIngredientStock({
+        documentId: ingredientId,
+        currentStock: newStock,
+      });
+
+      if (stockResult.error) {
+        console.error("Failed to update ingredient stock:", stockResult.error);
+      }
 
       onOpenChange(false);
       onSuccess?.();
