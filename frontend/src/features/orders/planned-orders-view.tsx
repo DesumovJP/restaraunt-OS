@@ -91,17 +91,7 @@ export function PlannedOrdersView({
   const { updateStatus: updateGraphQLStatus } = useUpdateScheduledOrderStatus();
 
   // Fetch reservations for the same date
-  const { reservations, isLoading: reservationsLoading, error: reservationsError } = useReservationsForDate(dateStr);
-
-  // Debug: log reservations data
-  React.useEffect(() => {
-    console.log("[PlannedOrdersView] Date:", dateStr);
-    console.log("[PlannedOrdersView] Reservations count:", reservations.length);
-    console.log("[PlannedOrdersView] Reservations:", reservations);
-    if (reservationsError) {
-      console.error("[PlannedOrdersView] Reservations error:", reservationsError);
-    }
-  }, [dateStr, reservations, reservationsError]);
+  const { reservations, isLoading: reservationsLoading } = useReservationsForDate(dateStr);
 
   const isLoading = ordersLoading || reservationsLoading;
 
@@ -162,11 +152,8 @@ export function PlannedOrdersView({
       ["pending", "confirmed"].includes(r.status)
     );
 
-    console.log("[PlannedOrdersView] Active reservations after filter:", activeReservations.length);
-
-    const reservationsConverted = activeReservations.map((r: Reservation) => {
-      console.log("[PlannedOrdersView] Converting reservation:", r.documentId, r.date, r.startTime, r.status);
-      return convertReservationToPlannedOrder({
+    const reservationsConverted = activeReservations.map((r: Reservation) =>
+      convertReservationToPlannedOrder({
         documentId: r.documentId,
         date: r.date,
         startTime: r.startTime,
@@ -181,10 +168,8 @@ export function PlannedOrdersView({
         occasion: r.occasion,
         tableId: r.tableId,
         tableNumber: r.tableNumber,
-      });
-    });
-
-    console.log("[PlannedOrdersView] Total orders:", scheduledOrdersConverted.length + reservationsConverted.length);
+      })
+    );
 
     // Merge and return
     return [...scheduledOrdersConverted, ...reservationsConverted];
