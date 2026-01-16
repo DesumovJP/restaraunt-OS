@@ -70,6 +70,10 @@
     "paymentMethod": {
       "type": "enumeration",
       "enum": ["cash", "card", "paylater"]
+    },
+    "version": {
+      "type": "integer",
+      "default": 1
     }
   }
 }

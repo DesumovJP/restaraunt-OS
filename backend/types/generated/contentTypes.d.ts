@@ -1044,6 +1044,7 @@ export interface ApiOrderOrder extends Struct.CollectionTypeSchema {
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    version: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<1>;
     waiter: Schema.Attribute.Relation<
       'manyToOne',
       'plugin::users-permissions.user'
@@ -1424,20 +1425,35 @@ export interface ApiTableTable extends Struct.CollectionTypeSchema {
     freedAt: Schema.Attribute.DateTime;
     isActive: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     lastCloseReason: Schema.Attribute.Enumeration<
-      ['mistaken_open', 'no_show', 'walkout', 'technical_error', 'normal']
+      [
+        'normal',
+        'mistaken_open',
+        'no_show',
+        'walkout',
+        'emergency',
+        'technical_error',
+      ]
     >;
     lastSessionDurationMs: Schema.Attribute.BigInteger;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::table.table'> &
       Schema.Attribute.Private;
+    mergedWith: Schema.Attribute.JSON & Schema.Attribute.DefaultTo<[]>;
     number: Schema.Attribute.Integer &
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
     occupiedAt: Schema.Attribute.DateTime;
+    primaryTableId: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;
+    reservation: Schema.Attribute.Relation<
+      'oneToOne',
+      'api::reservation.reservation'
+    >;
     reservedAt: Schema.Attribute.DateTime;
     reservedBy: Schema.Attribute.String;
-    status: Schema.Attribute.Enumeration<['free', 'occupied', 'reserved']> &
+    status: Schema.Attribute.Enumeration<
+      ['free', 'occupied', 'reserved', 'billing']
+    > &
       Schema.Attribute.DefaultTo<'free'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &

@@ -22,7 +22,7 @@
     },
     "status": {
       "type": "enumeration",
-      "enum": ["free", "occupied", "reserved"],
+      "enum": ["free", "occupied", "reserved", "billing"],
       "default": "free"
     },
     "currentGuests": {
@@ -52,10 +52,22 @@
     },
     "lastCloseReason": {
       "type": "enumeration",
-      "enum": ["mistaken_open", "no_show", "walkout", "technical_error", "normal"]
+      "enum": ["normal", "mistaken_open", "no_show", "walkout", "emergency", "technical_error"]
     },
     "closeComment": {
       "type": "text"
+    },
+    "mergedWith": {
+      "type": "json",
+      "default": []
+    },
+    "primaryTableId": {
+      "type": "string"
+    },
+    "reservation": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::reservation.reservation"
     }
   }
 }

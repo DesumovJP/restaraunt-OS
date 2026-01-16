@@ -3,8 +3,10 @@
  * Provides helper functions for logging actions to action-history
  */
 
+import type { ActionType, Module } from './enums';
+
 interface ActionLogParams {
-  action: 'create' | 'update' | 'delete' | 'start' | 'complete' | 'cancel' | 'receive' | 'write_off' | 'transfer' | 'login' | 'logout' | 'approve' | 'reject' | 'assign' | 'unassign';
+  action: ActionType;
   entityType: string;
   entityId: string;
   entityName?: string;
@@ -15,7 +17,7 @@ interface ActionLogParams {
   performedBy?: string;
   performedByName?: string;
   performedByRole?: string;
-  module?: 'pos' | 'kitchen' | 'storage' | 'admin' | 'reservations' | 'system';
+  module?: Module;
   severity?: 'info' | 'warning' | 'critical';
   metadata?: object;
 }
@@ -57,6 +59,12 @@ const ACTION_NAMES_UK: Record<string, string> = {
   reject: 'відхилено',
   assign: 'призначено',
   unassign: 'знято призначення',
+  // Table/Order specific actions
+  emergency_close: 'екстрено закрито',
+  merge: "об'єднано",
+  unmerge: "роз'єднано",
+  recall: 'відкликано',
+  add_items: 'додано страви',
 };
 
 /**

@@ -421,6 +421,12 @@ export const ACTION_TYPES = [
   'reject',
   'assign',
   'unassign',
+  // Table/Order specific actions
+  'emergency_close',
+  'merge',
+  'unmerge',
+  'recall',
+  'add_items',
 ] as const;
 
 export type ActionType = (typeof ACTION_TYPES)[number];

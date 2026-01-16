@@ -67,8 +67,18 @@ export default {
       config: {
         auth: false,
         policies: [],
-        middlewares: []
-      }
-    }
-  ]
+        middlewares: [],
+      },
+    },
+    {
+      method: 'POST',
+      path: '/kitchen-tickets/:documentId/recall',
+      handler: 'kitchen-ticket.recall',
+      config: {
+        auth: false,
+        policies: [],
+        middlewares: [],
+      },
+    },
+  ],
 };

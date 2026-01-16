@@ -681,7 +681,198 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
       success: true,
       ticket: updatedTicket,
       pickupWaitSeconds,
-      orderServed
+      orderServed,
     });
-  }
+  },
+
+  /**
+   * Recall ticket from kitchen - cancels a ticket that hasn't been served yet
+   * POST /api/kitchen-tickets/:documentId/recall
+   */
+  async recall(ctx) {
+    const { documentId } = ctx.params;
+    const { reason } = ctx.request.body || {};
+    const user = ctx.state.user;
+    const startTime = Date.now();
+
+    if (!reason) {
+      return ctx.badRequest('reason is required');
+    }
+
+    logTicket('warn', '→ RECALL ticket requested', {
+      ticketId: documentId,
+      user: user?.username || 'anonymous',
+      reason,
+    });
+
+    // Find ticket with relations
+    const ticket = await strapi.documents('api::kitchen-ticket.kitchen-ticket').findOne({
+      documentId,
+      populate: {
+        orderItem: {
+          populate: {
+            menuItem: true,
+          },
+        },
+        order: {
+          populate: {
+            table: true,
+          },
+        },
+        inventoryMovements: true,
+      },
+    });
+
+    if (!ticket) {
+      logTicket('error', '✗ RECALL failed: ticket not found', { ticketId: documentId });
+      return ctx.notFound('Ticket not found');
+    }
+
+    // Only allow recall for certain statuses
+    const recallableStatuses = ['queued', 'started', 'paused', 'resumed'];
+    if (!recallableStatuses.includes(ticket.status)) {
+      logTicket('error', '✗ RECALL failed: invalid status', {
+        ticketId: documentId,
+        status: ticket.status,
+      });
+      return ctx.badRequest(
+        `Неможливо відкликати тікет зі статусом "${ticket.status}". Дозволено: ${recallableStatuses.join(', ')}`
+      );
+    }
+
+    const now = new Date();
+    const nowIso = now.toISOString();
+
+    // Reverse inventory movements if any
+    let reversedMovements = 0;
+    if (ticket.inventoryMovements && ticket.inventoryMovements.length > 0) {
+      for (const movement of ticket.inventoryMovements as any[]) {
+        if (movement.type === 'consumption') {
+          // Create a reversal movement
+          await (strapi as any).documents('api::inventory-movement.inventory-movement').create({
+            data: {
+              batch: movement.batch,
+              type: 'reversal',
+              quantity: Math.abs(movement.quantity), // Positive to add back
+              reason: `Recall: ${reason}`,
+              kitchenTicket: null, // Don't link to same ticket
+              performedBy: user?.documentId,
+            },
+          });
+
+          // Update batch quantity
+          if (movement.batch?.documentId) {
+            const batch = await (strapi as any)
+              .documents('api::inventory-batch.inventory-batch')
+              .findOne({ documentId: movement.batch.documentId });
+            if (batch) {
+              await (strapi as any).documents('api::inventory-batch.inventory-batch').update({
+                documentId: batch.documentId,
+                data: {
+                  currentQuantity: (batch.currentQuantity || 0) + Math.abs(movement.quantity),
+                },
+              });
+            }
+          }
+
+          reversedMovements++;
+        }
+      }
+    }
+
+    // Update ticket status to cancelled
+    const updatedTicket = await strapi
+      .documents('api::kitchen-ticket.kitchen-ticket')
+      .update({
+        documentId,
+        data: {
+          status: 'cancelled',
+          completedAt: nowIso,
+        },
+      });
+
+    // Update order item status
+    if (ticket.orderItem?.documentId) {
+      await strapi.documents('api::order-item.order-item').update({
+        documentId: ticket.orderItem.documentId,
+        data: {
+          status: 'cancelled',
+          statusChangedAt: nowIso,
+          notes: `Recalled: ${reason}`,
+        },
+      });
+    }
+
+    // Update order total if needed
+    if (ticket.order?.documentId && ticket.orderItem) {
+      const order = await strapi.documents('api::order.order').findOne({
+        documentId: ticket.order.documentId,
+      });
+
+      if (order) {
+        const itemPrice = ticket.orderItem.totalPrice || 0;
+        const newTotal = Math.max(0, (order.totalAmount || 0) - itemPrice);
+
+        await strapi.documents('api::order.order').update({
+          documentId: order.documentId,
+          data: {
+            totalAmount: newTotal,
+            version: (order.version || 1) + 1,
+          },
+        });
+      }
+    }
+
+    const duration = Date.now() - startTime;
+    const menuItemName = ticket.orderItem?.menuItem?.name || 'Unknown';
+    const tableNumber = ticket.order?.table?.number;
+    const orderNumber = ticket.order?.orderNumber;
+
+    logTicket('warn', '⚠ RECALL completed', {
+      ticketId: documentId,
+      ticketNumber: ticket.ticketNumber,
+      duration,
+      menuItem: menuItemName,
+      reason,
+      reversedMovements,
+    });
+
+    // Log action
+    await logAction(strapi, {
+      action: 'recall',
+      entityType: 'kitchen_ticket',
+      entityId: documentId,
+      entityName: ticket.ticketNumber,
+      description: `Ticket recalled: ${ticket.ticketNumber} - ${menuItemName}`,
+      descriptionUk: `⏪ Тікет відкликано: ${ticket.ticketNumber} - ${menuItemName}${tableNumber ? ` (Стіл ${tableNumber})` : ''} - ${reason}`,
+      dataBefore: {
+        status: ticket.status,
+        menuItem: menuItemName,
+      },
+      dataAfter: {
+        status: 'cancelled',
+        reason,
+      },
+      metadata: {
+        ticketNumber: ticket.ticketNumber,
+        menuItemName,
+        orderNumber,
+        tableNumber,
+        reason,
+        reversedMovements,
+        previousStatus: ticket.status,
+      },
+      module: 'kitchen',
+      severity: 'warning',
+      performedBy: user?.documentId,
+      performedByName: user?.username,
+    });
+
+    return ctx.send({
+      success: true,
+      ticket: updatedTicket,
+      reason,
+      reversedMovements,
+    });
+  },
 }));
