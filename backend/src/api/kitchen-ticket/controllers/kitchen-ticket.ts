@@ -166,6 +166,27 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
           data: { status: 'ready' }
         });
         orderReady = true;
+
+        // Log "order ready" for waiter visibility - this is an important moment!
+        const orderNumber = (ticket as any).order?.orderNumber;
+        const tableNumber = (ticket as any).order?.table?.number;
+
+        await logAction(strapi, {
+          action: 'complete',
+          entityType: 'order',
+          entityId: ticket.order.documentId,
+          entityName: orderNumber,
+          description: `Order ready for pickup: ${orderNumber}`,
+          descriptionUk: `🔔 Замовлення готове: ${orderNumber}${tableNumber ? ` (Стіл ${tableNumber})` : ''}`,
+          metadata: {
+            orderNumber,
+            tableNumber,
+            ticketsCount: orderTickets.length,
+            lastTicketNumber: ticket.ticketNumber,
+          },
+          module: 'kitchen',
+          severity: 'info',
+        });
       }
     }
 
@@ -179,7 +200,7 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
     });
 
     // Note: Individual ticket completion is NOT logged to action history
-    // All timing data is captured in the table session close log instead
+    // But "order ready" IS logged when all tickets complete (important for waiters)
 
     return ctx.send({ success: true, ticket: updatedTicket });
   },
@@ -621,6 +642,26 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
           data: { status: 'served' }
         });
         orderServed = true;
+
+        // Log "order served" - waiter completed serving all items
+        const orderNumber = (ticket as any).order?.orderNumber;
+        const tableNumber = ticket.order?.table?.number;
+
+        await logAction(strapi, {
+          action: 'complete',
+          entityType: 'order',
+          entityId: ticket.order.documentId,
+          entityName: orderNumber,
+          description: `Order fully served: ${orderNumber}`,
+          descriptionUk: `✓ Замовлення подано: ${orderNumber}${tableNumber ? ` (Стіл ${tableNumber})` : ''}`,
+          metadata: {
+            orderNumber,
+            tableNumber,
+            itemsCount: orderItems.length,
+          },
+          module: 'pos',
+          severity: 'info',
+        });
       }
     }
 
@@ -634,7 +675,7 @@ export default factories.createCoreController('api::kitchen-ticket.kitchen-ticke
     });
 
     // Note: Individual ticket serve is NOT logged to action history
-    // All timing data is captured in the table session close log instead
+    // But "order served" IS logged when all items served (confirms delivery)
 
     return ctx.send({
       success: true,

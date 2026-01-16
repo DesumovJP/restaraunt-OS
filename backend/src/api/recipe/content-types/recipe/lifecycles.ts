@@ -10,13 +10,30 @@ import {
 import { logAction } from '../../../../utils/action-logger';
 
 const baseLifecycles = createAdminLifecycles('recipe', {
-  populate: ['ingredients', 'steps'],
+  populate: ['ingredients', 'ingredients.ingredient', 'steps'],
   getMetadata: extractRecipeMetadata,
   getUpdateMetadata: (original, updated) => ({
     ...extractRecipeMetadata(updated),
     previousCostPerPortion: original?.costPerPortion,
   }),
 });
+
+// Helper to extract ingredient names for comparison
+function getIngredientNames(ingredients: any[]): string[] {
+  if (!Array.isArray(ingredients)) return [];
+  return ingredients.map(ing => ing.ingredient?.name || ing.ingredientName || 'Unknown').sort();
+}
+
+// Helper to compare ingredient lists
+function getIngredientChanges(originalIngs: any[], newIngs: any[]): { added: string[], removed: string[], changed: boolean } {
+  const originalNames = new Set(getIngredientNames(originalIngs));
+  const newNames = new Set(getIngredientNames(newIngs));
+
+  const added = [...newNames].filter(name => !originalNames.has(name));
+  const removed = [...originalNames].filter(name => !newNames.has(name));
+
+  return { added, removed, changed: added.length > 0 || removed.length > 0 };
+}
 
 export default {
   ...baseLifecycles,
@@ -59,16 +76,59 @@ export default {
 
     const original = state?.original;
 
-    // Fetch with ingredients to get count
+    // Fetch with ingredients to get full data
+    let fullRecipe: any = null;
     let ingredientsCount = 0;
     try {
-      const fullRecipe = await (strapi as any).documents('api::recipe.recipe').findOne({
+      fullRecipe = await (strapi as any).documents('api::recipe.recipe').findOne({
         documentId: result.documentId,
-        populate: ['ingredients'],
+        populate: ['ingredients', 'ingredients.ingredient'],
       });
       ingredientsCount = fullRecipe?.ingredients?.length || 0;
     } catch {
       // Ignore
+    }
+
+    // Check for ingredient composition changes (important for recipe tracking)
+    if (original && fullRecipe) {
+      const originalIngredients = original.ingredients || [];
+      const newIngredients = fullRecipe.ingredients || [];
+      const { added, removed, changed } = getIngredientChanges(originalIngredients, newIngredients);
+
+      if (changed) {
+        let changeDesc = '';
+        if (added.length > 0 && removed.length > 0) {
+          changeDesc = `+${added.join(', ')}; -${removed.join(', ')}`;
+        } else if (added.length > 0) {
+          changeDesc = `+${added.join(', ')}`;
+        } else {
+          changeDesc = `-${removed.join(', ')}`;
+        }
+
+        await logAction(strapi, {
+          action: 'update',
+          entityType: 'recipe',
+          entityId: result.documentId,
+          entityName: result.name || result.nameUk,
+          description: `Recipe ingredients changed: ${result.name}`,
+          descriptionUk: `Зміна складу рецепту: ${result.nameUk || result.name} (${changeDesc})`,
+          dataBefore: { ingredients: originalIngredients.length },
+          dataAfter: { ingredients: newIngredients.length },
+          module: 'admin',
+          severity: 'info',
+          metadata: {
+            ...extractRecipeMetadata(result),
+            ingredientsCount,
+            ingredientChanges: {
+              added,
+              removed,
+              previousCount: originalIngredients.length,
+              newCount: newIngredients.length,
+            },
+          },
+        });
+        return;
+      }
     }
 
     // Check for cost per portion change (important for food cost analysis)
