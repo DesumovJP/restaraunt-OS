@@ -27,7 +27,8 @@ import {
 } from "@/features/storage/components";
 import { ProductList, ProductListSkeleton, BatchView } from "@/features/storage/views";
 import { MOCK_BATCHES } from "@/features/storage";
-import { useBatches, useBatchMutations, useStorageAlerts } from "@/hooks/use-batches";
+import { useBatchMutations, useStorageAlerts } from "@/hooks/use-batches";
+import { useBatchesData } from "@/hooks/use-batches-data";
 import { useStorageNotifications } from "@/hooks/use-storage-notifications";
 
 // Stores
@@ -58,7 +59,7 @@ interface BatchViewWrapperProps {
 }
 
 function BatchViewWrapper({ onExportReport }: BatchViewWrapperProps) {
-  const { batches, isLoading, error, refetch } = useBatches();
+  const { batches, isLoading, error, refetch } = useBatchesData();
   const mutations = useBatchMutations();
 
   const handleProcess = async (
