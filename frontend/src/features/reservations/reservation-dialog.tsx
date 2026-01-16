@@ -526,8 +526,8 @@ export function ReservationDialog({
                 <SelectContent>
                   {tables.map((table) => (
                     <SelectItem
-                      key={table.id || table.documentId}
-                      value={table.id || table.documentId || ""}
+                      key={table.documentId || table.id}
+                      value={table.documentId || table.id || ""}
                     >
                       Стіл {table.number} ({table.capacity} місць)
                     </SelectItem>
