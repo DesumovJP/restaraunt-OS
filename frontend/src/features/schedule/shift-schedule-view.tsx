@@ -5,7 +5,6 @@ import { useQuery } from "urql";
 import { GET_TEAM_SCHEDULE, GET_ALL_WORKERS } from "@/graphql/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -223,32 +222,34 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
     <div className={cn("flex flex-col h-full bg-slate-50", className)}>
       {/* Toolbar */}
       <div className={cn(
-        "flex items-center justify-between gap-2 px-4 py-3 border-b bg-white shadow-sm flex-wrap",
-        compact && "py-2"
+        "flex flex-col gap-3 px-4 py-3 border-b bg-white shadow-sm",
+        compact && "py-2 gap-2"
       )}>
-        <div className="flex items-center gap-2">
+        {/* Row 1: Navigation + Actions */}
+        <div className="flex items-center justify-between gap-2">
           {/* Week Navigation */}
-          <div className="flex items-center gap-1 rounded-lg border bg-white p-1">
+          <div className="flex items-center gap-1 rounded-xl border bg-slate-50 p-1">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 rounded-lg"
               onClick={navigatePrev}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
 
             <button
-              className="flex items-center gap-2 px-2 py-1 text-sm font-medium hover:bg-slate-100 rounded transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium hover:bg-white rounded-lg transition-colors"
               onClick={goToToday}
+              title="Перейти до поточного тижня"
             >
-              <Calendar className="h-4 w-4 text-slate-500" />
-              <span className="hidden sm:inline">
+              <Calendar className="h-4 w-4 text-blue-500" />
+              <span className="hidden sm:inline font-semibold">
                 {weekDates[0].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
-                {" - "}
+                {" — "}
                 {weekDates[6].toLocaleDateString("uk-UA", { day: "numeric", month: "short" })}
               </span>
-              <span className="sm:hidden">
+              <span className="sm:hidden font-semibold">
                 {weekDates[0].getDate()}-{weekDates[6].getDate()}.{weekDates[0].getMonth() + 1}
               </span>
             </button>
@@ -256,39 +257,59 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-8 w-8 rounded-lg"
               onClick={navigateNext}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
+
+          <div className="flex items-center gap-2">
+            {/* Department filter */}
+            <Select value={department} onValueChange={setDepartment}>
+              <SelectTrigger className="w-[140px] h-9 text-sm rounded-xl">
+                <Users className="h-4 w-4 text-slate-400 mr-1" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DEPARTMENTS.map((dept) => (
+                  <SelectItem key={dept.value} value={dept.value}>
+                    {dept.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Refresh */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9 rounded-xl"
+              onClick={() => refetchSchedule({ requestPolicy: "network-only" })}
+              disabled={scheduleFetching}
+              title="Оновити"
+            >
+              <RefreshCw className={cn("h-4 w-4", scheduleFetching && "animate-spin")} />
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Department filter */}
-          <Select value={department} onValueChange={setDepartment}>
-            <SelectTrigger className="w-[130px] h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DEPARTMENTS.map((dept) => (
-                <SelectItem key={dept.value} value={dept.value}>
-                  {dept.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {/* Refresh */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-9 w-9"
-            onClick={() => refetchSchedule({ requestPolicy: "network-only" })}
-            disabled={scheduleFetching}
-          >
-            <RefreshCw className={cn("h-4 w-4", scheduleFetching && "animate-spin")} />
-          </Button>
+        {/* Row 2: Shift Types Legend - compact pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-0.5">
+          <span className="text-xs text-slate-400 shrink-0">Типи змін:</span>
+          <div className="flex gap-1.5">
+            {SHIFT_TYPES.map((type) => (
+              <span
+                key={type.value}
+                className={cn(
+                  "text-xs px-2 py-1 rounded-lg font-medium whitespace-nowrap",
+                  SHIFT_TYPE_COLORS[type.value]
+                )}
+              >
+                {type.label}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -508,14 +529,6 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
           </>
         )}
 
-        {/* Legend */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {SHIFT_TYPES.map((type) => (
-            <Badge key={type.value} variant="secondary" className={cn("text-xs", SHIFT_TYPE_COLORS[type.value])}>
-              {type.label}
-            </Badge>
-          ))}
-        </div>
       </div>
     </div>
   );

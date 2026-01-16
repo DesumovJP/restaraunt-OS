@@ -201,68 +201,87 @@ export default function TableSelectionPage() {
 
         {/* Content */}
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-4 space-y-4">
-          {/* Compact filter bar */}
-          <div className="flex flex-wrap items-center gap-3">
-            {/* Zone Filters - scrollable on mobile */}
-            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide flex-shrink-0">
-              <button
-                onClick={() => setSelectedZone('all')}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 rounded-lg whitespace-nowrap font-medium text-sm transition-all touch-feedback',
-                  selectedZone === 'all'
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300'
-                )}
-              >
-                Всі
-                <span className={cn(
-                  'px-1.5 py-0.5 rounded text-xs font-semibold',
-                  selectedZone === 'all' ? 'bg-white/20' : 'bg-slate-100'
-                )}>
-                  {tables.length}
-                </span>
-              </button>
+          {/* Filter Sections */}
+          <div className="space-y-3">
+            {/* Row 1: Zone Filters + Search */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Zone Filters - wrapping grid on mobile */}
+              <div className="grid grid-cols-3 sm:flex gap-1.5 sm:gap-2">
+                <button
+                  onClick={() => setSelectedZone('all')}
+                  className={cn(
+                    'flex items-center justify-center sm:justify-start gap-1.5 px-3 py-2.5 rounded-xl font-medium text-sm transition-all touch-feedback',
+                    selectedZone === 'all'
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'bg-white border border-slate-200 text-slate-700 hover:border-slate-300'
+                  )}
+                >
+                  <span>Всі</span>
+                  <span className={cn(
+                    'px-1.5 py-0.5 rounded text-xs font-semibold',
+                    selectedZone === 'all' ? 'bg-white/20' : 'bg-slate-100'
+                  )}>
+                    {tables.length}
+                  </span>
+                </button>
 
-              {(['main', 'terrace', 'vip', 'bar'] as TableZone[]).map((zone) => {
-                const Icon = ZONE_ICONS[zone];
-                const isActive = selectedZone === zone;
-                return (
+                {(['main', 'terrace', 'vip', 'bar'] as TableZone[]).map((zone) => {
+                  const Icon = ZONE_ICONS[zone];
+                  const isActive = selectedZone === zone;
+                  return (
+                    <button
+                      key={zone}
+                      onClick={() => setSelectedZone(zone)}
+                      className={cn(
+                        'flex items-center justify-center sm:justify-start gap-1 sm:gap-1.5 px-2 sm:px-3 py-2.5 rounded-xl font-medium text-sm transition-all touch-feedback',
+                        isActive
+                          ? 'bg-slate-900 text-white shadow-sm'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
+                      )}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{ZONE_LABELS_SHORT[zone]}</span>
+                      <span className={cn(
+                        'px-1.5 py-0.5 rounded text-xs font-semibold shrink-0',
+                        isActive ? 'bg-white/20' : 'bg-slate-100'
+                      )}>
+                        {zoneCounts[zone]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Search - full width on mobile, grows on desktop */}
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Пошук за номером столу..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-11 text-sm rounded-xl border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-slate-200"
+                />
+                {searchQuery && (
                   <button
-                    key={zone}
-                    onClick={() => setSelectedZone(zone)}
-                    className={cn(
-                      'flex items-center gap-1.5 px-3 py-2 rounded-lg whitespace-nowrap font-medium text-sm transition-all touch-feedback',
-                      isActive
-                        ? 'bg-slate-900 text-white shadow-sm'
-                        : 'bg-white border border-slate-200 text-slate-600 hover:border-slate-300'
-                    )}
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-100 rounded-lg transition-colors touch-feedback"
                   >
-                    <Icon className="h-4 w-4" />
-                    <span className="sm:hidden">{ZONE_LABELS_SHORT[zone]}</span>
-                    <span className="hidden sm:inline">{ZONE_LABELS[zone]}</span>
-                    <span className={cn(
-                      'px-1.5 py-0.5 rounded text-xs font-semibold',
-                      isActive ? 'bg-white/20' : 'bg-slate-100'
-                    )}>
-                      {zoneCounts[zone]}
-                    </span>
+                    <RotateCcw className="h-4 w-4 text-slate-400" />
                   </button>
-                );
-              })}
+                )}
+              </div>
             </div>
 
-            {/* Divider */}
-            <div className="hidden sm:block h-6 w-px bg-slate-200" />
-
-            {/* Status filter - touch-friendly with larger targets */}
-            <div className="flex gap-1 sm:gap-1.5">
+            {/* Row 2: Status Filters with labels */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-slate-500 mr-1">Статус:</span>
               <button
                 onClick={() => setStatusFilter('all')}
                 className={cn(
-                  'px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-all min-h-[40px] sm:min-h-0 touch-feedback',
+                  'px-3 py-1.5 rounded-lg text-sm font-medium transition-all touch-feedback',
                   statusFilter === 'all'
                     ? 'bg-slate-200 text-slate-800'
-                    : 'text-slate-500 hover:bg-slate-100'
+                    : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'
                 )}
               >
                 Всі
@@ -270,58 +289,57 @@ export default function TableSelectionPage() {
               <button
                 onClick={() => setStatusFilter('free')}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-all min-h-[40px] sm:min-h-0 touch-feedback',
+                  'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all touch-feedback',
                   statusFilter === 'free'
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : 'text-slate-500 hover:bg-slate-100'
+                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                 )}
               >
-                <Circle className="h-2.5 w-2.5 sm:h-2 sm:w-2 fill-emerald-500 text-emerald-500" />
-                <span className="text-sm sm:text-xs">{stats.free}</span>
+                <Circle className="h-2.5 w-2.5 fill-emerald-500 text-emerald-500" />
+                <span>Вільні</span>
+                <span className={cn(
+                  'px-1.5 py-0.5 rounded text-xs font-semibold',
+                  statusFilter === 'free' ? 'bg-emerald-200/50' : 'bg-slate-100'
+                )}>
+                  {stats.free}
+                </span>
               </button>
               <button
                 onClick={() => setStatusFilter('occupied')}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-all min-h-[40px] sm:min-h-0 touch-feedback',
+                  'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all touch-feedback',
                   statusFilter === 'occupied'
-                    ? 'bg-amber-100 text-amber-700'
-                    : 'text-slate-500 hover:bg-slate-100'
+                    ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                 )}
               >
-                <Circle className="h-2.5 w-2.5 sm:h-2 sm:w-2 fill-amber-500 text-amber-500" />
-                <span className="text-sm sm:text-xs">{stats.occupied}</span>
+                <Circle className="h-2.5 w-2.5 fill-amber-500 text-amber-500" />
+                <span>Зайняті</span>
+                <span className={cn(
+                  'px-1.5 py-0.5 rounded text-xs font-semibold',
+                  statusFilter === 'occupied' ? 'bg-amber-200/50' : 'bg-slate-100'
+                )}>
+                  {stats.occupied}
+                </span>
               </button>
               <button
                 onClick={() => setStatusFilter('reserved')}
                 className={cn(
-                  'flex items-center gap-1.5 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs font-medium transition-all min-h-[40px] sm:min-h-0 touch-feedback',
+                  'flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all touch-feedback',
                   statusFilter === 'reserved'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-slate-500 hover:bg-slate-100'
+                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                 )}
               >
-                <Circle className="h-2.5 w-2.5 sm:h-2 sm:w-2 fill-blue-500 text-blue-500" />
-                <span className="text-sm sm:text-xs">{stats.reserved}</span>
+                <Circle className="h-2.5 w-2.5 fill-blue-500 text-blue-500" />
+                <span>Бронь</span>
+                <span className={cn(
+                  'px-1.5 py-0.5 rounded text-xs font-semibold',
+                  statusFilter === 'reserved' ? 'bg-blue-200/50' : 'bg-slate-100'
+                )}>
+                  {stats.reserved}
+                </span>
               </button>
-            </div>
-
-            {/* Search - grows to fill space, touch-friendly */}
-            <div className="flex-1 min-w-[140px] sm:min-w-[200px] relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Номер столу..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-11 sm:h-10 text-sm rounded-xl border-slate-200 bg-white shadow-sm focus:ring-2 focus:ring-slate-200"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-100 rounded-lg transition-colors touch-feedback"
-                >
-                  <RotateCcw className="h-4 w-4 text-slate-400" />
-                </button>
-              )}
             </div>
           </div>
 
