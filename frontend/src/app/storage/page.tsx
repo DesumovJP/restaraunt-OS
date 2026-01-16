@@ -177,7 +177,7 @@ export default function StoragePage() {
   const [selectedSubCategory, setSelectedSubCategory] = React.useState<StorageSubCategory | null>(null);
 
   // Fetch products
-  const { products, isLoading, error } = useStorageProducts();
+  const { products, isLoading, error, refetch: refetchProducts } = useStorageProducts();
 
   // Calculate category counts
   const categoryCounts = React.useMemo(() => getCategoryCounts(products), [products]);
@@ -577,7 +577,7 @@ export default function StoragePage() {
         onOpenChange={setIsSupplyFormOpen}
         onSuccess={() => {
           // Refetch products after supply
-          console.log("Supply created successfully");
+          refetchProducts();
         }}
       />
 
