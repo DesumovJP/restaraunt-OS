@@ -40,6 +40,7 @@ export default {
       entityId: result.documentId,
       entityName: `Стіл №${result.number}`,
       description: `Created table: #${result.number}`,
+      descriptionUk: `Новий стіл: №${result.number} (${result.capacity} місць)${result.zone ? ` у зоні "${result.zone}"` : ''}`,
       dataAfter: result,
       module: 'admin',
       metadata: {
@@ -116,6 +117,7 @@ export default {
       entityId: params.where?.documentId || 'unknown',
       entityName: entity ? `Стіл №${entity.number}` : undefined,
       description: `Deleted table: #${entity?.number || params.where?.documentId}`,
+      descriptionUk: `Видалено стіл: №${entity?.number || params.where?.documentId}`,
       dataBefore: entity,
       module: 'admin',
       severity: 'warning',
