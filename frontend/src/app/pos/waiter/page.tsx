@@ -82,7 +82,7 @@ function WaiterPOSContent() {
         id: t.id,
         number: t.number,
         occupiedAt: t.occupiedAt,
-        guestCount: t.guestCount,
+        guestCount: t.currentGuests,
       }));
   }, [tables]);
 
