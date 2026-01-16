@@ -212,27 +212,9 @@ export function DeliveryOrderForm({ onOrderChange }: DeliveryOrderFormProps) {
                 <Truck className="h-8 w-8 text-slate-400" />
               </div>
               <p className="font-medium text-slate-600 mb-2">Список порожній</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Додайте товари до замовлення на поставку
+              <p className="text-sm text-muted-foreground">
+                Натисніть "Додати" щоб обрати товар зі складу
               </p>
-              <div className="flex justify-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setAddProductOpen(true)}
-                  className="gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Додати існуючий
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setCreateProductOpen(true)}
-                  className="gap-2 bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Створити новий
-                </Button>
-              </div>
             </div>
           ) : (
             <>
@@ -240,10 +222,8 @@ export function DeliveryOrderForm({ onOrderChange }: DeliveryOrderFormProps) {
               {!isMobile && (
                 <div className="hidden sm:flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 bg-slate-50 border-b text-xs font-medium text-muted-foreground">
                   <div className="flex-1">Назва</div>
-                  <div className="w-14 text-center">Од.</div>
-                  <div className="w-20 sm:w-24 text-center">К-сть</div>
-                  <div className="w-24 sm:w-28 text-center">Ціна</div>
-                  <div className="w-24 sm:w-28 text-right">Сума</div>
+                  <div className="w-16 text-center">Од.</div>
+                  <div className="w-28 text-center">Кількість</div>
                   <div className="w-9"></div>
                 </div>
               )}
@@ -279,27 +259,9 @@ export function DeliveryOrderForm({ onOrderChange }: DeliveryOrderFormProps) {
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               {/* Summary */}
-              <div className="flex items-center gap-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">Позицій</p>
-                  <p className="text-lg font-semibold">{totalItems}</p>
-                </div>
-                <div className="h-8 w-px bg-slate-200" />
-                <div>
-                  <p className="text-sm text-muted-foreground">Всього</p>
-                  <p className={cn(
-                    "text-2xl font-bold",
-                    order.totalAmount > 0 ? "text-emerald-600" : "text-slate-600"
-                  )}>
-                    {order.totalAmount.toLocaleString("uk-UA", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                    <span className="text-sm font-normal text-muted-foreground ml-1">
-                      грн
-                    </span>
-                  </p>
-                </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Позицій у замовленні</p>
+                <p className="text-2xl font-bold text-slate-700">{totalItems}</p>
               </div>
 
               {/* Actions */}

@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Trash2, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
 import type { DeliveryOrderItem } from "@/types/delivery";
 
 interface DeliveryItemRowProps {
@@ -26,14 +25,7 @@ const UNIT_LABELS: Record<string, string> = {
 export function DeliveryItemRow({ item, onUpdate, onRemove }: DeliveryItemRowProps) {
   const handleQuantityChange = (value: string) => {
     const quantity = parseFloat(value) || 0;
-    const totalCost = quantity * item.unitCost;
-    onUpdate({ ...item, quantity, totalCost });
-  };
-
-  const handleUnitCostChange = (value: string) => {
-    const unitCost = parseFloat(value) || 0;
-    const totalCost = item.quantity * unitCost;
-    onUpdate({ ...item, unitCost, totalCost });
+    onUpdate({ ...item, quantity });
   };
 
   return (
@@ -55,14 +47,14 @@ export function DeliveryItemRow({ item, onUpdate, onRemove }: DeliveryItemRowPro
       </div>
 
       {/* Unit */}
-      <div className="w-14 text-center shrink-0">
+      <div className="w-16 text-center shrink-0">
         <span className="text-sm text-muted-foreground">
           {UNIT_LABELS[item.unit] || item.unit}
         </span>
       </div>
 
       {/* Quantity */}
-      <div className="w-20 sm:w-24 shrink-0">
+      <div className="w-28 shrink-0">
         <Input
           type="number"
           min="0"
@@ -72,38 +64,6 @@ export function DeliveryItemRow({ item, onUpdate, onRemove }: DeliveryItemRowPro
           placeholder="0"
           className="h-9 text-center text-sm"
         />
-      </div>
-
-      {/* Unit Cost */}
-      <div className="w-24 sm:w-28 shrink-0">
-        <div className="relative">
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            value={item.unitCost || ""}
-            onChange={(e) => handleUnitCostChange(e.target.value)}
-            placeholder="0.00"
-            className="h-9 text-right pr-10 text-sm"
-          />
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-            грн
-          </span>
-        </div>
-      </div>
-
-      {/* Total Cost */}
-      <div className="w-24 sm:w-28 text-right shrink-0">
-        <span className={cn(
-          "font-semibold text-sm",
-          item.totalCost > 0 ? "text-emerald-600" : "text-muted-foreground"
-        )}>
-          {item.totalCost.toLocaleString("uk-UA", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-          <span className="text-xs font-normal text-muted-foreground ml-0.5">грн</span>
-        </span>
       </div>
 
       {/* Remove Button */}
@@ -125,14 +85,7 @@ export function DeliveryItemRow({ item, onUpdate, onRemove }: DeliveryItemRowPro
 export function DeliveryItemRowMobile({ item, onUpdate, onRemove }: DeliveryItemRowProps) {
   const handleQuantityChange = (value: string) => {
     const quantity = parseFloat(value) || 0;
-    const totalCost = quantity * item.unitCost;
-    onUpdate({ ...item, quantity, totalCost });
-  };
-
-  const handleUnitCostChange = (value: string) => {
-    const unitCost = parseFloat(value) || 0;
-    const totalCost = item.quantity * unitCost;
-    onUpdate({ ...item, unitCost, totalCost });
+    onUpdate({ ...item, quantity });
   };
 
   return (
@@ -163,57 +116,23 @@ export function DeliveryItemRowMobile({ item, onUpdate, onRemove }: DeliveryItem
         </Button>
       </div>
 
-      {/* Input Row */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <label className="text-xs text-muted-foreground mb-1 block">Кількість</label>
-          <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={item.quantity || ""}
-              onChange={(e) => handleQuantityChange(e.target.value)}
-              placeholder="0"
-              className="h-10 text-center"
-            />
-            <span className="text-sm text-muted-foreground w-10">
-              {UNIT_LABELS[item.unit] || item.unit}
-            </span>
-          </div>
+      {/* Quantity Input */}
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">Кількість</label>
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min="0"
+            step="0.01"
+            value={item.quantity || ""}
+            onChange={(e) => handleQuantityChange(e.target.value)}
+            placeholder="0"
+            className="h-10 text-center flex-1"
+          />
+          <span className="text-sm text-muted-foreground w-10">
+            {UNIT_LABELS[item.unit] || item.unit}
+          </span>
         </div>
-        <div className="flex-1">
-          <label className="text-xs text-muted-foreground mb-1 block">Ціна за од.</label>
-          <div className="relative">
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={item.unitCost || ""}
-              onChange={(e) => handleUnitCostChange(e.target.value)}
-              placeholder="0.00"
-              className="h-10 text-right pr-10"
-            />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-              грн
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Total Row */}
-      <div className="flex items-center justify-between pt-2 border-t">
-        <span className="text-sm text-muted-foreground">Сума:</span>
-        <span className={cn(
-          "font-bold text-lg",
-          item.totalCost > 0 ? "text-emerald-600" : "text-muted-foreground"
-        )}>
-          {item.totalCost.toLocaleString("uk-UA", {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          })}
-          <span className="text-sm font-normal text-muted-foreground ml-1">грн</span>
-        </span>
       </div>
     </div>
   );

@@ -48,17 +48,17 @@ function exportToCSV(order: DeliveryOrder, supplier?: DeliverySupplier) {
   csv += "\n";
 
   // Table header
-  csv += "№,Назва,SKU,Од.,Кількість,Ціна за од.,Сума\n";
+  csv += "№,Назва,SKU,Од.,Кількість\n";
 
   // Items
   order.items.forEach((item, idx) => {
     const name = (item.nameUk || item.name).replace(/,/g, ";"); // Escape commas
     const unit = UNIT_LABELS[item.unit] || item.unit;
-    csv += `${idx + 1},"${name}",${item.sku || "-"},${unit},${item.quantity},${item.unitCost.toFixed(2)},${item.totalCost.toFixed(2)}\n`;
+    csv += `${idx + 1},"${name}",${item.sku || "-"},${unit},${item.quantity}\n`;
   });
 
-  // Total
-  csv += `\n,,,,Всього:,,${order.totalAmount.toFixed(2)}\n`;
+  // Total count
+  csv += `\n,,,Всього позицій:,${order.items.length}\n`;
 
   // Download
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -90,14 +90,11 @@ function formatOrderText(order: DeliveryOrder, supplier?: DeliverySupplier): str
   order.items.forEach((item, idx) => {
     const name = item.nameUk || item.name;
     const unit = UNIT_LABELS[item.unit] || item.unit;
-    text += `${idx + 1}. ${name}\n`;
-    text += `   ${item.quantity} ${unit} × ${item.unitCost.toFixed(2)} грн = ${item.totalCost.toFixed(2)} грн\n`;
+    text += `${idx + 1}. ${name} — ${item.quantity} ${unit}\n`;
   });
 
   text += `${"─".repeat(40)}\n`;
-  text += `ВСЬОГО: ${order.totalAmount.toFixed(2)} грн\n`;
-  text += `\n`;
-  text += `Кількість позицій: ${order.items.length}\n`;
+  text += `Всього позицій: ${order.items.length}\n`;
 
   return text;
 }

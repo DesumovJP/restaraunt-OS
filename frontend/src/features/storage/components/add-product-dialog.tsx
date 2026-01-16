@@ -50,7 +50,6 @@ export function AddProductDialog({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedIngredient, setSelectedIngredient] = React.useState<DeliveryIngredient | null>(null);
   const [quantity, setQuantity] = React.useState("");
-  const [unitCost, setUnitCost] = React.useState("");
 
   const [result] = useQuery({
     query: GET_ALL_INGREDIENTS,
@@ -79,20 +78,12 @@ export function AddProductDialog({
     });
   }, [ingredients, searchQuery, existingIds]);
 
-  // Auto-fill unit cost from ingredient
-  React.useEffect(() => {
-    if (selectedIngredient?.costPerUnit && !unitCost) {
-      setUnitCost(selectedIngredient.costPerUnit.toString());
-    }
-  }, [selectedIngredient, unitCost]);
-
   // Reset form on close
   React.useEffect(() => {
     if (!open) {
       setSearchQuery("");
       setSelectedIngredient(null);
       setQuantity("");
-      setUnitCost("");
     }
   }, [open]);
 
@@ -100,7 +91,6 @@ export function AddProductDialog({
     if (!selectedIngredient || !quantity) return;
 
     const qty = parseFloat(quantity) || 0;
-    const cost = parseFloat(unitCost) || 0;
 
     const item: DeliveryOrderItem = {
       id: generateUUID(),
@@ -111,16 +101,14 @@ export function AddProductDialog({
       sku: selectedIngredient.sku,
       unit: selectedIngredient.unit,
       quantity: qty,
-      unitCost: cost,
-      totalCost: qty * cost,
+      unitCost: 0,
+      totalCost: 0,
       mainCategory: selectedIngredient.mainCategory,
     };
 
     onAdd(item);
     onOpenChange(false);
   };
-
-  const totalCost = (parseFloat(quantity) || 0) * (parseFloat(unitCost) || 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -242,64 +230,26 @@ export function AddProductDialog({
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="quantity" className="text-sm">
-                    Кількість <span className="text-destructive">*</span>
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="quantity"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                      placeholder="0"
-                      className="pr-12 h-11"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      {UNIT_LABELS[selectedIngredient.unit] || selectedIngredient.unit}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="unitCost" className="text-sm">
-                    Ціна за од.
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="unitCost"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={unitCost}
-                      onChange={(e) => setUnitCost(e.target.value)}
-                      placeholder="0.00"
-                      className="pr-10 h-11"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-                      грн
-                    </span>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="quantity" className="text-sm">
+                  Кількість <span className="text-destructive">*</span>
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="quantity"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    placeholder="0"
+                    className="pr-12 h-11"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                    {UNIT_LABELS[selectedIngredient.unit] || selectedIngredient.unit}
+                  </span>
                 </div>
               </div>
-
-              {/* Total Cost Preview */}
-              {totalCost > 0 && (
-                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-emerald-700">Сума:</span>
-                    <span className="text-lg font-bold text-emerald-700">
-                      {totalCost.toLocaleString("uk-UA", {
-                        minimumFractionDigits: 2,
-                        maximumFractionDigits: 2,
-                      })} грн
-                    </span>
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </div>
