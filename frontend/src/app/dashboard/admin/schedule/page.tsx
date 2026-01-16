@@ -2,12 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useQuery, useMutation } from "urql";
-import { GET_TEAM_SCHEDULE, GET_ALL_WORKERS } from "@/graphql/queries";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -24,6 +23,24 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
+import {
   ArrowLeft,
   RefreshCw,
   Calendar,
@@ -33,209 +50,94 @@ import {
   Users,
   Clock,
   UserPlus,
+  MoreVertical,
+  Edit2,
+  Trash2,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  User,
+  Briefcase,
+  CalendarDays,
+  Timer,
 } from "lucide-react";
-import { gql } from "urql";
-
-// Mutation for creating shifts
-const CREATE_WORKER_SHIFT = gql`
-  mutation CreateWorkerShift($data: WorkerShiftInput!) {
-    createWorkerShift(data: $data) {
-      documentId
-      date
-      startTime
-      endTime
-      shiftType
-      status
-    }
-  }
-`;
+import {
+  useScheduleManagement,
+  getWeekDates,
+  isToday,
+  formatTimeDisplay,
+  formatMinutesToHours,
+  SHIFT_TYPES,
+  SHIFT_TYPE_COLORS,
+  SHIFT_STATUS_COLORS,
+  SHIFT_STATUS_LABELS,
+  DEPARTMENTS,
+  ROLE_LABELS,
+  ROLE_COLORS,
+  DEPARTMENT_LABELS,
+  type Worker,
+  type WorkerShift,
+  type ShiftType,
+  type ShiftStatus,
+} from "@/hooks/use-schedule";
+import { useScheduleStore, type ScheduleState } from "@/stores/schedule-store";
 
 const DAYS_UK = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд"];
 
-const SHIFT_TYPE_COLORS: Record<string, string> = {
-  morning: "bg-yellow-100 text-yellow-800",
-  afternoon: "bg-orange-100 text-orange-800",
-  evening: "bg-purple-100 text-purple-800",
-  night: "bg-blue-100 text-blue-800",
-  split: "bg-gray-100 text-gray-800",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  scheduled: "border-info",
-  started: "border-warning",
-  completed: "border-success",
-  missed: "border-error",
-  cancelled: "border-muted",
-};
-
-const DEPARTMENTS = [
-  { value: "all", label: "Всі відділи" },
-  { value: "management", label: "Менеджмент" },
-  { value: "kitchen", label: "Кухня" },
-  { value: "service", label: "Обслуговування" },
-  { value: "bar", label: "Бар" },
-  { value: "cleaning", label: "Клінінг" },
-];
-
-const ROLE_LABELS: Record<string, string> = {
-  admin: "Адмін",
-  manager: "Менеджер",
-  chef: "Шеф-кухар",
-  cook: "Кухар",
-  waiter: "Офіціант",
-  host: "Хостес",
-  bartender: "Бармен",
-  cashier: "Касир",
-  viewer: "Гість",
-};
-
-const ROLE_COLORS: Record<string, string> = {
-  admin: "bg-red-100 text-red-700",
-  manager: "bg-purple-100 text-purple-700",
-  chef: "bg-orange-100 text-orange-700",
-  cook: "bg-yellow-100 text-yellow-700",
-  waiter: "bg-blue-100 text-blue-700",
-  host: "bg-pink-100 text-pink-700",
-  bartender: "bg-cyan-100 text-cyan-700",
-  cashier: "bg-green-100 text-green-700",
-  viewer: "bg-gray-100 text-gray-700",
-};
-
-const DEPARTMENT_LABELS: Record<string, string> = {
-  management: "Менеджмент",
-  kitchen: "Кухня",
-  service: "Зал",
-  bar: "Бар",
-  cleaning: "Клінінг",
-  none: "",
-};
-
-const SHIFT_TYPES = [
-  { value: "morning", label: "Ранкова (06:00-14:00)", start: "06:00", end: "14:00" },
-  { value: "afternoon", label: "Денна (10:00-18:00)", start: "10:00", end: "18:00" },
-  { value: "evening", label: "Вечірня (16:00-00:00)", start: "16:00", end: "00:00" },
-  { value: "night", label: "Нічна (22:00-06:00)", start: "22:00", end: "06:00" },
-  { value: "split", label: "Розділена", start: "10:00", end: "14:00" },
-];
-
-interface Worker {
-  documentId: string;
-  username: string;
-  firstName?: string;
-  lastName?: string;
-  avatarUrl?: string;
-  department?: string;
-  station?: string;
-  systemRole?: string;
-  isActive?: boolean;
-}
-
-interface WorkerShift {
-  documentId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  shiftType: string;
-  status: string;
-  department?: string;
-  station?: string;
-  scheduledMinutes?: number;
-  actualMinutes?: number;
-  worker?: Worker;
-}
-
-function getWeekDates(date: Date): Date[] {
-  const week: Date[] = [];
-  const start = new Date(date);
-  start.setDate(start.getDate() - start.getDay() + 1);
-
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(start);
-    day.setDate(start.getDate() + i);
-    week.push(day);
-  }
-  return week;
-}
-
 export default function ScheduleManagementPage() {
   const [currentDate, setCurrentDate] = React.useState(new Date());
-  const [department, setDepartment] = React.useState("all");
-  const [showAddDialog, setShowAddDialog] = React.useState(false);
-  const [selectedDate, setSelectedDate] = React.useState<string>("");
-  const [selectedWorker, setSelectedWorker] = React.useState<string>("");
-  const [selectedShiftType, setSelectedShiftType] = React.useState<string>("morning");
-  const [customStartTime, setCustomStartTime] = React.useState<string>("");
-  const [customEndTime, setCustomEndTime] = React.useState<string>("");
-  const [selectedDepartment, setSelectedDepartment] = React.useState<string>("kitchen");
-
   const weekDates = React.useMemo(() => getWeekDates(currentDate), [currentDate]);
 
-  const fromDate = weekDates[0].toISOString().split("T")[0];
-  const toDate = weekDates[6].toISOString().split("T")[0];
+  // Store state
+  const selectedDepartment = useScheduleStore((s: ScheduleState) => s.selectedDepartment);
+  const setSelectedDepartment = useScheduleStore((s: ScheduleState) => s.setSelectedDepartment);
+  const showAddDialog = useScheduleStore((s: ScheduleState) => s.showAddDialog);
+  const openAddDialog = useScheduleStore((s: ScheduleState) => s.openAddDialog);
+  const closeAddDialog = useScheduleStore((s: ScheduleState) => s.closeAddDialog);
+  const showEditDialog = useScheduleStore((s: ScheduleState) => s.showEditDialog);
+  const openEditDialog = useScheduleStore((s: ScheduleState) => s.openEditDialog);
+  const closeEditDialog = useScheduleStore((s: ScheduleState) => s.closeEditDialog);
+  const editingShift = useScheduleStore((s: ScheduleState) => s.editingShift);
+  const showDeleteConfirm = useScheduleStore((s: ScheduleState) => s.showDeleteConfirm);
+  const openDeleteConfirm = useScheduleStore((s: ScheduleState) => s.openDeleteConfirm);
+  const closeDeleteConfirm = useScheduleStore((s: ScheduleState) => s.closeDeleteConfirm);
+  const deleteTargetShiftId = useScheduleStore((s: ScheduleState) => s.deleteTargetShiftId);
+  const showWorkerDetails = useScheduleStore((s: ScheduleState) => s.showWorkerDetails);
+  const openWorkerDetails = useScheduleStore((s: ScheduleState) => s.openWorkerDetails);
+  const closeWorkerDetails = useScheduleStore((s: ScheduleState) => s.closeWorkerDetails);
+  const selectedDate = useScheduleStore((s: ScheduleState) => s.selectedDate);
 
-  const [{ data: scheduleData, fetching: scheduleFetching }, refetchSchedule] = useQuery({
-    query: GET_TEAM_SCHEDULE,
-    variables: {
-      fromDate,
-      toDate,
-      department: department === "all" ? undefined : department,
-    },
-  });
+  // Hook data
+  const {
+    shifts,
+    filteredWorkers,
+    scheduleGrid,
+    summaryByWorker,
+    fetching,
+    refetch,
+    createShift,
+    updateShift,
+    deleteShift,
+    checkConflict,
+    workers,
+  } = useScheduleManagement(weekDates, selectedDepartment);
 
-  const [{ data: workersData }] = useQuery({
-    query: GET_ALL_WORKERS,
-  });
+  // Form state
+  const [formWorker, setFormWorker] = React.useState<string>("");
+  const [formShiftType, setFormShiftType] = React.useState<ShiftType>("morning");
+  const [formStartTime, setFormStartTime] = React.useState<string>("");
+  const [formEndTime, setFormEndTime] = React.useState<string>("");
+  const [formDepartment, setFormDepartment] = React.useState<string>("kitchen");
+  const [formNotes, setFormNotes] = React.useState<string>("");
+  const [formStatus, setFormStatus] = React.useState<ShiftStatus>("scheduled");
+  const [formError, setFormError] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const [, createShift] = useMutation(CREATE_WORKER_SHIFT);
+  // Selected worker for details
+  const selectedWorkerId = useScheduleStore((s: ScheduleState) => s.selectedWorkerId);
+  const selectedWorkerSummary = selectedWorkerId ? summaryByWorker[selectedWorkerId] : null;
 
-  const shifts: WorkerShift[] = scheduleData?.workerShifts || [];
-  const workers: Worker[] = workersData?.usersPermissionsUsers || [];
-
-  // Group shifts by date and worker
-  const scheduleByDateWorker = React.useMemo(() => {
-    const map: Record<string, Record<string, WorkerShift[]>> = {};
-
-    for (const date of weekDates) {
-      const dateStr = date.toISOString().split("T")[0];
-      map[dateStr] = {};
-    }
-
-    for (const shift of shifts) {
-      if (!map[shift.date]) continue;
-      const workerId = shift.worker?.documentId || "unknown";
-      if (!map[shift.date][workerId]) {
-        map[shift.date][workerId] = [];
-      }
-      map[shift.date][workerId].push(shift);
-    }
-
-    return map;
-  }, [shifts, weekDates]);
-
-  // Filter workers by department and sort by role/name
-  const filteredWorkers = React.useMemo(() => {
-    let filtered = workers.filter(w => w.isActive !== false);
-
-    if (department !== "all") {
-      filtered = filtered.filter(w => w.department === department);
-    }
-
-    // Sort: by department, then by role importance, then by name
-    const roleOrder = ["chef", "cook", "bartender", "waiter", "host", "cashier", "manager", "admin", "viewer"];
-    return filtered.sort((a, b) => {
-      // First by department
-      if (a.department !== b.department) {
-        return (a.department || "").localeCompare(b.department || "");
-      }
-      // Then by role
-      const roleA = roleOrder.indexOf(a.systemRole || "viewer");
-      const roleB = roleOrder.indexOf(b.systemRole || "viewer");
-      if (roleA !== roleB) return roleA - roleB;
-      // Then by name
-      return (a.firstName || a.username || "").localeCompare(b.firstName || b.username || "");
-    });
-  }, [workers, department]);
-
+  // Navigation
   const navigatePrev = () => {
     const newDate = new Date(currentDate);
     newDate.setDate(newDate.getDate() - 7);
@@ -252,66 +154,270 @@ export default function ScheduleManagementPage() {
     setCurrentDate(new Date());
   };
 
-  const formatTime = (time: string) => time?.slice(0, 5) || "";
-
-  const openAddDialog = (dateStr: string) => {
-    setSelectedDate(dateStr);
-    setShowAddDialog(true);
+  // Reset form
+  const resetForm = () => {
+    setFormWorker("");
+    setFormShiftType("morning");
+    setFormStartTime("");
+    setFormEndTime("");
+    setFormDepartment("kitchen");
+    setFormNotes("");
+    setFormStatus("scheduled");
+    setFormError(null);
   };
 
-  const handleAddShift = async () => {
-    if (!selectedWorker || !selectedDate) return;
-
-    const shiftTypeConfig = SHIFT_TYPES.find(t => t.value === selectedShiftType);
-    let startTime = customStartTime || shiftTypeConfig?.start || "09:00";
-    let endTime = customEndTime || shiftTypeConfig?.end || "17:00";
-
-    // Format time to HH:mm:ss.SSS (Strapi Time format)
-    const formatTimeForStrapi = (time: string) => {
-      const parts = time.split(":");
-      if (parts.length === 2) {
-        return `${parts[0]}:${parts[1]}:00.000`;
+  // Open add dialog with pre-filled date
+  const handleOpenAddDialog = (dateStr: string, workerId?: string) => {
+    resetForm();
+    if (workerId) {
+      setFormWorker(workerId);
+      const worker = workers.find(w => w.documentId === workerId);
+      if (worker?.department) {
+        setFormDepartment(worker.department);
       }
-      return time;
-    };
+    }
+    openAddDialog(dateStr, workerId);
+  };
 
-    startTime = formatTimeForStrapi(startTime);
-    endTime = formatTimeForStrapi(endTime);
+  // Open edit dialog with shift data
+  const handleOpenEditDialog = (shift: WorkerShift) => {
+    setFormWorker(shift.worker?.documentId || "");
+    setFormShiftType(shift.shiftType);
+    setFormStartTime(formatTimeDisplay(shift.startTime));
+    setFormEndTime(formatTimeDisplay(shift.endTime));
+    setFormDepartment(shift.department || "kitchen");
+    setFormNotes(shift.notes || "");
+    setFormStatus(shift.status);
+    setFormError(null);
+    openEditDialog(shift);
+  };
 
-    // Calculate scheduled minutes
-    const [startH, startM] = startTime.split(":").map(Number);
-    const [endH, endM] = endTime.split(":").map(Number);
-    let scheduledMinutes = (endH * 60 + endM) - (startH * 60 + startM);
-    if (scheduledMinutes < 0) scheduledMinutes += 24 * 60;
+  // Add shift
+  const handleAddShift = async () => {
+    if (!formWorker || !selectedDate) return;
 
-    const result = await createShift({
-      data: {
-        worker: selectedWorker,
+    setFormError(null);
+    setIsSubmitting(true);
+
+    try {
+      const shiftTypeConfig = SHIFT_TYPES.find(t => t.value === formShiftType);
+      const startTime = formStartTime || shiftTypeConfig?.start || "09:00";
+      const endTime = formEndTime || shiftTypeConfig?.end || "17:00";
+
+      // Check for conflicts
+      const conflict = checkConflict(formWorker, selectedDate, startTime, endTime);
+      if (conflict?.type === "overlap") {
+        setFormError(`Конфлікт: зміна перетинається з існуючою (${formatTimeDisplay(conflict.existingShift.startTime)}-${formatTimeDisplay(conflict.existingShift.endTime)})`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      await createShift({
+        worker: formWorker,
         date: selectedDate,
         startTime,
         endTime,
-        shiftType: selectedShiftType,
-        department: selectedDepartment,
-        scheduledMinutes,
+        shiftType: formShiftType,
+        department: formDepartment,
+        notes: formNotes || undefined,
         status: "scheduled",
-      },
-    });
+      });
 
-    if (result.error) {
-      console.error("Failed to create shift:", result.error);
-      return;
+      closeAddDialog();
+      resetForm();
+      refetch();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Помилка при створенні зміни");
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setShowAddDialog(false);
-    setSelectedWorker("");
-    setCustomStartTime("");
-    setCustomEndTime("");
-    refetchSchedule({ requestPolicy: "network-only" });
   };
 
-  const isToday = (date: Date) => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
+  // Update shift
+  const handleUpdateShift = async () => {
+    if (!editingShift) return;
+
+    setFormError(null);
+    setIsSubmitting(true);
+
+    try {
+      const shiftTypeConfig = SHIFT_TYPES.find(t => t.value === formShiftType);
+      const startTime = formStartTime || shiftTypeConfig?.start || "09:00";
+      const endTime = formEndTime || shiftTypeConfig?.end || "17:00";
+
+      // Check for conflicts (excluding current shift)
+      const conflict = checkConflict(
+        formWorker,
+        editingShift.shift.date,
+        startTime,
+        endTime,
+        editingShift.shift.documentId
+      );
+      if (conflict?.type === "overlap") {
+        setFormError(`Конфлікт: зміна перетинається з існуючою (${formatTimeDisplay(conflict.existingShift.startTime)}-${formatTimeDisplay(conflict.existingShift.endTime)})`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      await updateShift(editingShift.shift.documentId, {
+        startTime,
+        endTime,
+        shiftType: formShiftType,
+        department: formDepartment,
+        notes: formNotes || undefined,
+        status: formStatus,
+      });
+
+      closeEditDialog();
+      resetForm();
+      refetch();
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Помилка при оновленні зміни");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Delete shift
+  const handleDeleteShift = async () => {
+    if (!deleteTargetShiftId) return;
+
+    try {
+      await deleteShift(deleteTargetShiftId);
+      closeDeleteConfirm();
+      refetch();
+    } catch (error) {
+      console.error("Failed to delete shift:", error);
+    }
+  };
+
+  // Shift cell component
+  const ShiftCell = ({ shift, compact = false }: { shift: WorkerShift; compact?: boolean }) => (
+    <div
+      className={`group relative text-[11px] p-1.5 rounded border-l-2 ${SHIFT_TYPE_COLORS[shift.shiftType]} ${SHIFT_STATUS_COLORS[shift.status]} cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all`}
+      onClick={() => handleOpenEditDialog(shift)}
+    >
+      <div className="font-mono font-medium">
+        {formatTimeDisplay(shift.startTime)}-{formatTimeDisplay(shift.endTime)}
+      </div>
+      {!compact && shift.notes && (
+        <div className="text-[9px] opacity-70 truncate mt-0.5">{shift.notes}</div>
+      )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-0.5 right-0.5 p-0.5 rounded opacity-0 group-hover:opacity-100 hover:bg-black/10 transition-opacity"
+          >
+            <MoreVertical className="h-3 w-3" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => handleOpenEditDialog(shift)}>
+            <Edit2 className="h-4 w-4 mr-2" />
+            Редагувати
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => openDeleteConfirm(shift.documentId)}
+            className="text-destructive focus:text-destructive"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Видалити
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+
+  // Worker card component
+  const WorkerCard = ({ worker }: { worker: Worker }) => {
+    const workerWeekShifts = weekDates.map(date => ({
+      date,
+      dateStr: date.toISOString().split("T")[0],
+      shifts: scheduleGrid[date.toISOString().split("T")[0]]?.[worker.documentId] || []
+    }));
+    const totalShifts = workerWeekShifts.reduce((sum, d) => sum + d.shifts.length, 0);
+    const totalMinutes = workerWeekShifts.reduce((sum, d) =>
+      sum + d.shifts.reduce((sSum, s) => sSum + (s.scheduledMinutes || 0), 0), 0);
+
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="p-3 pb-2">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => openWorkerDetails(worker.documentId)}
+              className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium shrink-0 hover:bg-primary/20 transition-colors"
+            >
+              {worker.firstName?.[0] || worker.username?.[0] || "?"}
+            </button>
+            <div className="flex-1 min-w-0">
+              <button
+                onClick={() => openWorkerDetails(worker.documentId)}
+                className="font-semibold text-sm truncate hover:text-primary transition-colors text-left"
+              >
+                {worker.firstName} {worker.lastName}
+              </button>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
+                  {ROLE_LABELS[worker.systemRole || "viewer"]}
+                </span>
+                {worker.department && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {DEPARTMENT_LABELS[worker.department]}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-1 shrink-0">
+              <Badge variant="outline" className="text-[10px] h-5">
+                <Clock className="h-3 w-3 mr-1" />
+                {totalShifts} зм.
+              </Badge>
+              {totalMinutes > 0 && (
+                <span className="text-[10px] text-muted-foreground">
+                  {formatMinutesToHours(totalMinutes)}
+                </span>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-2 pt-0">
+          {/* Week grid for this worker */}
+          <div className="grid grid-cols-7 gap-1">
+            {workerWeekShifts.map(({ date, dateStr, shifts: dayShifts }, i) => {
+              const today = isToday(date);
+              return (
+                <div
+                  key={i}
+                  className={`min-h-[50px] p-1 rounded-lg text-center ${
+                    today ? "bg-primary/10" : "bg-muted/30"
+                  }`}
+                >
+                  <div className={`text-[10px] font-medium mb-0.5 ${today ? "text-primary" : "text-muted-foreground"}`}>
+                    {DAYS_UK[i]}
+                  </div>
+                  {dayShifts.length > 0 ? (
+                    <div className="space-y-0.5">
+                      {dayShifts.map((shift) => (
+                        <ShiftCell key={shift.documentId} shift={shift} compact />
+                      ))}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleOpenAddDialog(dateStr, worker.documentId)}
+                      className="w-full h-6 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   return (
@@ -333,7 +439,7 @@ export default function ScheduleManagementPage() {
             </div>
           </div>
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <Select value={department} onValueChange={setDepartment}>
+            <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
               <SelectTrigger className="w-[100px] sm:w-[140px] h-9 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
@@ -349,17 +455,17 @@ export default function ScheduleManagementPage() {
               variant="outline"
               size="icon"
               className="h-9 w-9"
-              onClick={() => refetchSchedule({ requestPolicy: "network-only" })}
-              disabled={scheduleFetching}
+              onClick={() => refetch()}
+              disabled={fetching}
             >
-              <RefreshCw className={`h-4 w-4 ${scheduleFetching ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 ${fetching ? "animate-spin" : ""}`} />
             </Button>
           </div>
         </div>
       </header>
 
       <main className="flex-1 p-3 sm:p-4">
-        {/* Week Navigation - Mobile optimized */}
+        {/* Week Navigation */}
         <Card className="mb-3 sm:mb-4">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between gap-2">
@@ -394,17 +500,17 @@ export default function ScheduleManagementPage() {
               const today = isToday(date);
               const dateStr = date.toISOString().split("T")[0];
               const shiftsOnDay = filteredWorkers.reduce((count, worker) => {
-                return count + (scheduleByDateWorker[dateStr]?.[worker.documentId]?.length || 0);
+                return count + (scheduleGrid[dateStr]?.[worker.documentId]?.length || 0);
               }, 0);
 
               return (
                 <button
                   key={i}
-                  onClick={() => openAddDialog(dateStr)}
+                  onClick={() => handleOpenAddDialog(dateStr)}
                   className={`flex flex-col items-center min-w-[52px] p-2 rounded-xl border transition-all touch-feedback ${
                     today
                       ? "bg-primary/10 border-primary ring-2 ring-primary/20"
-                      : "bg-white border-slate-200 hover:bg-slate-50"
+                      : "bg-card border-border hover:bg-muted/50"
                   }`}
                 >
                   <span className={`text-xs font-medium ${today ? "text-primary" : "text-muted-foreground"}`}>
@@ -429,84 +535,14 @@ export default function ScheduleManagementPage() {
               Немає працівників
             </div>
           ) : (
-            filteredWorkers.map((worker) => {
-              const workerWeekShifts = weekDates.map(date => ({
-                date,
-                dateStr: date.toISOString().split("T")[0],
-                shifts: scheduleByDateWorker[date.toISOString().split("T")[0]]?.[worker.documentId] || []
-              }));
-              const totalShifts = workerWeekShifts.reduce((sum, d) => sum + d.shifts.length, 0);
-
-              return (
-                <Card key={worker.documentId} className="overflow-hidden">
-                  <CardHeader className="p-3 pb-2">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
-                        {worker.firstName?.[0] || worker.username?.[0] || "?"}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm truncate">
-                          {worker.firstName} {worker.lastName}
-                        </p>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
-                            {ROLE_LABELS[worker.systemRole || "viewer"]}
-                          </span>
-                          {worker.department && (
-                            <span className="text-[10px] text-muted-foreground">
-                              {DEPARTMENT_LABELS[worker.department]}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <Badge variant="outline" className="shrink-0">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {totalShifts} зм.
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-2 pt-0">
-                    {/* Week grid for this worker */}
-                    <div className="grid grid-cols-7 gap-1">
-                      {workerWeekShifts.map(({ date, dateStr, shifts }, i) => {
-                        const today = isToday(date);
-                        return (
-                          <div
-                            key={i}
-                            className={`min-h-[50px] p-1 rounded-lg text-center ${
-                              today ? "bg-primary/10" : "bg-muted/30"
-                            }`}
-                          >
-                            <div className={`text-[10px] font-medium mb-0.5 ${today ? "text-primary" : "text-muted-foreground"}`}>
-                              {DAYS_UK[i]}
-                            </div>
-                            {shifts.length > 0 ? (
-                              <div className="space-y-0.5">
-                                {shifts.map((shift) => (
-                                  <div
-                                    key={shift.documentId}
-                                    className={`text-[9px] font-mono font-medium px-1 py-0.5 rounded ${SHIFT_TYPE_COLORS[shift.shiftType]}`}
-                                  >
-                                    {formatTime(shift.startTime).slice(0,2)}-{formatTime(shift.endTime).slice(0,2)}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground">—</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })
+            filteredWorkers.map((worker) => (
+              <WorkerCard key={worker.documentId} worker={worker} />
+            ))
           )}
 
           {/* Add shift FAB */}
           <Button
-            onClick={() => openAddDialog(new Date().toISOString().split("T")[0])}
+            onClick={() => handleOpenAddDialog(new Date().toISOString().split("T")[0])}
             className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
           >
             <UserPlus className="h-6 w-6" />
@@ -516,10 +552,10 @@ export default function ScheduleManagementPage() {
         {/* Desktop: Table-based Schedule Grid */}
         <Card className="hidden md:block">
           <CardContent className="p-0 overflow-x-auto">
-            <table className="w-full min-w-[700px]">
+            <table className="w-full min-w-[800px]">
               <thead>
                 <tr className="border-b">
-                  <th className="p-3 text-left font-medium w-[180px]">
+                  <th className="p-3 text-left font-medium w-[200px]">
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4" />
                       Працівник
@@ -540,73 +576,88 @@ export default function ScheduleManagementPage() {
                           variant="ghost"
                           size="sm"
                           className="mt-1 h-7 w-7 p-0"
-                          onClick={() => openAddDialog(date.toISOString().split("T")[0])}
+                          onClick={() => handleOpenAddDialog(date.toISOString().split("T")[0])}
                         >
                           <Plus className="h-3 w-3" />
                         </Button>
                       </th>
                     );
                   })}
+                  <th className="p-2 text-center font-medium w-[80px]">
+                    <Timer className="h-4 w-4 mx-auto" />
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filteredWorkers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-8 text-center text-muted-foreground">
                       Немає працівників
                     </td>
                   </tr>
                 ) : (
-                  filteredWorkers.map((worker) => (
-                    <tr key={worker.documentId} className="border-b hover:bg-muted/50">
-                      <td className="p-3">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
-                            {worker.firstName?.[0] || worker.username?.[0] || "?"}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {worker.firstName} {worker.lastName}
-                            </p>
-                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
-                                {ROLE_LABELS[worker.systemRole || "viewer"]}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      {weekDates.map((date, i) => {
-                        const dateStr = date.toISOString().split("T")[0];
-                        const workerShifts = scheduleByDateWorker[dateStr]?.[worker.documentId] || [];
-                        const today = isToday(date);
-
-                        return (
-                          <td
-                            key={i}
-                            className={`p-1.5 text-center ${today ? "bg-primary/5" : ""}`}
+                  filteredWorkers.map((worker) => {
+                    const summary = summaryByWorker[worker.documentId];
+                    return (
+                      <tr key={worker.documentId} className="border-b hover:bg-muted/50">
+                        <td className="p-3">
+                          <button
+                            onClick={() => openWorkerDetails(worker.documentId)}
+                            className="flex items-center gap-2 text-left hover:bg-muted/50 -m-2 p-2 rounded-lg transition-colors w-full"
                           >
-                            {workerShifts.length > 0 ? (
-                              <div className="space-y-1">
-                                {workerShifts.map((shift) => (
-                                  <div
-                                    key={shift.documentId}
-                                    className={`text-[11px] p-1 rounded border-l-2 ${SHIFT_TYPE_COLORS[shift.shiftType]} ${STATUS_COLORS[shift.status]}`}
-                                  >
-                                    <div className="font-mono font-medium">
-                                      {formatTime(shift.startTime)}-{formatTime(shift.endTime)}
-                                    </div>
-                                  </div>
-                                ))}
+                            <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-sm font-medium shrink-0">
+                              {worker.firstName?.[0] || worker.username?.[0] || "?"}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {worker.firstName} {worker.lastName}
+                              </p>
+                              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
+                                  {ROLE_LABELS[worker.systemRole || "viewer"]}
+                                </span>
                               </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))
+                            </div>
+                          </button>
+                        </td>
+                        {weekDates.map((date, i) => {
+                          const dateStr = date.toISOString().split("T")[0];
+                          const workerShifts = scheduleGrid[dateStr]?.[worker.documentId] || [];
+                          const today = isToday(date);
+
+                          return (
+                            <td
+                              key={i}
+                              className={`p-1.5 text-center ${today ? "bg-primary/5" : ""}`}
+                            >
+                              {workerShifts.length > 0 ? (
+                                <div className="space-y-1">
+                                  {workerShifts.map((shift) => (
+                                    <ShiftCell key={shift.documentId} shift={shift} />
+                                  ))}
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => handleOpenAddDialog(dateStr, worker.documentId)}
+                                  className="w-full h-8 flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors"
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                            </td>
+                          );
+                        })}
+                        <td className="p-2 text-center">
+                          <div className="text-xs font-medium">
+                            {summary ? formatMinutesToHours(summary.totalMinutes) : "—"}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {summary?.totalShifts || 0} зм.
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -620,8 +671,16 @@ export default function ScheduleManagementPage() {
             <div className="flex flex-wrap gap-3">
               {SHIFT_TYPES.map((type) => (
                 <Badge key={type.value} className={SHIFT_TYPE_COLORS[type.value]}>
-                  {type.label.split(" ")[0]}
+                  {type.label}
                 </Badge>
+              ))}
+            </div>
+            <div className="flex flex-wrap gap-3 mt-2">
+              {Object.entries(SHIFT_STATUS_LABELS).map(([status, label]) => (
+                <div key={status} className="flex items-center gap-1.5 text-xs">
+                  <div className={`w-3 h-3 rounded border-l-2 ${SHIFT_STATUS_COLORS[status as ShiftStatus]}`} />
+                  <span className="text-muted-foreground">{label}</span>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -629,15 +688,21 @@ export default function ScheduleManagementPage() {
       </main>
 
       {/* Add Shift Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+      <Dialog open={showAddDialog} onOpenChange={(open) => !open && closeAddDialog()}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Додати зміну на {selectedDate}</DialogTitle>
           </DialogHeader>
           <DialogBody className="space-y-4">
+            {formError && (
+              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                {formError}
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium mb-2 block">Працівник</label>
-              <Select value={selectedWorker} onValueChange={setSelectedWorker}>
+              <Select value={formWorker} onValueChange={setFormWorker}>
                 <SelectTrigger>
                   <SelectValue placeholder="Оберіть працівника" />
                 </SelectTrigger>
@@ -657,14 +722,14 @@ export default function ScheduleManagementPage() {
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Тип зміни</label>
-              <Select value={selectedShiftType} onValueChange={setSelectedShiftType}>
+              <Select value={formShiftType} onValueChange={(v) => setFormShiftType(v as ShiftType)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {SHIFT_TYPES.map((type) => (
                     <SelectItem key={type.value} value={type.value}>
-                      {type.label}
+                      {type.labelFull}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -675,22 +740,22 @@ export default function ScheduleManagementPage() {
                 <label className="text-sm font-medium mb-2 block">Початок</label>
                 <Input
                   type="time"
-                  value={customStartTime || SHIFT_TYPES.find(t => t.value === selectedShiftType)?.start}
-                  onChange={(e) => setCustomStartTime(e.target.value)}
+                  value={formStartTime || SHIFT_TYPES.find(t => t.value === formShiftType)?.start}
+                  onChange={(e) => setFormStartTime(e.target.value)}
                 />
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Кінець</label>
                 <Input
                   type="time"
-                  value={customEndTime || SHIFT_TYPES.find(t => t.value === selectedShiftType)?.end}
-                  onChange={(e) => setCustomEndTime(e.target.value)}
+                  value={formEndTime || SHIFT_TYPES.find(t => t.value === formShiftType)?.end}
+                  onChange={(e) => setFormEndTime(e.target.value)}
                 />
               </div>
             </div>
             <div>
               <label className="text-sm font-medium mb-2 block">Відділ</label>
-              <Select value={selectedDepartment} onValueChange={setSelectedDepartment}>
+              <Select value={formDepartment} onValueChange={setFormDepartment}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -703,16 +768,271 @@ export default function ScheduleManagementPage() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Примітка</label>
+              <Textarea
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
+                placeholder="Додаткова інформація..."
+                rows={2}
+              />
+            </div>
           </DialogBody>
           <DialogFooter className="border-t pt-4">
             <Button
               onClick={handleAddShift}
-              disabled={!selectedWorker}
+              disabled={!formWorker || isSubmitting}
               className="w-full h-11 text-base font-medium rounded-xl"
             >
+              {isSubmitting ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
               Додати зміну
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Shift Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={(open) => !open && closeEditDialog()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редагувати зміну</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            {formError && (
+              <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                {formError}
+              </div>
+            )}
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2 text-sm">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">
+                  {editingShift?.shift.worker?.firstName} {editingShift?.shift.worker?.lastName}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm mt-1 text-muted-foreground">
+                <CalendarDays className="h-4 w-4" />
+                <span>{editingShift?.shift.date}</span>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Тип зміни</label>
+              <Select value={formShiftType} onValueChange={(v) => setFormShiftType(v as ShiftType)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SHIFT_TYPES.map((type) => (
+                    <SelectItem key={type.value} value={type.value}>
+                      {type.labelFull}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Початок</label>
+                <Input
+                  type="time"
+                  value={formStartTime}
+                  onChange={(e) => setFormStartTime(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Кінець</label>
+                <Input
+                  type="time"
+                  value={formEndTime}
+                  onChange={(e) => setFormEndTime(e.target.value)}
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Статус</label>
+              <Select value={formStatus} onValueChange={(v) => setFormStatus(v as ShiftStatus)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(SHIFT_STATUS_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      <div className="flex items-center gap-2">
+                        {value === "completed" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                        {value === "cancelled" && <XCircle className="h-4 w-4 text-red-600" />}
+                        {value === "scheduled" && <Clock className="h-4 w-4 text-blue-600" />}
+                        {value === "started" && <Clock className="h-4 w-4 text-amber-600" />}
+                        {value === "missed" && <AlertTriangle className="h-4 w-4 text-red-600" />}
+                        {label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Відділ</label>
+              <Select value={formDepartment} onValueChange={setFormDepartment}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DEPARTMENTS.filter(d => d.value !== "all").map((dept) => (
+                    <SelectItem key={dept.value} value={dept.value}>
+                      {dept.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">Примітка</label>
+              <Textarea
+                value={formNotes}
+                onChange={(e) => setFormNotes(e.target.value)}
+                placeholder="Додаткова інформація..."
+                rows={2}
+              />
+            </div>
+          </DialogBody>
+          <DialogFooter className="border-t pt-4 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => editingShift && openDeleteConfirm(editingShift.shift.documentId)}
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Видалити
+            </Button>
+            <Button
+              onClick={handleUpdateShift}
+              disabled={isSubmitting}
+              className="flex-1"
+            >
+              {isSubmitting ? (
+                <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Зберегти
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => !open && closeDeleteConfirm()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Видалити зміну?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Ця дія незворотня. Зміну буде видалено з графіку.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Скасувати</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteShift} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Видалити
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Worker Details Dialog */}
+      <Dialog open={showWorkerDetails} onOpenChange={(open) => !open && closeWorkerDetails()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Профіль працівника</DialogTitle>
+          </DialogHeader>
+          <DialogBody className="space-y-4">
+            {selectedWorkerSummary && (
+              <>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-2xl font-medium">
+                    {selectedWorkerSummary.worker.firstName?.[0] || selectedWorkerSummary.worker.username?.[0] || "?"}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      {selectedWorkerSummary.worker.firstName} {selectedWorkerSummary.worker.lastName}
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className={ROLE_COLORS[selectedWorkerSummary.worker.systemRole || "viewer"]}>
+                        {ROLE_LABELS[selectedWorkerSummary.worker.systemRole || "viewer"]}
+                      </Badge>
+                      {selectedWorkerSummary.worker.department && (
+                        <Badge variant="outline">
+                          {DEPARTMENT_LABELS[selectedWorkerSummary.worker.department]}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Статистика за тиждень</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <div className="text-2xl font-bold">{selectedWorkerSummary.totalShifts}</div>
+                      <div className="text-xs text-muted-foreground">Змін</div>
+                    </div>
+                    <div className="p-3 bg-muted/50 rounded-lg">
+                      <div className="text-2xl font-bold">{formatMinutesToHours(selectedWorkerSummary.totalMinutes)}</div>
+                      <div className="text-xs text-muted-foreground">Загалом</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">Зміни на тижні</h4>
+                  <div className="space-y-2">
+                    {selectedWorkerSummary.shifts.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Немає запланованих змін</p>
+                    ) : (
+                      selectedWorkerSummary.shifts.map((shift) => (
+                        <div
+                          key={shift.documentId}
+                          onClick={() => handleOpenEditDialog(shift)}
+                          className={`p-3 rounded-lg border-l-2 cursor-pointer hover:bg-muted/50 transition-colors ${SHIFT_TYPE_COLORS[shift.shiftType]} ${SHIFT_STATUS_COLORS[shift.status]}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium text-sm">
+                              {new Date(shift.date).toLocaleDateString("uk-UA", { weekday: "short", day: "numeric", month: "short" })}
+                            </div>
+                            <Badge variant="outline" className="text-[10px]">
+                              {SHIFT_STATUS_LABELS[shift.status]}
+                            </Badge>
+                          </div>
+                          <div className="text-sm mt-1 font-mono">
+                            {formatTimeDisplay(shift.startTime)} - {formatTimeDisplay(shift.endTime)}
+                          </div>
+                          {shift.notes && (
+                            <div className="text-xs text-muted-foreground mt-1">{shift.notes}</div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium mb-3">За типом зміни</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(selectedWorkerSummary.byType)
+                      .filter(([_, count]) => count > 0)
+                      .map(([type, count]) => (
+                        <Badge key={type} className={SHIFT_TYPE_COLORS[type as ShiftType]}>
+                          {SHIFT_TYPES.find(t => t.value === type)?.label}: {count}
+                        </Badge>
+                      ))
+                    }
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogBody>
         </DialogContent>
       </Dialog>
     </div>
