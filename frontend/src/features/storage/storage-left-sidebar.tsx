@@ -8,11 +8,13 @@ import {
   CalendarDays,
   FileBarChart,
   Trash2,
+  ListTodo,
 } from 'lucide-react';
 import { AppSidebar, type NavigationItem } from '@/components/layout/app-sidebar';
 
-export type StorageView = 'inventory' | 'batches' | 'reports' | 'waste' | 'chat' | 'schedule' | 'profile';
+export type StorageView = 'inventory' | 'batches' | 'reports' | 'waste' | 'dailies' | 'chat' | 'schedule' | 'profile';
 
+// Main storage functionality
 const defaultNavigationItems: NavigationItem<StorageView>[] = [
   { id: 'inventory', icon: Layers, label: 'Інвентар' },
   { id: 'batches', icon: Archive, label: 'Партії' },
@@ -24,8 +26,9 @@ const analyticsItems: NavigationItem<string>[] = [
   { id: 'waste', icon: Trash2, label: 'Аналітика втрат', path: '/storage/waste' },
 ];
 
-// Secondary items - communication and scheduling
-const secondaryItems: NavigationItem<StorageView>[] = [
+// Common items - tasks, communication, scheduling
+const commonItems: NavigationItem<StorageView>[] = [
+  { id: 'dailies', icon: ListTodo, label: 'Завдання' },
   { id: 'chat', icon: MessageSquare, label: 'Чат' },
   { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
 ];
@@ -56,7 +59,7 @@ export function StorageLeftSidebar({
       onOpenChange={onOpenChange}
       navigationItems={navigationItems}
       secondaryItems={analyticsItems}
-      externalLinks={secondaryItems}
+      externalLinks={commonItems}
       activeView={activeView}
       onViewChange={onViewChange as (view: StorageView | string) => void}
       userName={userName}

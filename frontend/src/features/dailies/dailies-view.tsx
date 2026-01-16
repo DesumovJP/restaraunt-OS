@@ -47,7 +47,7 @@ interface DailiesViewProps {
   /** Callback to open sidebar */
   onOpenSidebar?: () => void;
   /** Color variant */
-  variant?: "default" | "kitchen" | "waiter";
+  variant?: "default" | "kitchen" | "waiter" | "storage" | "admin";
 }
 
 // Priority colors for card pins
@@ -225,6 +225,18 @@ export function DailiesView({
     ? {
         iconBg: "bg-gradient-to-br from-slate-700 to-slate-900",
         activeTabBg: "bg-slate-100 text-slate-700",
+        pendingTabBg: "bg-amber-100 text-amber-700",
+      }
+    : variant === "storage"
+    ? {
+        iconBg: "bg-gradient-to-br from-emerald-500 to-teal-500",
+        activeTabBg: "bg-emerald-100 text-emerald-700",
+        pendingTabBg: "bg-amber-100 text-amber-700",
+      }
+    : variant === "admin"
+    ? {
+        iconBg: "bg-gradient-to-br from-blue-500 to-indigo-500",
+        activeTabBg: "bg-blue-100 text-blue-700",
         pendingTabBg: "bg-amber-100 text-amber-700",
       }
     : {

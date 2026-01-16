@@ -12,6 +12,7 @@ import { QRScanner } from "@/features/inventory/qr-scanner";
 import { StorageLeftSidebar, type StorageView } from "@/features/storage/storage-left-sidebar";
 import { WorkerProfileCard } from "@/features/profile/worker-profile-card";
 import { WorkersChat } from "@/features/admin/workers-chat";
+import { DailiesView } from "@/features/dailies";
 import { useAuthStore } from "@/stores/auth-store";
 
 // New optimized components
@@ -22,6 +23,7 @@ import {
   ProductPreview,
   SupplyForm,
   WriteOffForm,
+  CategoryFilterMinimal,
 } from "@/features/storage/components";
 import { ProductList, ProductListSkeleton, BatchView } from "@/features/storage/views";
 import { MOCK_BATCHES } from "@/features/storage";
@@ -408,50 +410,14 @@ export default function StoragePage() {
               </div>
             </div>
 
-            {/* Category chips - horizontal scrollable */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-              <button
-                onClick={() => {
-                  setSelectedMainCategory(null);
-                  setSelectedSubCategory(null);
-                }}
-                className={cn(
-                  "shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                  !selectedMainCategory
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                )}
-              >
-                Всі
-                <span className="ml-1.5 text-xs opacity-70">{products.length}</span>
-              </button>
-              {Object.entries(categoryCounts?.main || {}).map(([category, count]) => (
-                <button
-                  key={category}
-                  onClick={() => {
-                    setSelectedMainCategory(category as StorageMainCategory);
-                    setSelectedSubCategory(null);
-                  }}
-                  className={cn(
-                    "shrink-0 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
-                    selectedMainCategory === category
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  )}
-                >
-                  {category === "raw" && "Сировина"}
-                  {category === "prep" && "Заготовки"}
-                  {category === "dry" && "Бакалія"}
-                  {category === "seasonings" && "Приправи"}
-                  {category === "oils" && "Олії"}
-                  {category === "dairy" && "Молочні"}
-                  {category === "beverages" && "Напої"}
-                  {category === "frozen" && "Заморожені"}
-                  {category === "ready" && "Готові"}
-                  <span className="ml-1.5 text-xs opacity-70">{count}</span>
-                </button>
-              ))}
-            </div>
+            {/* Category filter - dropdown with subcategory support */}
+            <CategoryFilterMinimal
+              selectedMainCategory={selectedMainCategory}
+              selectedSubCategory={selectedSubCategory}
+              onMainCategoryChange={setSelectedMainCategory}
+              onSubCategoryChange={setSelectedSubCategory}
+              categoryCounts={categoryCounts}
+            />
 
             {/* Results info */}
             <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -515,6 +481,11 @@ export default function StoragePage() {
 
         {activeView === "batches" && (
           <BatchViewWrapper onExportReport={handleCloseShift} />
+        )}
+
+        {/* Dailies View */}
+        {activeView === "dailies" && (
+          <DailiesView compact className="h-full" variant="storage" onOpenSidebar={() => setSidebarOpen(true)} />
         )}
 
         {/* Chat View */}

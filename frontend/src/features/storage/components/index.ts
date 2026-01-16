@@ -26,3 +26,5 @@ export { ProductPreview } from "./product-preview";
 export { SupplyForm } from "./supply-form";
 
 export { WriteOffForm } from "./write-off-form";
+
+export { CategoryFilterMinimal, CategoryPills } from "./category-filter-minimal";

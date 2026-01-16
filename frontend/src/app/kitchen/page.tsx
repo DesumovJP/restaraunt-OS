@@ -418,15 +418,15 @@ export default function KitchenDisplayPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Shared Header for views that don't have their own */}
         {(activeView === "chat" || activeView === "schedule" || activeView === "profile") && (
-          <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b safe-top">
-            <div className="px-3 sm:px-4 py-2.5">
+          <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm safe-area-inset-top">
+            <div className="px-3 sm:px-4 py-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   {/* Mobile menu button */}
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="lg:hidden h-9 w-9"
+                    className="lg:hidden h-10 w-10 rounded-xl touch-feedback"
                     onClick={() => setIsSidebarOpen(true)}
                     aria-label="Меню"
                   >
@@ -494,15 +494,15 @@ export default function KitchenDisplayPage() {
         ) : (
           <>
             {/* Stations View - Header */}
-            <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-sm border-b safe-top">
-              <div className="px-3 sm:px-4 py-2.5">
+            <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm safe-area-inset-top">
+              <div className="px-3 sm:px-4 py-3">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     {/* Mobile menu button */}
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="lg:hidden h-9 w-9"
+                      className="lg:hidden h-10 w-10 rounded-xl touch-feedback"
                       onClick={() => setIsSidebarOpen(true)}
                       aria-label="Меню"
                     >

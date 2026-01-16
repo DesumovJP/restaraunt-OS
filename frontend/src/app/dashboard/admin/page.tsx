@@ -7,6 +7,7 @@ import { AlertsList } from "@/features/alerts/alerts-list";
 import { ActionLogView } from "@/features/kpi/action-log";
 import { WorkersChat } from "@/features/admin/workers-chat";
 import { WorkerProfileCard } from "@/features/profile";
+import { DailiesView } from "@/features/dailies";
 import { useAuthStore } from "@/stores/auth-store";
 import { AdminLeftSidebar, type AdminView } from "@/features/admin/admin-left-sidebar";
 import { Button } from "@/components/ui/button";
@@ -151,7 +152,9 @@ export default function AdminDashboardPage() {
     logs: 'Журнал дій',
     analytics: 'Аналітика',
     workers: 'Робітники',
+    dailies: 'Завдання',
     chat: 'Чат',
+    schedule: 'Графік змін',
     profile: 'Профіль',
   };
 
@@ -244,8 +247,22 @@ export default function AdminDashboardPage() {
           {activeView === 'workers' && (
             <WorkersView />
           )}
+          {activeView === 'dailies' && (
+            <DailiesView compact className="h-full" variant="admin" onOpenSidebar={() => setSidebarOpen(true)} />
+          )}
           {activeView === 'chat' && (
             <WorkersChat />
+          )}
+          {activeView === 'schedule' && (
+            <div className="flex flex-col items-center justify-center h-64 text-center">
+              <p className="text-muted-foreground mb-4">Графік змін доступний на окремій сторінці</p>
+              <Button
+                onClick={() => window.location.href = '/dashboard/admin/schedule'}
+                className="rounded-xl"
+              >
+                Перейти до графіку
+              </Button>
+            </div>
           )}
           {activeView === 'profile' && (
             <div className="max-w-md mx-auto">

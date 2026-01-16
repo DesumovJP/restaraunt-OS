@@ -8,21 +8,29 @@ import {
   Users,
   CalendarDays,
   MessageSquare,
+  ListTodo,
 } from 'lucide-react';
 import { AppSidebar, type NavigationItem } from '@/components/layout/app-sidebar';
 
-export type AdminView = 'overview' | 'logs' | 'analytics' | 'workers' | 'chat' | 'profile';
+export type AdminView = 'overview' | 'logs' | 'analytics' | 'workers' | 'dailies' | 'chat' | 'schedule' | 'profile';
 
-const navigationItems: NavigationItem<AdminView>[] = [
+// Main item - dashboard overview
+const mainItems: NavigationItem<AdminView>[] = [
   { id: 'overview', icon: LayoutDashboard, label: 'Огляд' },
+];
+
+// Dashboard tabs - specific admin functionality
+const dashboardTabs: NavigationItem<AdminView>[] = [
   { id: 'logs', icon: ScrollText, label: 'Журнал дій' },
   { id: 'analytics', icon: BarChart3, label: 'Аналітика' },
   { id: 'workers', icon: Users, label: 'Робітники' },
-  { id: 'chat', icon: MessageSquare, label: 'Чат' },
 ];
 
-const externalLinks: NavigationItem<AdminView>[] = [
-  { id: 'schedule' as AdminView, icon: CalendarDays, label: 'Графік змін', path: '/dashboard/admin/schedule' },
+// Common items - tasks, communication, scheduling
+const commonItems: NavigationItem<AdminView>[] = [
+  { id: 'dailies', icon: ListTodo, label: 'Завдання' },
+  { id: 'chat', icon: MessageSquare, label: 'Чат' },
+  { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
 ];
 
 interface AdminLeftSidebarProps {
@@ -47,8 +55,9 @@ export function AdminLeftSidebar({
       variant="admin"
       open={open}
       onOpenChange={onOpenChange}
-      navigationItems={navigationItems}
-      externalLinks={externalLinks}
+      navigationItems={mainItems}
+      secondaryItems={dashboardTabs}
+      externalLinks={commonItems}
       activeView={activeView}
       onViewChange={onViewChange}
       userName={userName}
