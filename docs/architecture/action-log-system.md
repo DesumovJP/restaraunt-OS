@@ -385,30 +385,39 @@ await logAction(strapi, {
 
 ### 8.1 Повністю реалізовано ✅
 
-| Сутність | Lifecycle | Controller |
-|----------|-----------|------------|
-| table | ✅ create, update, delete | ✅ close |
-| reservation | ✅ create, update, delete | - |
-| scheduled_order | ✅ create, update, delete | - |
-| ingredient | ✅ create, update, delete | - |
-| stock_batch | ✅ create, update, delete | - |
-| inventory_movement | ✅ create, update, delete | - |
-| daily_task | ✅ create, update, delete | - |
-| worker_shift | ✅ create, update, delete | ✅ clockIn, clockOut |
-| order | ✅ cancel only | - |
-| order_item | ✅ cancel only | - |
-| kitchen_ticket | - | ✅ cancel, fail |
+| Сутність | Lifecycle | Controller | Українські описи |
+|----------|-----------|------------|------------------|
+| table | ✅ create, update, delete | ✅ close | ✅ |
+| reservation | ✅ create, update, delete | - | ✅ |
+| scheduled_order | ✅ create, update, delete | - | ✅ |
+| ingredient | ✅ create, update, delete | - | ✅ |
+| stock_batch | ✅ create, update, delete | - | ✅ |
+| inventory_movement | ✅ create, update, delete | - | ✅ |
+| daily_task | ✅ create, update, delete | - | ✅ |
+| worker_shift | ✅ create, update, delete | ✅ clockIn, clockOut | ✅ |
+| order | ✅ cancel only | - | ✅ |
+| order_item | ✅ cancel only | - | ✅ |
+| kitchen_ticket | - | ✅ cancel, fail | ✅ |
+| menu_item | ✅ create, update, delete | - | ✅ (з відстеженням ціни) |
+| menu_category | ✅ create, update, delete | - | ✅ |
+| recipe | ✅ create, update, delete | - | ✅ (з відстеженням собівартості) |
+| supplier | ✅ create, update, delete | - | ✅ |
+| yield_profile | ✅ create, update, delete | - | ✅ |
 
-### 8.2 Потребує реалізації 🔴
+### 8.2 Свідомо НЕ логується ⚪
+
+| Сутність | Причина |
+|----------|---------|
+| worker_performance | Автоматично згенеровані аналітичні дані (було б спамом) |
+| ticket_event | Внутрішнє відстеження статусів тікетів (є в table close) |
+| table_session_event | Внутрішнє відстеження подій сесії (є в table close) |
+| action_history | Сам журнал дій (уникнення рекурсії) |
+
+### 8.3 Потребує уваги 🟡
 
 | Сутність | Що потрібно |
 |----------|-------------|
-| menu_item | create, update (price!), delete |
-| menu_category | create, update, delete |
-| recipe | create, update, delete |
-| user | create, role change, deactivate |
-| supplier | create, update, delete |
-| worker_performance | create (для KPI звітів) |
+| user | create, role change, deactivate (потрібен custom lifecycle) |
 
 ---
 
@@ -482,4 +491,5 @@ query GetRecentActions($limit: Int = 50) {
 ---
 
 *Документ створено: 2024-01-16*
-*Версія: 1.0*
+*Останнє оновлення: 2026-01-16*
+*Версія: 2.0*
