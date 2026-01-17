@@ -228,7 +228,7 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
             <div
               key={type.value}
               className={cn(
-                "text-[10px] px-2 py-0.5 rounded-lg font-medium",
+                "text-[9px] sm:text-[10px] px-2 py-0.5 rounded-lg font-medium",
                 SHIFT_TYPE_COLORS[type.value]
               )}
             >
@@ -339,7 +339,7 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
                           : "bg-white border text-slate-600 hover:bg-slate-50"
                       )}
                     >
-                      <span className="text-[10px] font-medium uppercase">{DAYS_UK[i]}</span>
+                      <span className="text-[9px] sm:text-[10px] font-medium uppercase">{DAYS_UK[i]}</span>
                       <span className="text-lg font-bold">{date.getDate()}</span>
                     </button>
                   );
@@ -376,7 +376,7 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
                           {worker.firstName} {worker.lastName?.[0] ? `${worker.lastName[0]}.` : ""}
                         </p>
                         <span className={cn(
-                          "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                          "text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full font-medium",
                           ROLE_COLORS[worker.systemRole || "viewer"]
                         )}>
                           {ROLE_LABELS[worker.systemRole || "viewer"]}
@@ -462,7 +462,7 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
                                 {worker.firstName || worker.username}
                               </p>
                               <span className={cn(
-                                "text-[10px] px-1.5 py-0.5 rounded-full font-medium",
+                                "text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full font-medium",
                                 ROLE_COLORS[worker.systemRole || "viewer"]
                               )}>
                                 {ROLE_LABELS[worker.systemRole || "viewer"]}
@@ -494,7 +494,7 @@ export function ShiftScheduleView({ className, compact = false }: ShiftScheduleV
                                         STATUS_COLORS[shift.status]
                                       )}
                                     >
-                                      <div className="font-mono font-medium text-[10px]">
+                                      <div className="font-mono font-medium text-[9px] sm:text-[10px]">
                                         {formatTime(shift.startTime)}-{formatTime(shift.endTime)}
                                       </div>
                                     </div>

@@ -311,7 +311,7 @@ export function BillSplitPanel({
                               <Badge
                                 key={id}
                                 variant="secondary"
-                                className="text-[10px]"
+                                className="text-[9px] sm:text-[10px]"
                               >
                                 {updatedParticipants.find((p) => p.personId === id)
                                   ?.name || id}

@@ -39,7 +39,7 @@ export function TableSessionTimer({ occupiedAt }: TableSessionTimerProps) {
   return (
     <span
       className={cn(
-        "text-[10px] font-mono",
+        "text-[9px] sm:text-[10px] font-mono",
         isCritical
           ? "text-danger"
           : isLong

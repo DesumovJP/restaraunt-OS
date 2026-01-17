@@ -138,7 +138,7 @@ export function TaskItemRow({
             <span className="font-semibold text-sm sm:text-base leading-tight text-foreground">{task.menuItemName}</span>
             <CourseBadge course={task.courseType} size="sm" />
             {hasAllergen && (
-              <Badge variant="destructive" className="h-5 px-1.5 gap-1 text-[10px]">
+              <Badge variant="destructive" className="h-5 px-1.5 gap-1 text-[9px] sm:text-[10px]">
                 <AlertTriangle className="h-3 w-3" />
                 <span className="hidden sm:inline">Алерген</span>
               </Badge>
@@ -181,7 +181,7 @@ export function TaskItemRow({
             <>
               <Clock className={cn("h-4 w-4 flex-shrink-0", queueTimerColor)} />
               <div className="flex flex-col items-end min-w-[44px]">
-                <span className="text-[10px] text-muted-foreground leading-none mb-0.5">в черзі</span>
+                <span className="text-[9px] sm:text-[10px] text-muted-foreground leading-none mb-0.5">в черзі</span>
                 <span className={cn("font-mono font-bold text-xs leading-tight tabular-nums", queueTimerColor)}>
                   {formatDurationMs(queueWait)}
                 </span>
@@ -192,7 +192,7 @@ export function TaskItemRow({
             <>
               <Flame className={cn("h-4 w-4 flex-shrink-0", isOverdue && "animate-pulse", timerColor)} />
               <div className="flex flex-col items-end min-w-[44px]">
-                <span className="text-[10px] text-muted-foreground leading-none mb-0.5">готується</span>
+                <span className="text-[9px] sm:text-[10px] text-muted-foreground leading-none mb-0.5">готується</span>
                 <span className={cn("font-mono font-bold text-xs leading-tight tabular-nums", timerColor)}>
                   {formatDurationMs(currentElapsed)}
                 </span>
@@ -203,7 +203,7 @@ export function TaskItemRow({
             <>
               <Timer className={cn("h-4 w-4 flex-shrink-0", isPickupOverdue && "animate-pulse", pickupTimerColor)} />
               <div className="flex flex-col items-end min-w-[44px]">
-                <span className="text-[10px] text-muted-foreground leading-none mb-0.5">очікує</span>
+                <span className="text-[9px] sm:text-[10px] text-muted-foreground leading-none mb-0.5">очікує</span>
                 <span className={cn("font-mono font-bold text-xs leading-tight tabular-nums", pickupTimerColor)}>
                   {formatDurationMs(pickupWait)}
                 </span>

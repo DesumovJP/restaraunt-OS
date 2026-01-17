@@ -259,7 +259,7 @@ export function WorkersChat() {
           {/* Channels List */}
           <div className="flex-1 overflow-y-auto">
             <div className="px-3 py-3">
-              <p className="px-2 py-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <p className="px-2 py-2 text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 Канали
               </p>
               <div className="space-y-1">
@@ -291,10 +291,10 @@ export function WorkersChat() {
                       </div>
                       <div className="flex-1 min-w-0 text-left">
                         <span className="truncate block">{channel.name}</span>
-                        <span className="text-[10px] text-slate-400 md:hidden">{channel.description}</span>
+                        <span className="text-[9px] sm:text-[10px] text-slate-400 md:hidden">{channel.description}</span>
                       </div>
                       {channel.unread > 0 && (
-                        <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full min-w-[22px] text-center">
+                        <span className="bg-blue-500 text-white text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full min-w-[22px] text-center">
                           {channel.unread}
                         </span>
                       )}
@@ -304,7 +304,7 @@ export function WorkersChat() {
               </div>
 
               {/* Team Members */}
-              <p className="px-2 py-2 mt-5 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <p className="px-2 py-2 mt-5 text-[10px] sm:text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
                 Особисті повідомлення
               </p>
               <div className="space-y-1">
@@ -345,12 +345,12 @@ export function WorkersChat() {
                         )}>
                           {user.name}
                         </p>
-                        <p className="text-[10px] text-slate-400 md:hidden">
+                        <p className="text-[9px] sm:text-[10px] text-slate-400 md:hidden">
                           {ROLE_LABELS[user.role]}
                         </p>
                       </div>
                       {user.dmUnread > 0 && (
-                        <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full min-w-[22px] text-center">
+                        <span className="bg-blue-500 text-white text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full min-w-[22px] text-center">
                           {user.dmUnread}
                         </span>
                       )}
@@ -381,7 +381,7 @@ export function WorkersChat() {
               {/* Channels & DMs List */}
               <div className="flex-1 overflow-y-auto">
                 <div className="px-3 py-2">
-                  <p className="px-2 py-2 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <p className="px-2 py-2 text-[10px] sm:text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Канали
                   </p>
                   <div className="space-y-0.5">
@@ -401,7 +401,7 @@ export function WorkersChat() {
                             <p className="text-xs text-muted-foreground truncate">{channel.description}</p>
                           </div>
                           {channel.unread > 0 && (
-                            <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full min-w-[24px] text-center">
+                            <span className="bg-blue-500 text-white text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full min-w-[24px] text-center">
                               {channel.unread}
                             </span>
                           )}
@@ -410,7 +410,7 @@ export function WorkersChat() {
                     })}
                   </div>
 
-                  <p className="px-2 py-2 mt-4 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <p className="px-2 py-2 mt-4 text-[10px] sm:text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
                     Особисті повідомлення
                   </p>
                   <div className="space-y-0.5">
@@ -444,7 +444,7 @@ export function WorkersChat() {
                           <p className="text-xs text-muted-foreground truncate">{ROLE_LABELS[user.role]}</p>
                         </div>
                         {user.dmUnread > 0 && (
-                          <span className="bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-full min-w-[24px] text-center">
+                          <span className="bg-blue-500 text-white text-[9px] sm:text-[10px] font-bold px-2 py-1 rounded-full min-w-[24px] text-center">
                             {user.dmUnread}
                           </span>
                         )}
@@ -527,7 +527,7 @@ export function WorkersChat() {
               {/* Date separator */}
               <div className="flex items-center gap-3 py-3">
                 <div className="flex-1 h-px bg-border" />
-                <span className="text-[11px] text-muted-foreground font-medium px-2 py-1 bg-muted/50 rounded-full">
+                <span className="text-[10px] sm:text-[11px] text-muted-foreground font-medium px-2 py-1 bg-muted/50 rounded-full">
                   Сьогодні
                 </span>
                 <div className="flex-1 h-px bg-border" />
@@ -560,7 +560,7 @@ export function WorkersChat() {
                       </Avatar>
                     ) : (
                       <div className="w-8 md:w-9 flex-shrink-0 flex items-center justify-center">
-                        <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[9px] sm:text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                           {msg.timestamp}
                         </span>
                       </div>
@@ -574,7 +574,7 @@ export function WorkersChat() {
                           >
                             {msg.author.name}
                           </span>
-                          <span className="text-[11px] text-muted-foreground flex-shrink-0">
+                          <span className="text-[10px] sm:text-[11px] text-muted-foreground flex-shrink-0">
                             {msg.timestamp}
                           </span>
                         </div>
@@ -630,7 +630,7 @@ export function WorkersChat() {
                       </Avatar>
                     ) : (
                       <div className="w-8 md:w-9 flex-shrink-0 flex items-center justify-center">
-                        <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="text-[9px] sm:text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                           {msg.timestamp}
                         </span>
                       </div>
@@ -641,7 +641,7 @@ export function WorkersChat() {
                           <span className="font-medium md:font-semibold text-sm md:text-base truncate">
                             {isMe ? "Ви" : sender?.name}
                           </span>
-                          <span className="text-[11px] text-muted-foreground flex-shrink-0">
+                          <span className="text-[10px] sm:text-[11px] text-muted-foreground flex-shrink-0">
                             {msg.timestamp}
                           </span>
                         </div>

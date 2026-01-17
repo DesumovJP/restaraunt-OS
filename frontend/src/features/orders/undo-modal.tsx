@@ -262,7 +262,7 @@ export function UndoModal({
                         {reason.requiresApproval && (
                           <Badge
                             variant="outline"
-                            className="text-[10px] px-1.5 py-0"
+                            className="text-[9px] sm:text-[10px] px-1.5 py-0"
                           >
                             Підтвердження
                           </Badge>
@@ -446,11 +446,11 @@ export function UndoHistory({ history, className }: UndoHistoryProps) {
               </span>
             </div>
             <div className="flex items-center gap-1.5 text-muted-foreground">
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge variant="secondary" className="text-[9px] sm:text-[10px]">
                 {getStatusLabel(entry.previousStatus)}
               </Badge>
               <RotateCcw className="h-2.5 w-2.5" />
-              <Badge variant="outline" className="text-[10px]">
+              <Badge variant="outline" className="text-[9px] sm:text-[10px]">
                 {getStatusLabel(entry.newStatus)}
               </Badge>
               <span className="ml-auto">{entry.actorName}</span>
@@ -461,7 +461,7 @@ export function UndoHistory({ history, className }: UndoHistoryProps) {
               </p>
             )}
             {entry.approvedBy && (
-              <p className="mt-1 text-success text-[10px]">
+              <p className="mt-1 text-success text-[9px] sm:text-[10px]">
                 Підтверджено: {entry.approvedBy}
               </p>
             )}

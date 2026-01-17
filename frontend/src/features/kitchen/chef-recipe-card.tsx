@@ -134,7 +134,7 @@ export function ChefRecipeCard({
                 {recipe.menuItem.name}
               </h3>
               {outputTypeLabel && (
-                <Badge variant="outline" className="text-[10px] h-5 shrink-0">
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] h-5 shrink-0">
                   {outputTypeLabel}
                 </Badge>
               )}
@@ -335,7 +335,7 @@ export function RecipeDetailModal({
             <DialogTitle className="text-lg">{recipe.menuItem.name}</DialogTitle>
             <DialogDescription className="flex items-center gap-2 text-xs">
               {recipe.outputType && (
-                <Badge variant="outline" className="text-[10px] h-5">
+                <Badge variant="outline" className="text-[9px] sm:text-[10px] h-5">
                   {recipe.outputType === "kitchen" && "Кухня"}
                   {recipe.outputType === "bar" && "Бар"}
                   {recipe.outputType === "pastry" && "Кондитерська"}
@@ -354,19 +354,19 @@ export function RecipeDetailModal({
           {/* Economics summary */}
           <div className="grid grid-cols-4 gap-2 mt-3 text-center">
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase">Собів.</div>
+              <div className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">Собів.</div>
               <div className="text-sm font-bold">{fmt(cost)} ₴</div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase">Ціна</div>
+              <div className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">Ціна</div>
               <div className="text-sm font-bold">{fmt(price)} ₴</div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase">Маржа</div>
+              <div className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">Маржа</div>
               <div className={cn("text-sm font-bold", status.color)}>{fmt(marginAbs)} ₴</div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase">Food Cost</div>
+              <div className="text-[9px] sm:text-[10px] text-muted-foreground uppercase">Food Cost</div>
               <div className={cn("text-sm font-bold", status.color)}>{fmt(foodCostPct)}%</div>
             </div>
           </div>
@@ -442,7 +442,7 @@ export function RecipeDetailModal({
               <div className="space-y-2 text-xs">
                 {recipe.steps.map((step) => (
                   <div key={step.stepNumber} className="flex gap-2">
-                    <span className="shrink-0 w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-[10px] font-bold">
+                    <span className="shrink-0 w-5 h-5 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-[9px] sm:text-[10px] font-bold">
                       {step.stepNumber}
                     </span>
                     <span className="flex-1 text-muted-foreground">{step.instruction}</span>

@@ -144,7 +144,7 @@ export function AllKitchenTableCard({
               );
             })}
             {taskStations.size > 3 && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+              <Badge variant="outline" className="text-[8px] sm:text-[9px] px-1 py-0 h-4">
                 +{taskStations.size - 3}
               </Badge>
             )}

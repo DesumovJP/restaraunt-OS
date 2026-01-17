@@ -138,7 +138,7 @@ export function TaskCard({
       {/* Header */}
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 flex items-center gap-1">
+          <Badge variant="outline" className="text-[9px] sm:text-[10px] px-1.5 py-0 flex items-center gap-1">
             <span>Стіл {task.tableNumber}</span>
             {task.tableOccupiedAt && (
               <>
@@ -151,20 +151,20 @@ export function TaskCard({
           {task.priority !== "normal" && (
             <Badge
               variant={task.priority === "rush" ? "destructive" : "default"}
-              className="text-[10px] px-1.5 py-0"
+              className="text-[9px] sm:text-[10px] px-1.5 py-0"
             >
               {task.priority === "rush" ? "Терміново" : "VIP"}
             </Badge>
           )}
           {hasAllergen && (
-            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 gap-0.5">
+            <Badge variant="destructive" className="text-[9px] sm:text-[10px] px-1.5 py-0 gap-0.5">
               <AlertTriangle className="h-2.5 w-2.5" />
             </Badge>
           )}
           {task.isScheduled && (
             <Badge
               variant="outline"
-              className="text-[10px] px-1.5 py-0 gap-0.5 border-purple-300 text-purple-700 bg-purple-50"
+              className="text-[9px] sm:text-[10px] px-1.5 py-0 gap-0.5 border-purple-300 text-purple-700 bg-purple-50"
             >
               <Calendar className="h-2.5 w-2.5" />
               Заплановане
@@ -185,7 +185,7 @@ export function TaskCard({
             <>
               <Clock className={cn("h-3.5 w-3.5", queueTimerColor)} />
               <div className="flex flex-col items-end">
-                <span className="text-[10px] text-muted-foreground leading-none">в черзі</span>
+                <span className="text-[9px] sm:text-[10px] text-muted-foreground leading-none">в черзі</span>
                 <span className={cn("font-mono font-medium leading-none", queueTimerColor)}>
                   {formatDurationMs(queueWait)}
                 </span>
@@ -196,7 +196,7 @@ export function TaskCard({
             <>
               <Flame className={cn("h-3.5 w-3.5", timerColor)} />
               <div className="flex flex-col items-end">
-                <span className="text-[10px] text-muted-foreground leading-none">готується</span>
+                <span className="text-[9px] sm:text-[10px] text-muted-foreground leading-none">готується</span>
                 <span className={cn("font-mono font-medium leading-none", timerColor)}>
                   {formatDurationMs(currentElapsed)}
                 </span>
@@ -207,7 +207,7 @@ export function TaskCard({
             <>
               <Timer className={cn("h-3.5 w-3.5", pickupTimerColor)} />
               <div className="flex flex-col items-end">
-                <span className="text-[10px] text-muted-foreground leading-none">очікує</span>
+                <span className="text-[9px] sm:text-[10px] text-muted-foreground leading-none">очікує</span>
                 <span className={cn("font-mono font-medium leading-none", pickupTimerColor)}>
                   {formatDurationMs(pickupWait)}
                 </span>

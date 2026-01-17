@@ -216,12 +216,12 @@ function BatchCard({
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
           {batch.isLocked && (
-            <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50 text-[10px] px-4.5 py-0.5">
+            <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50 text-[9px] sm:text-[10px] px-4.5 py-0.5">
               <Lock className="h-3 w-3" />
               <span className="truncate max-w-[60px]">{batch.lockedBy}</span>
             </Badge>
           )}
-          <Badge variant="outline" className={cn("text-[10px] px-4.5 py-0.5 whitespace-nowrap", statusConfig.bgColor, statusConfig.color)}>
+          <Badge variant="outline" className={cn("text-[9px] sm:text-[10px] px-4.5 py-0.5 whitespace-nowrap", statusConfig.bgColor, statusConfig.color)}>
             {statusConfig.label}
           </Badge>
         </div>
@@ -298,7 +298,7 @@ function BatchCard({
                 ? (process.actualYield * 100).toFixed(0)
                 : '—';
               return (
-                <Badge key={idx} variant="secondary" className="text-[10px]">
+                <Badge key={idx} variant="secondary" className="text-[9px] sm:text-[10px]">
                   {PROCESS_TYPES.find((p) => p.value === process.processType)?.label ||
                     process.processType}
                   : {yieldPercent}%
@@ -306,7 +306,7 @@ function BatchCard({
               );
             })}
             {batch.processes.length > 3 && (
-              <Badge variant="secondary" className="text-[10px]">
+              <Badge variant="secondary" className="text-[9px] sm:text-[10px]">
                 +{batch.processes.length - 3}
               </Badge>
             )}

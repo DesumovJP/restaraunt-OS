@@ -290,14 +290,14 @@ export default function ScheduleManagementPage() {
   // Shift cell component
   const ShiftCell = ({ shift, compact = false }: { shift: WorkerShift; compact?: boolean }) => (
     <div
-      className={`group relative text-[11px] p-1.5 rounded border-l-2 ${SHIFT_TYPE_COLORS[shift.shiftType]} ${SHIFT_STATUS_COLORS[shift.status]} cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all`}
+      className={`group relative text-[10px] sm:text-[11px] p-1.5 rounded border-l-2 ${SHIFT_TYPE_COLORS[shift.shiftType]} ${SHIFT_STATUS_COLORS[shift.status]} cursor-pointer hover:ring-2 hover:ring-primary/30 transition-all`}
       onClick={() => handleOpenEditDialog(shift)}
     >
       <div className="font-mono font-medium">
         {formatTimeDisplay(shift.startTime)}-{formatTimeDisplay(shift.endTime)}
       </div>
       {!compact && shift.notes && (
-        <div className="text-[9px] opacity-70 truncate mt-0.5">{shift.notes}</div>
+        <div className="text-[8px] sm:text-[9px] opacity-70 truncate mt-0.5">{shift.notes}</div>
       )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -355,23 +355,23 @@ export default function ScheduleManagementPage() {
                 {worker.firstName} {worker.lastName}
               </button>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
+                <span className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
                   {ROLE_LABELS[worker.systemRole || "viewer"]}
                 </span>
                 {worker.department && (
-                  <span className="text-[10px] text-muted-foreground">
+                  <span className="text-[9px] sm:text-[10px] text-muted-foreground">
                     {DEPARTMENT_LABELS[worker.department]}
                   </span>
                 )}
               </div>
             </div>
             <div className="flex flex-col items-end gap-1 shrink-0">
-              <Badge variant="outline" className="text-[10px] h-5">
+              <Badge variant="outline" className="text-[9px] sm:text-[10px] h-5">
                 <Clock className="h-3 w-3 mr-1" />
                 {totalShifts} зм.
               </Badge>
               {totalMinutes > 0 && (
-                <span className="text-[10px] text-muted-foreground">
+                <span className="text-[9px] sm:text-[10px] text-muted-foreground">
                   {formatMinutesToHours(totalMinutes)}
                 </span>
               )}
@@ -390,7 +390,7 @@ export default function ScheduleManagementPage() {
                     today ? "bg-primary/10" : "bg-muted/30"
                   }`}
                 >
-                  <div className={`text-[10px] font-medium mb-0.5 ${today ? "text-primary" : "text-muted-foreground"}`}>
+                  <div className={`text-[9px] sm:text-[10px] font-medium mb-0.5 ${today ? "text-primary" : "text-muted-foreground"}`}>
                     {DAYS_UK[i]}
                   </div>
                   {dayShifts.length > 0 ? (
@@ -443,7 +443,7 @@ export default function ScheduleManagementPage() {
         <div className="hidden md:flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground mr-1">Типи змін:</span>
           {SHIFT_TYPES.map((type) => (
-            <Badge key={type.value} variant="secondary" className={`text-[10px] px-2 py-0.5 ${SHIFT_TYPE_COLORS[type.value]}`}>
+            <Badge key={type.value} variant="secondary" className={`text-[9px] sm:text-[10px] px-2 py-0.5 ${SHIFT_TYPE_COLORS[type.value]}`}>
               {type.label}
             </Badge>
           ))}
@@ -524,7 +524,7 @@ export default function ScheduleManagementPage() {
                     {date.getDate()}
                   </span>
                   {shiftsOnDay > 0 && (
-                    <Badge variant="secondary" className="h-4 px-1 text-[10px] mt-0.5">
+                    <Badge variant="secondary" className="h-4 px-1 text-[9px] sm:text-[10px] mt-0.5">
                       {shiftsOnDay}
                     </Badge>
                   )}
@@ -617,7 +617,7 @@ export default function ScheduleManagementPage() {
                                 {worker.firstName} {worker.lastName}
                               </p>
                               <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
+                                <span className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full font-medium ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
                                   {ROLE_LABELS[worker.systemRole || "viewer"]}
                                 </span>
                               </div>
@@ -655,7 +655,7 @@ export default function ScheduleManagementPage() {
                           <div className="text-xs font-medium">
                             {summary ? formatMinutesToHours(summary.totalMinutes) : "—"}
                           </div>
-                          <div className="text-[10px] text-muted-foreground">
+                          <div className="text-[9px] sm:text-[10px] text-muted-foreground">
                             {summary?.totalShifts || 0} зм.
                           </div>
                         </td>
@@ -694,7 +694,7 @@ export default function ScheduleManagementPage() {
                     <SelectItem key={worker.documentId} value={worker.documentId}>
                       <div className="flex items-center gap-2">
                         <span>{worker.firstName} {worker.lastName}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
+                        <span className={`text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full ${ROLE_COLORS[worker.systemRole || "viewer"]}`}>
                           {ROLE_LABELS[worker.systemRole || "viewer"]}
                         </span>
                       </div>
@@ -984,7 +984,7 @@ export default function ScheduleManagementPage() {
                             <div className="font-medium text-sm">
                               {new Date(shift.date).toLocaleDateString("uk-UA", { weekday: "short", day: "numeric", month: "short" })}
                             </div>
-                            <Badge variant="outline" className="text-[10px]">
+                            <Badge variant="outline" className="text-[9px] sm:text-[10px]">
                               {SHIFT_STATUS_LABELS[shift.status]}
                             </Badge>
                           </div>

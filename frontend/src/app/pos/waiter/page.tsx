@@ -306,7 +306,7 @@ function WaiterPOSContent() {
             </main>
           ) : activeView === 'chat' ? (
             /* Chat View */
-            <main className="flex-1 flex flex-col overflow-hidden p-4 bg-white">
+            <main className="flex-1 flex flex-col overflow-hidden p-3 sm:p-4 bg-white">
               <WorkersChat />
             </main>
           ) : activeView === 'schedule' ? (
@@ -316,7 +316,7 @@ function WaiterPOSContent() {
             </main>
           ) : activeView === 'profile' ? (
             /* Profile View */
-            <main className="flex-1 flex flex-col overflow-y-auto p-4 md:p-6 bg-slate-50">
+            <main className="flex-1 flex flex-col overflow-y-auto p-3 sm:p-4 md:p-6 bg-slate-50">
               <div className="max-w-md mx-auto w-full animate-fade-in-up">
                 <WorkerProfileCard
                   worker={{

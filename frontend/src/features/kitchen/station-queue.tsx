@@ -202,7 +202,7 @@ export function StationQueue({
                     <Badge
                       variant={isActive ? "default" : "secondary"}
                       className={cn(
-                        "h-5 px-1.5 text-[11px] min-w-[22px]",
+                        "h-5 px-1.5 text-[10px] sm:text-[11px] min-w-[22px]",
                         isActive && tab.id === "active" && "bg-warning text-warning-foreground"
                       )}
                     >
@@ -354,7 +354,7 @@ function EmptyColumn({
           variant === "success" && "text-success"
         )} />
       </div>
-      <p className={cn("font-medium", size === "sm" ? "text-[11px]" : "text-xs")}>{message}</p>
+      <p className={cn("font-medium", size === "sm" ? "text-[10px] sm:text-[11px]" : "text-xs")}>{message}</p>
     </div>
   );
 }
@@ -452,7 +452,7 @@ export function StationOverview({
                 </div>
 
                 {/* Station name */}
-                <h4 className="font-medium text-[11px] sm:text-xs leading-tight mb-1 line-clamp-1">
+                <h4 className="font-medium text-[10px] sm:text-[11px] sm:text-xs leading-tight mb-1 line-clamp-1">
                   {config.nameUk}
                 </h4>
 

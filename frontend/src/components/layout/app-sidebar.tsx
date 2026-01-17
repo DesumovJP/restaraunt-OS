@@ -291,7 +291,7 @@ export function AppSidebar<T extends string = string>({
             <User className="w-4 h-4 text-white" />
           </div>
           <span className={cn(
-            'text-[10px] font-medium',
+            'text-[9px] sm:text-[10px] font-medium',
             activeView === profileViewId ? 'text-white' : 'text-slate-600'
           )}>
             Профіль

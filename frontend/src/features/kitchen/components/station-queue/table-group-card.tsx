@@ -131,24 +131,24 @@ export function TableGroupCard({
 
           {/* Priority badges */}
           {hasRush && (
-            <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 animate-pulse">
+            <Badge variant="destructive" className="text-[9px] sm:text-[10px] px-1.5 py-0 h-5 animate-pulse">
               Терміново
             </Badge>
           )}
           {hasVip && !hasRush && (
-            <Badge variant="default" className="text-[10px] px-1.5 py-0 h-5 bg-amber-500">
+            <Badge variant="default" className="text-[9px] sm:text-[10px] px-1.5 py-0 h-5 bg-amber-500">
               VIP
             </Badge>
           )}
           {hasAllergen && (
-            <Badge variant="destructive" className="text-[10px] px-1 py-0 h-5 gap-0.5">
+            <Badge variant="destructive" className="text-[9px] sm:text-[10px] px-1 py-0 h-5 gap-0.5">
               <AlertTriangle className="h-2.5 w-2.5" />
             </Badge>
           )}
           {hasScheduled && (
             <Badge
               variant="outline"
-              className="text-[10px] px-1.5 py-0 h-5 gap-0.5 border-purple-300 text-purple-700 bg-purple-50"
+              className="text-[9px] sm:text-[10px] px-1.5 py-0 h-5 gap-0.5 border-purple-300 text-purple-700 bg-purple-50"
             >
               <Calendar className="h-2.5 w-2.5" />
             </Badge>
