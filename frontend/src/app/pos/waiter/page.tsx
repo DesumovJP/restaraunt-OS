@@ -23,6 +23,7 @@ import { WorkersChat } from "@/features/admin/workers-chat";
 import { ShiftScheduleView } from "@/features/schedule";
 import { WorkerProfileCard, type WorkerProfileData } from "@/features/profile";
 import { WaiterMenuReference } from "@/features/menu/waiter-menu-reference";
+import { WaiterShiftStats } from "@/features/pos/waiter-shift-stats";
 import { useAuthStore } from "@/stores/auth-store";
 import type { Category, MenuItem } from "@/types";
 import { cn } from "@/lib/utils";
@@ -349,7 +350,15 @@ function WaiterPOSContent() {
           {activeView === 'profile' && (
             /* Profile View */
             <main className="flex-1 flex flex-col overflow-y-auto p-3 sm:p-4 md:p-6 bg-slate-50">
-              <div className="max-w-md mx-auto w-full animate-fade-in-up">
+              <div className="max-w-md mx-auto w-full space-y-4 animate-fade-in-up">
+                {/* Shift Statistics */}
+                <WaiterShiftStats
+                  waiterId="waiter-1"
+                  shiftStartTime={new Date(Date.now() - 4 * 60 * 60 * 1000)}
+                  variant="compact"
+                />
+
+                {/* Profile Card */}
                 <WorkerProfileCard
                   worker={{
                     documentId: 'waiter-1',
