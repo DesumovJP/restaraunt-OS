@@ -34,6 +34,7 @@ import { PlannedOrdersView } from "@/features/orders/planned-orders-view";
 import { WorkersChat } from "@/features/admin/workers-chat";
 import { WorkerProfileCard } from "@/features/profile";
 import { ShiftScheduleView } from "@/features/schedule";
+import { DailiesView } from "@/features/dailies";
 import { useStationEvents } from "@/hooks/use-websocket";
 import { useKitchenStore, onTaskStarted, type KitchenTask, type BackendKitchenTicket } from "@/stores/kitchen-store";
 import { useInventoryDeduction, storageHistoryApi } from "@/hooks/use-inventory-deduction";
@@ -428,7 +429,7 @@ export default function KitchenDisplayPage() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Shared Header for views that don't have their own */}
-        {(activeView === "chat" || activeView === "schedule" || activeView === "profile") && (
+        {(activeView === "dailies" || activeView === "chat" || activeView === "schedule" || activeView === "profile") && (
           <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm safe-area-inset-top">
             <div className="px-3 sm:px-4 py-3">
               <div className="flex items-center justify-between">
@@ -449,7 +450,7 @@ export default function KitchenDisplayPage() {
                     </div>
                     <div>
                       <h1 className="text-base sm:text-lg font-bold leading-tight">
-                        {activeView === "chat" ? "Чат команди" : activeView === "schedule" ? "Графік змін" : "Профіль"}
+                        {activeView === "dailies" ? "Завдання" : activeView === "chat" ? "Чат команди" : activeView === "schedule" ? "Графік змін" : "Профіль"}
                       </h1>
                       <p className="text-xs text-muted-foreground hidden sm:block">Кухня</p>
                     </div>
@@ -473,6 +474,11 @@ export default function KitchenDisplayPage() {
         ) : null}
 
         {/* Lazy mount - only load when first visited, then keep mounted */}
+        {visitedViews.has("dailies") && (
+          <div className={cn("flex-1 overflow-hidden", activeView !== "dailies" && "hidden")}>
+            <DailiesView compact className="h-full" variant="kitchen" />
+          </div>
+        )}
         {visitedViews.has("chat") && (
           <div className={cn("flex-1 overflow-hidden p-3 sm:p-4", activeView !== "chat" && "hidden")}>
             <WorkersChat />

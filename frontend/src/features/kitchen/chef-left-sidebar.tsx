@@ -6,10 +6,11 @@ import {
   ChefHat,
   MessageSquare,
   CalendarDays,
+  ListTodo,
 } from 'lucide-react';
 import { AppSidebar, type NavigationItem } from '@/components/layout/app-sidebar';
 
-export type ChefView = 'orders' | 'recipes' | 'stations' | 'calendar' | 'chat' | 'schedule' | 'profile';
+export type ChefView = 'orders' | 'recipes' | 'stations' | 'calendar' | 'dailies' | 'chat' | 'schedule' | 'profile';
 
 // Main kitchen functionality
 const defaultNavigationItems: NavigationItem<ChefView>[] = [
@@ -19,6 +20,7 @@ const defaultNavigationItems: NavigationItem<ChefView>[] = [
 
 // Common items - communication, scheduling (separate from kitchen functionality)
 const commonItems: NavigationItem<ChefView>[] = [
+  { id: 'dailies', icon: ListTodo, label: 'Завдання' },
   { id: 'chat', icon: MessageSquare, label: 'Чат' },
   { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
 ];

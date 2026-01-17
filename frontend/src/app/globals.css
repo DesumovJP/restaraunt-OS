@@ -52,6 +52,13 @@
     scroll-behavior: smooth;
   }
 
+  /* Mobile font scale - reduce all rem-based sizes by 10% on mobile */
+  @media (max-width: 640px) {
+    html {
+      font-size: 90%; /* 14.4px instead of 16px */
+    }
+  }
+
   /* Mobile-optimized touch interactions */
   button,
   [role="button"] {
