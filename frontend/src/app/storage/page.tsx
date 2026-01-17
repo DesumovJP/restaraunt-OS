@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -153,27 +155,56 @@ function BatchViewWrapper({ onExportReport }: BatchViewWrapperProps) {
 }
 
 // ==========================================
-// MAIN PAGE COMPONENT
+// LOADING STATE
+// ==========================================
+
+function LoadingState() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-slate-200 animate-pulse" />
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-4 w-32 bg-slate-200 rounded animate-pulse" />
+          <div className="h-3 w-24 bg-slate-100 rounded animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ==========================================
+// MAIN PAGE COMPONENT (with Suspense wrapper)
 // ==========================================
 
 export default function StoragePage() {
-  // View state (controlled by sidebar)
-  const [activeView, setActiveView] = React.useState<StorageView>("inventory");
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <StoragePageContent />
+    </Suspense>
+  );
+}
+
+function StoragePageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get view from URL, default to 'inventory'
+  const activeView = (searchParams.get('view') as StorageView) || 'inventory';
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
-  // Track visited views for lazy mounting (only load when first visited)
-  const [visitedViews, setVisitedViews] = React.useState<Set<StorageView>>(
-    () => new Set(["inventory"])
-  );
-
-  // Update visited views when switching
+  // Update URL when view changes (no local state needed)
   const handleViewChange = React.useCallback((view: StorageView) => {
-    setActiveView(view);
-    setVisitedViews(prev => {
-      if (prev.has(view)) return prev;
-      return new Set([...prev, view]);
-    });
-  }, []);
+    // Use router.replace with shallow routing to update URL without full page reload
+    const params = new URLSearchParams(searchParams.toString());
+    if (view === 'inventory') {
+      params.delete('view'); // Default view doesn't need param
+    } else {
+      params.set('view', view);
+    }
+    const queryString = params.toString();
+    const newPath = queryString ? `/storage?${queryString}` : '/storage';
+    router.replace(newPath as any, { scroll: false });
+  }, [router, searchParams]);
 
   // Storage notifications (auto-checks and shows toasts for alerts)
   useStorageNotifications();
@@ -520,23 +551,23 @@ export default function StoragePage() {
           <BatchViewWrapper onExportReport={handleCloseShift} />
         )}
 
-        {/* Dailies View - lazy mount, then keep mounted */}
-        {visitedViews.has("dailies") && (
-          <div className={cn("h-full", activeView !== "dailies" && "hidden")}>
+        {/* Dailies View */}
+        {activeView === "dailies" && (
+          <div className="h-full">
             <DailiesView compact className="h-full" variant="storage" onOpenSidebar={() => setSidebarOpen(true)} />
           </div>
         )}
 
-        {/* Chat View - lazy mount, then keep mounted */}
-        {visitedViews.has("chat") && (
-          <div className={cn("h-full", activeView !== "chat" && "hidden")}>
+        {/* Chat View */}
+        {activeView === "chat" && (
+          <div className="h-full">
             <WorkersChat />
           </div>
         )}
 
-        {/* Schedule View - lazy mount, then keep mounted */}
-        {visitedViews.has("schedule") && (
-          <div className={cn("h-full", activeView !== "schedule" && "hidden")}>
+        {/* Schedule View */}
+        {activeView === "schedule" && (
+          <div className="h-full">
             <ShiftScheduleView compact className="h-full" />
           </div>
         )}

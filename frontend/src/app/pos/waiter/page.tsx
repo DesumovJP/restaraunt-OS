@@ -144,31 +144,22 @@ function WaiterPOSContent() {
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
-  // Read initial view from URL params
-  const viewFromUrl = searchParams.get('view') as WaiterView | null;
-  const [activeView, setActiveView] = React.useState<WaiterView>(viewFromUrl || 'menu');
+  // Get view from URL, default to 'menu'
+  const activeView = (searchParams.get('view') as WaiterView) || 'menu';
 
-  // Track visited views for lazy mounting (only load when first visited)
-  const [visitedViews, setVisitedViews] = React.useState<Set<WaiterView>>(
-    () => new Set([viewFromUrl || 'menu'])
-  );
-
-  // Update visited views when switching
+  // Update URL when view changes
   const handleViewChange = React.useCallback((view: WaiterView) => {
-    setActiveView(view);
-    setVisitedViews(prev => {
-      if (prev.has(view)) return prev;
-      return new Set([...prev, view]);
-    });
-  }, []);
-
-  // Update active view when URL params change
-  React.useEffect(() => {
-    const view = searchParams.get('view') as WaiterView | null;
-    if (view && ['dailies', 'chat', 'schedule', 'profile'].includes(view)) {
-      handleViewChange(view);
+    const params = new URLSearchParams(searchParams.toString());
+    if (view === 'menu') {
+      params.delete('view'); // Default view doesn't need param
+    } else {
+      params.set('view', view);
     }
-  }, [searchParams, handleViewChange]);
+    // Preserve other params like mode, reservationId, etc.
+    const queryString = params.toString();
+    const newPath = queryString ? `/pos/waiter?${queryString}` : '/pos/waiter';
+    router.replace(newPath as any, { scroll: false });
+  }, [router, searchParams]);
 
   // Redirect if no table selected (skip in scheduled mode and non-menu views)
   React.useEffect(() => {
@@ -314,19 +305,23 @@ function WaiterPOSContent() {
 
         {/* Content with Menu and Invoice Sidebar */}
         <div className="flex flex-1 overflow-hidden">
-          {/* Lazy mount - only load when first visited, then keep mounted */}
-          {visitedViews.has('dailies') && (
-            <main className={cn("flex-1 flex flex-col overflow-hidden bg-white", activeView !== 'dailies' && "hidden")}>
+          {/* Dailies View */}
+          {activeView === 'dailies' && (
+            <main className="flex-1 flex flex-col overflow-hidden bg-white">
               <DailiesView compact className="h-full" variant="waiter" />
             </main>
           )}
-          {visitedViews.has('chat') && (
-            <main className={cn("flex-1 flex flex-col overflow-hidden p-3 sm:p-4 bg-white", activeView !== 'chat' && "hidden")}>
+
+          {/* Chat View */}
+          {activeView === 'chat' && (
+            <main className="flex-1 flex flex-col overflow-hidden p-3 sm:p-4 bg-white">
               <WorkersChat />
             </main>
           )}
-          {visitedViews.has('schedule') && (
-            <main className={cn("flex-1 flex flex-col overflow-hidden bg-white", activeView !== 'schedule' && "hidden")}>
+
+          {/* Schedule View */}
+          {activeView === 'schedule' && (
+            <main className="flex-1 flex flex-col overflow-hidden bg-white">
               <ShiftScheduleView compact className="h-full" />
             </main>
           )}

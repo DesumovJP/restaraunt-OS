@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "urql";
 import { KPIGrid } from "@/features/kpi/kpi-card";
 import { AlertsList } from "@/features/alerts/alerts-list";
@@ -54,23 +56,47 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+// Loading fallback
+function LoadingState() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 animate-pulse" />
+        <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 export default function AdminDashboardPage() {
-  const [activeView, setActiveView] = React.useState<AdminView>('overview');
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <AdminDashboardContent />
+    </Suspense>
+  );
+}
+
+function AdminDashboardContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get view from URL, default to 'overview'
+  const activeView = (searchParams.get('view') as AdminView) || 'overview';
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
-  // Track visited views for lazy mounting (only load when first visited)
-  const [visitedViews, setVisitedViews] = React.useState<Set<AdminView>>(
-    () => new Set(['overview'])
-  );
-
-  // Update visited views when switching
+  // Update URL when view changes
   const handleViewChange = React.useCallback((view: AdminView) => {
-    setActiveView(view);
-    setVisitedViews(prev => {
-      if (prev.has(view)) return prev;
-      return new Set([...prev, view]);
-    });
-  }, []);
+    const params = new URLSearchParams(searchParams.toString());
+    if (view === 'overview') {
+      params.delete('view'); // Default view doesn't need param
+    } else {
+      params.set('view', view);
+    }
+    const queryString = params.toString();
+    const newPath = queryString ? `/dashboard/admin?${queryString}` : '/dashboard/admin';
+    router.replace(newPath as any, { scroll: false });
+  }, [router, searchParams]);
+
   const [kpis, setKPIs] = React.useState<KPI[]>([]);
   const [alerts, setAlerts] = React.useState<Alert[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -263,19 +289,23 @@ export default function AdminDashboardPage() {
           {activeView === 'workers' && (
             <WorkersView />
           )}
-          {/* Lazy mount - only load when first visited, then keep mounted */}
-          {visitedViews.has('dailies') && (
-            <div className={cn("h-full", activeView !== 'dailies' && "hidden")}>
+          {/* Dailies View */}
+          {activeView === 'dailies' && (
+            <div className="h-full">
               <DailiesView compact className="h-full" variant="admin" onOpenSidebar={() => setSidebarOpen(true)} />
             </div>
           )}
-          {visitedViews.has('chat') && (
-            <div className={cn("h-full", activeView !== 'chat' && "hidden")}>
+
+          {/* Chat View */}
+          {activeView === 'chat' && (
+            <div className="h-full">
               <WorkersChat />
             </div>
           )}
-          {visitedViews.has('schedule') && (
-            <div className={cn("h-full", activeView !== 'schedule' && "hidden")}>
+
+          {/* Schedule View */}
+          {activeView === 'schedule' && (
+            <div className="h-full">
               <ShiftScheduleView compact className="h-full" />
             </div>
           )}

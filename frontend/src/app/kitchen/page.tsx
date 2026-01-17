@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,27 +50,52 @@ import {
 import type { StationType, StationSubTaskStatus } from "@/types/station";
 import { STATION_CAPACITY_CONFIGS, STATION_DISPLAY_CONFIGS } from "@/lib/config/station-config";
 
+// Loading fallback
+function LoadingState() {
+  return (
+    <div className="flex h-screen items-center justify-center bg-slate-50">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 animate-pulse" />
+        <div className="h-4 w-24 bg-slate-200 rounded animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 export default function KitchenDisplayPage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <KitchenDisplayContent />
+    </Suspense>
+  );
+}
+
+function KitchenDisplayContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get view from URL, default to 'stations'
+  const activeView = (searchParams.get('view') as ChefView) || 'stations';
+
   const [selectedStation, setSelectedStation] = React.useState<StationType | "all">("all");
   const [isSoundEnabled, setSoundEnabled] = React.useState(true);
   const [isFullscreen, setFullscreen] = React.useState(false);
   const [pausedStations, setPausedStations] = React.useState<Set<StationType>>(new Set());
-  const [activeView, setActiveView] = React.useState<ChefView>("stations");
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
-  // Track visited views for lazy mounting (only load when first visited)
-  const [visitedViews, setVisitedViews] = React.useState<Set<ChefView>>(
-    () => new Set(["stations"])
-  );
-
-  // Update visited views when switching
+  // Update URL when view changes
   const handleViewChange = React.useCallback((view: ChefView) => {
-    setActiveView(view);
-    setVisitedViews(prev => {
-      if (prev.has(view)) return prev;
-      return new Set([...prev, view]);
-    });
-  }, []);
+    const params = new URLSearchParams(searchParams.toString());
+    if (view === 'stations') {
+      params.delete('view'); // Default view doesn't need param
+    } else {
+      params.set('view', view);
+    }
+    const queryString = params.toString();
+    const newPath = queryString ? `/kitchen?${queryString}` : '/kitchen';
+    router.replace(newPath as any, { scroll: false });
+  }, [router, searchParams]);
+
   const [currentTime, setCurrentTime] = React.useState<string>("");
   const [isHydrated, setIsHydrated] = React.useState(false);
 
@@ -473,19 +500,23 @@ export default function KitchenDisplayPage() {
           <PlannedOrdersView variant="kitchen" onOpenSidebar={() => setIsSidebarOpen(true)} />
         ) : null}
 
-        {/* Lazy mount - only load when first visited, then keep mounted */}
-        {visitedViews.has("dailies") && (
-          <div className={cn("flex-1 overflow-hidden", activeView !== "dailies" && "hidden")}>
+        {/* Dailies View */}
+        {activeView === "dailies" && (
+          <div className="flex-1 overflow-hidden">
             <DailiesView compact className="h-full" variant="kitchen" />
           </div>
         )}
-        {visitedViews.has("chat") && (
-          <div className={cn("flex-1 overflow-hidden p-3 sm:p-4", activeView !== "chat" && "hidden")}>
+
+        {/* Chat View */}
+        {activeView === "chat" && (
+          <div className="flex-1 overflow-hidden p-3 sm:p-4">
             <WorkersChat />
           </div>
         )}
-        {visitedViews.has("schedule") && (
-          <div className={cn("flex-1", activeView !== "schedule" && "hidden")}>
+
+        {/* Schedule View */}
+        {activeView === "schedule" && (
+          <div className="flex-1">
             <ShiftScheduleView compact className="flex-1" />
           </div>
         )}
