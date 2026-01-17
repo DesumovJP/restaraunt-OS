@@ -14,15 +14,15 @@ export type ChefView = 'orders' | 'recipes' | 'stations' | 'calendar' | 'dailies
 
 // Main kitchen functionality
 const defaultNavigationItems: NavigationItem<ChefView>[] = [
-  { id: 'orders', icon: ClipboardList, label: 'Замовлення' },
-  { id: 'recipes', icon: ChefHat, label: 'Рецепти' },
+  { id: 'orders', icon: ClipboardList, label: 'Замовлення', path: '/kitchen' },
+  { id: 'recipes', icon: ChefHat, label: 'Рецепти', path: '/kitchen?view=recipes' },
 ];
 
-// Common items - communication, scheduling (separate from kitchen functionality)
+// Common items - communication, scheduling (all navigate to kitchen page with view param)
 const commonItems: NavigationItem<ChefView>[] = [
-  { id: 'dailies', icon: ListTodo, label: 'Завдання' },
-  { id: 'chat', icon: MessageSquare, label: 'Чат' },
-  { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
+  { id: 'dailies', icon: ListTodo, label: 'Завдання', path: '/kitchen?view=dailies' },
+  { id: 'chat', icon: MessageSquare, label: 'Чат', path: '/kitchen?view=chat' },
+  { id: 'schedule', icon: CalendarDays, label: 'Графік змін', path: '/kitchen?view=schedule' },
 ];
 
 interface ChefLeftSidebarProps {
@@ -57,6 +57,7 @@ export function ChefLeftSidebar({
       userRole={userRole}
       showProfile={true}
       profileViewId="profile"
+      profilePath="/kitchen?view=profile"
     />
   );
 }

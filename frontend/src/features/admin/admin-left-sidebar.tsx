@@ -16,21 +16,21 @@ export type AdminView = 'overview' | 'logs' | 'analytics' | 'workers' | 'dailies
 
 // Main item - dashboard overview
 const mainItems: NavigationItem<AdminView>[] = [
-  { id: 'overview', icon: LayoutDashboard, label: 'Огляд' },
+  { id: 'overview', icon: LayoutDashboard, label: 'Огляд', path: '/dashboard/admin' },
 ];
 
 // Dashboard tabs - specific admin functionality
 const dashboardTabs: NavigationItem<AdminView>[] = [
-  { id: 'logs', icon: ScrollText, label: 'Журнал дій' },
-  { id: 'analytics', icon: BarChart3, label: 'Аналітика' },
-  { id: 'workers', icon: Users, label: 'Робітники' },
+  { id: 'logs', icon: ScrollText, label: 'Журнал дій', path: '/dashboard/admin?view=logs' },
+  { id: 'analytics', icon: BarChart3, label: 'Аналітика', path: '/dashboard/admin?view=analytics' },
+  { id: 'workers', icon: Users, label: 'Робітники', path: '/dashboard/admin?view=workers' },
 ];
 
-// Common items - tasks, communication, scheduling
+// Common items - tasks, communication, scheduling (all navigate to admin page with view param)
 const commonItems: NavigationItem<AdminView>[] = [
-  { id: 'dailies', icon: ListTodo, label: 'Завдання' },
-  { id: 'chat', icon: MessageSquare, label: 'Чат' },
-  { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
+  { id: 'dailies', icon: ListTodo, label: 'Завдання', path: '/dashboard/admin?view=dailies' },
+  { id: 'chat', icon: MessageSquare, label: 'Чат', path: '/dashboard/admin?view=chat' },
+  { id: 'schedule', icon: CalendarDays, label: 'Графік змін', path: '/dashboard/admin?view=schedule' },
 ];
 
 interface AdminLeftSidebarProps {
@@ -64,6 +64,7 @@ export function AdminLeftSidebar({
       userRole={userRole}
       showProfile={true}
       profileViewId="profile"
+      profilePath="/dashboard/admin?view=profile"
     />
   );
 }

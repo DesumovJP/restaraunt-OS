@@ -16,8 +16,8 @@ export type StorageView = 'inventory' | 'batches' | 'reports' | 'waste' | 'daili
 
 // Main storage functionality
 const defaultNavigationItems: NavigationItem<StorageView>[] = [
-  { id: 'inventory', icon: Layers, label: 'Інвентар' },
-  { id: 'batches', icon: Archive, label: 'Партії' },
+  { id: 'inventory', icon: Layers, label: 'Інвентар', path: '/storage' },
+  { id: 'batches', icon: Archive, label: 'Партії', path: '/storage?view=batches' },
 ];
 
 // Reports and analytics - directly related to storage functionality
@@ -26,11 +26,11 @@ const analyticsItems: NavigationItem<string>[] = [
   { id: 'reports', icon: FileBarChart, label: 'Журнал руху', path: '/storage/reports' },
 ];
 
-// Common items - tasks, communication, scheduling
+// Common items - tasks, communication, scheduling (all navigate to main storage page with view param)
 const commonItems: NavigationItem<StorageView>[] = [
-  { id: 'dailies', icon: ListTodo, label: 'Завдання' },
-  { id: 'chat', icon: MessageSquare, label: 'Чат' },
-  { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
+  { id: 'dailies', icon: ListTodo, label: 'Завдання', path: '/storage?view=dailies' },
+  { id: 'chat', icon: MessageSquare, label: 'Чат', path: '/storage?view=chat' },
+  { id: 'schedule', icon: CalendarDays, label: 'Графік змін', path: '/storage?view=schedule' },
 ];
 
 interface StorageLeftSidebarProps {
@@ -66,6 +66,7 @@ export function StorageLeftSidebar({
       userRole={userRole}
       showProfile={true}
       profileViewId="profile"
+      profilePath="/storage?view=profile"
     />
   );
 }
