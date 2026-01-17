@@ -194,17 +194,17 @@ function StoragePageContent() {
 
   // Update URL when view changes (no local state needed)
   const handleViewChange = React.useCallback((view: StorageView) => {
-    // Use router.replace with shallow routing to update URL without full page reload
-    const params = new URLSearchParams(searchParams.toString());
+    // Read current params directly from window to avoid stale closure issues
+    const currentParams = new URLSearchParams(window.location.search);
     if (view === 'inventory') {
-      params.delete('view'); // Default view doesn't need param
+      currentParams.delete('view'); // Default view doesn't need param
     } else {
-      params.set('view', view);
+      currentParams.set('view', view);
     }
-    const queryString = params.toString();
+    const queryString = currentParams.toString();
     const newPath = queryString ? `/storage?${queryString}` : '/storage';
     router.replace(newPath as any, { scroll: false });
-  }, [router, searchParams]);
+  }, [router]);
 
   // Storage notifications (auto-checks and shows toasts for alerts)
   useStorageNotifications();

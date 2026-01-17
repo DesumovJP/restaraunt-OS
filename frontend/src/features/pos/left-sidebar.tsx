@@ -18,11 +18,11 @@ const pageNavigationItems: NavigationItem<WaiterNavView>[] = [
   { id: 'calendar', icon: CalendarCheck, label: 'Календар', path: '/pos/waiter/calendar' },
 ];
 
-// View navigation items (change view within page)
+// View navigation items (navigate to waiter page with view param)
 const viewNavigationItems: NavigationItem<WaiterNavView>[] = [
-  { id: 'dailies', icon: ListTodo, label: 'Завдання' },
-  { id: 'chat', icon: MessageSquare, label: 'Чат' },
-  { id: 'schedule', icon: CalendarDays, label: 'Графік змін' },
+  { id: 'dailies', icon: ListTodo, label: 'Завдання', path: '/pos/waiter?view=dailies' },
+  { id: 'chat', icon: MessageSquare, label: 'Чат', path: '/pos/waiter?view=chat' },
+  { id: 'schedule', icon: CalendarDays, label: 'Графік змін', path: '/pos/waiter?view=schedule' },
 ];
 
 interface LeftSidebarProps {
@@ -61,6 +61,7 @@ export function LeftSidebar({
       userRole={userRole}
       showProfile={true}
       profileViewId="profile"
+      profilePath="/pos/waiter?view=profile"
     />
   );
 }

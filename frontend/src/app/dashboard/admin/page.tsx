@@ -86,16 +86,17 @@ function AdminDashboardContent() {
 
   // Update URL when view changes
   const handleViewChange = React.useCallback((view: AdminView) => {
-    const params = new URLSearchParams(searchParams.toString());
+    // Read current params directly from window to avoid stale closure issues
+    const currentParams = new URLSearchParams(window.location.search);
     if (view === 'overview') {
-      params.delete('view'); // Default view doesn't need param
+      currentParams.delete('view'); // Default view doesn't need param
     } else {
-      params.set('view', view);
+      currentParams.set('view', view);
     }
-    const queryString = params.toString();
+    const queryString = currentParams.toString();
     const newPath = queryString ? `/dashboard/admin?${queryString}` : '/dashboard/admin';
     router.replace(newPath as any, { scroll: false });
-  }, [router, searchParams]);
+  }, [router]);
 
   const [kpis, setKPIs] = React.useState<KPI[]>([]);
   const [alerts, setAlerts] = React.useState<Alert[]>([]);

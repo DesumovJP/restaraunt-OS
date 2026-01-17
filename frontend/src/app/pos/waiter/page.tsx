@@ -149,17 +149,18 @@ function WaiterPOSContent() {
 
   // Update URL when view changes
   const handleViewChange = React.useCallback((view: WaiterView) => {
-    const params = new URLSearchParams(searchParams.toString());
+    // Read current params directly from window to avoid stale closure issues
+    const currentParams = new URLSearchParams(window.location.search);
     if (view === 'menu') {
-      params.delete('view'); // Default view doesn't need param
+      currentParams.delete('view'); // Default view doesn't need param
     } else {
-      params.set('view', view);
+      currentParams.set('view', view);
     }
     // Preserve other params like mode, reservationId, etc.
-    const queryString = params.toString();
+    const queryString = currentParams.toString();
     const newPath = queryString ? `/pos/waiter?${queryString}` : '/pos/waiter';
     router.replace(newPath as any, { scroll: false });
-  }, [router, searchParams]);
+  }, [router]);
 
   // Redirect if no table selected (skip in scheduled mode and non-menu views)
   React.useEffect(() => {

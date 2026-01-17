@@ -85,16 +85,17 @@ function KitchenDisplayContent() {
 
   // Update URL when view changes
   const handleViewChange = React.useCallback((view: ChefView) => {
-    const params = new URLSearchParams(searchParams.toString());
+    // Read current params directly from window to avoid stale closure issues
+    const currentParams = new URLSearchParams(window.location.search);
     if (view === 'stations') {
-      params.delete('view'); // Default view doesn't need param
+      currentParams.delete('view'); // Default view doesn't need param
     } else {
-      params.set('view', view);
+      currentParams.set('view', view);
     }
-    const queryString = params.toString();
+    const queryString = currentParams.toString();
     const newPath = queryString ? `/kitchen?${queryString}` : '/kitchen';
     router.replace(newPath as any, { scroll: false });
-  }, [router, searchParams]);
+  }, [router]);
 
   const [currentTime, setCurrentTime] = React.useState<string>("");
   const [isHydrated, setIsHydrated] = React.useState(false);

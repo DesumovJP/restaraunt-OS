@@ -45,6 +45,8 @@ export interface AppSidebarProps<T extends string = string> {
   showProfile?: boolean;
   /** Profile view id (defaults to 'profile') */
   profileViewId?: T;
+  /** If provided, navigates to this path for profile instead of calling onViewChange */
+  profilePath?: string;
   /** Custom class for desktop sidebar */
   className?: string;
   /** Custom class for mobile drawer */
@@ -119,6 +121,7 @@ export function AppSidebar<T extends string = string>({
   userRole = 'Роль',
   showProfile = true,
   profileViewId = 'profile' as T,
+  profilePath,
   className,
   drawerClassName,
 }: AppSidebarProps<T>) {
@@ -164,7 +167,11 @@ export function AppSidebar<T extends string = string>({
   };
 
   const handleProfileClick = () => {
-    onViewChange(profileViewId);
+    if (profilePath) {
+      router.push(profilePath as Parameters<typeof router.push>[0]);
+    } else {
+      onViewChange(profileViewId);
+    }
     if (isMobile) {
       handleOpenChange(false);
     }
