@@ -456,13 +456,17 @@ export default function KitchenDisplayPage() {
           <ChefRecipesView onOpenSidebar={() => setIsSidebarOpen(true)} />
         ) : activeView === "calendar" ? (
           <PlannedOrdersView variant="kitchen" onOpenSidebar={() => setIsSidebarOpen(true)} />
-        ) : activeView === "chat" ? (
-          <div className="flex-1 overflow-hidden p-3 sm:p-4">
-            <WorkersChat />
-          </div>
-        ) : activeView === "schedule" ? (
+        ) : null}
+
+        {/* Keep these views mounted to avoid refetching */}
+        <div className={cn("flex-1 overflow-hidden p-3 sm:p-4", activeView !== "chat" && "hidden")}>
+          <WorkersChat />
+        </div>
+        <div className={cn("flex-1", activeView !== "schedule" && "hidden")}>
           <ShiftScheduleView compact className="flex-1" />
-        ) : activeView === "profile" ? (
+        </div>
+
+        {activeView === "profile" ? (
           <div className="flex-1 overflow-y-auto p-3 sm:p-4">
             <div className="max-w-md mx-auto w-full">
               <WorkerProfileCard

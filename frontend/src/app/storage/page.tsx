@@ -472,19 +472,6 @@ export default function StoragePage() {
                     <SelectItem value="category">За категорією</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => useStorageUIStore.getState().toggleSortOrder()}
-                  className="h-8 w-8"
-                  title={sortOrder === "asc" ? "За зростанням" : "За спаданням"}
-                >
-                  {sortOrder === "asc" ? (
-                    <ArrowUpDown className="h-3.5 w-3.5 rotate-180" />
-                  ) : (
-                    <ArrowUpDown className="h-3.5 w-3.5" />
-                  )}
-                </Button>
               </div>
             </div>
 
@@ -519,20 +506,20 @@ export default function StoragePage() {
           <BatchViewWrapper onExportReport={handleCloseShift} />
         )}
 
-        {/* Dailies View */}
-        {activeView === "dailies" && (
+        {/* Dailies View - keep mounted to avoid refetching */}
+        <div className={cn("h-full", activeView !== "dailies" && "hidden")}>
           <DailiesView compact className="h-full" variant="storage" onOpenSidebar={() => setSidebarOpen(true)} />
-        )}
+        </div>
 
-        {/* Chat View */}
-        {activeView === "chat" && (
+        {/* Chat View - keep mounted */}
+        <div className={cn("h-full", activeView !== "chat" && "hidden")}>
           <WorkersChat />
-        )}
+        </div>
 
-        {/* Schedule View */}
-        {activeView === "schedule" && (
+        {/* Schedule View - keep mounted to avoid refetching */}
+        <div className={cn("h-full", activeView !== "schedule" && "hidden")}>
           <ShiftScheduleView compact className="h-full" />
-        )}
+        </div>
 
         {/* Profile View */}
         {activeView === "profile" && (

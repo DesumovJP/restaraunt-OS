@@ -24,6 +24,7 @@ import { ShiftScheduleView } from "@/features/schedule";
 import { WorkerProfileCard, type WorkerProfileData } from "@/features/profile";
 import { useAuthStore } from "@/stores/auth-store";
 import type { Category, MenuItem } from "@/types";
+import { cn } from "@/lib/utils";
 
 export type WaiterView = 'tables' | 'menu' | 'calendar' | 'dailies' | 'chat' | 'schedule' | 'profile';
 
@@ -299,22 +300,17 @@ function WaiterPOSContent() {
 
         {/* Content with Menu and Invoice Sidebar */}
         <div className="flex flex-1 overflow-hidden">
-          {activeView === 'dailies' ? (
-            /* Dailies View */
-            <main className="flex-1 flex flex-col overflow-hidden bg-white">
-              <DailiesView compact className="h-full" variant="waiter" />
-            </main>
-          ) : activeView === 'chat' ? (
-            /* Chat View */
-            <main className="flex-1 flex flex-col overflow-hidden p-3 sm:p-4 bg-white">
-              <WorkersChat />
-            </main>
-          ) : activeView === 'schedule' ? (
-            /* Schedule View - Read Only */
-            <main className="flex-1 flex flex-col overflow-hidden bg-white">
-              <ShiftScheduleView compact className="h-full" />
-            </main>
-          ) : activeView === 'profile' ? (
+          {/* Keep views mounted to avoid refetching */}
+          <main className={cn("flex-1 flex flex-col overflow-hidden bg-white", activeView !== 'dailies' && "hidden")}>
+            <DailiesView compact className="h-full" variant="waiter" />
+          </main>
+          <main className={cn("flex-1 flex flex-col overflow-hidden p-3 sm:p-4 bg-white", activeView !== 'chat' && "hidden")}>
+            <WorkersChat />
+          </main>
+          <main className={cn("flex-1 flex flex-col overflow-hidden bg-white", activeView !== 'schedule' && "hidden")}>
+            <ShiftScheduleView compact className="h-full" />
+          </main>
+          {activeView === 'profile' ? (
             /* Profile View */
             <main className="flex-1 flex flex-col overflow-y-auto p-3 sm:p-4 md:p-6 bg-slate-50">
               <div className="max-w-md mx-auto w-full animate-fade-in-up">
@@ -341,7 +337,7 @@ function WaiterPOSContent() {
                 />
               </div>
             </main>
-          ) : (
+          ) : activeView === 'menu' && (
             /* Menu View */
             <main className="flex-1 flex flex-col overflow-hidden bg-white">
               {/* Search Bar */}

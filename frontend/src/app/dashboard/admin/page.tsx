@@ -17,6 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { analyticsApi } from "@/lib/api";
 import { GET_RECENT_ACTIONS } from "@/graphql/queries";
 import { RefreshCw, Calendar, Menu, TrendingUp, TrendingDown, Minus, Construction, CalendarDays, X, Clock, CheckCircle2, Utensils, Timer, Award, BarChart3 as BarChartIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -248,15 +249,16 @@ export default function AdminDashboardPage() {
           {activeView === 'workers' && (
             <WorkersView />
           )}
-          {activeView === 'dailies' && (
+          {/* Keep these views mounted to avoid refetching */}
+          <div className={cn("h-full", activeView !== 'dailies' && "hidden")}>
             <DailiesView compact className="h-full" variant="admin" onOpenSidebar={() => setSidebarOpen(true)} />
-          )}
-          {activeView === 'chat' && (
+          </div>
+          <div className={cn("h-full", activeView !== 'chat' && "hidden")}>
             <WorkersChat />
-          )}
-          {activeView === 'schedule' && (
+          </div>
+          <div className={cn("h-full", activeView !== 'schedule' && "hidden")}>
             <ShiftScheduleView compact className="h-full" />
-          )}
+          </div>
           {activeView === 'profile' && (
             <div className="max-w-md mx-auto">
               <WorkerProfileCard
