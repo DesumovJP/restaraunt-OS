@@ -7,15 +7,17 @@ import {
   CalendarCheck,
   MessageSquare,
   CalendarDays,
+  BookOpen,
 } from 'lucide-react';
 import { AppSidebar, type NavigationItem } from '@/components/layout/app-sidebar';
 
-export type WaiterNavView = 'tables' | 'menu' | 'calendar' | 'dailies' | 'chat' | 'schedule' | 'profile';
+export type WaiterNavView = 'tables' | 'menu' | 'calendar' | 'recipes' | 'dailies' | 'chat' | 'schedule' | 'profile';
 
 // Page navigation items (navigate to different routes)
 const pageNavigationItems: NavigationItem<WaiterNavView>[] = [
   { id: 'tables', icon: Grid3X3, label: 'Столи', path: '/pos/waiter/tables' },
   { id: 'calendar', icon: CalendarCheck, label: 'Календар', path: '/pos/waiter/calendar' },
+  { id: 'recipes', icon: BookOpen, label: 'Довідник страв', path: '/pos/waiter?view=recipes' },
 ];
 
 // View navigation items (navigate to waiter page with view param)

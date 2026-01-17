@@ -22,11 +22,12 @@ import { DailiesView } from "@/features/dailies";
 import { WorkersChat } from "@/features/admin/workers-chat";
 import { ShiftScheduleView } from "@/features/schedule";
 import { WorkerProfileCard, type WorkerProfileData } from "@/features/profile";
+import { WaiterMenuReference } from "@/features/menu/waiter-menu-reference";
 import { useAuthStore } from "@/stores/auth-store";
 import type { Category, MenuItem } from "@/types";
 import { cn } from "@/lib/utils";
 
-export type WaiterView = 'tables' | 'menu' | 'calendar' | 'dailies' | 'chat' | 'schedule' | 'profile';
+export type WaiterView = 'tables' | 'menu' | 'calendar' | 'recipes' | 'dailies' | 'chat' | 'schedule' | 'profile';
 
 // Premium loading skeleton
 function LoadingState() {
@@ -175,8 +176,8 @@ function WaiterPOSContent() {
 
   // Redirect if no table selected (skip in scheduled mode and non-menu views)
   React.useEffect(() => {
-    // Allow access to dailies, chat, schedule, profile views without table
-    const viewsWithoutTable = ['dailies', 'chat', 'schedule', 'profile'];
+    // Allow access to dailies, chat, schedule, profile, recipes views without table
+    const viewsWithoutTable = ['dailies', 'chat', 'schedule', 'profile', 'recipes'];
     if (!selectedTable && !isScheduledMode && !viewsWithoutTable.includes(activeView)) {
       router.push('/pos/waiter/tables');
     }
@@ -274,7 +275,7 @@ function WaiterPOSContent() {
   };
 
   // Allow access to certain views without table
-  const viewsWithoutTable = ['dailies', 'chat', 'schedule', 'profile'];
+  const viewsWithoutTable = ['dailies', 'chat', 'schedule', 'profile', 'recipes'];
   if (!selectedTable && !isScheduledMode && !viewsWithoutTable.includes(activeView)) {
     return null;
   }
@@ -337,6 +338,14 @@ function WaiterPOSContent() {
               <ShiftScheduleView compact className="h-full" />
             </main>
           )}
+
+          {/* Recipes/Menu Reference View */}
+          {activeView === 'recipes' && (
+            <main className="flex-1 flex flex-col overflow-hidden bg-white">
+              <WaiterMenuReference onOpenSidebar={() => setIsSidebarOpen(true)} />
+            </main>
+          )}
+
           {activeView === 'profile' && (
             /* Profile View */
             <main className="flex-1 flex flex-col overflow-y-auto p-3 sm:p-4 md:p-6 bg-slate-50">
