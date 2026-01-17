@@ -484,7 +484,7 @@ export default function KitchenDisplayPage() {
           </div>
         )}
 
-        {activeView === "profile" ? (
+        {activeView === "profile" && (
           <div className="flex-1 overflow-y-auto p-3 sm:p-4">
             <div className="max-w-md mx-auto w-full">
               <WorkerProfileCard
@@ -508,7 +508,8 @@ export default function KitchenDisplayPage() {
               />
             </div>
           </div>
-        ) : (
+        )}
+        {activeView === "stations" && (
           <>
             {/* Stations View - Header */}
             <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b shadow-sm safe-area-inset-top">

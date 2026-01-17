@@ -330,7 +330,7 @@ function WaiterPOSContent() {
               <ShiftScheduleView compact className="h-full" />
             </main>
           )}
-          {activeView === 'profile' ? (
+          {activeView === 'profile' && (
             /* Profile View */
             <main className="flex-1 flex flex-col overflow-y-auto p-3 sm:p-4 md:p-6 bg-slate-50">
               <div className="max-w-md mx-auto w-full animate-fade-in-up">
@@ -357,7 +357,8 @@ function WaiterPOSContent() {
                 />
               </div>
             </main>
-          ) : activeView === 'menu' && (
+          )}
+          {activeView === 'menu' && (
             /* Menu View */
             <main className="flex-1 flex flex-col overflow-hidden bg-white">
               {/* Search Bar */}
