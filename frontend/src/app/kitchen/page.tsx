@@ -54,6 +54,20 @@ export default function KitchenDisplayPage() {
   const [pausedStations, setPausedStations] = React.useState<Set<StationType>>(new Set());
   const [activeView, setActiveView] = React.useState<ChefView>("stations");
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+
+  // Track visited views for lazy mounting (only load when first visited)
+  const [visitedViews, setVisitedViews] = React.useState<Set<ChefView>>(
+    () => new Set(["stations"])
+  );
+
+  // Update visited views when switching
+  const handleViewChange = React.useCallback((view: ChefView) => {
+    setActiveView(view);
+    setVisitedViews(prev => {
+      if (prev.has(view)) return prev;
+      return new Set([...prev, view]);
+    });
+  }, []);
   const [currentTime, setCurrentTime] = React.useState<string>("");
   const [isHydrated, setIsHydrated] = React.useState(false);
 
@@ -407,7 +421,7 @@ export default function KitchenDisplayPage() {
         userName="Шеф-кухар"
         userRole="Кухня"
         activeView={activeView}
-        onViewChange={setActiveView}
+        onViewChange={handleViewChange}
         navigationItems={kitchenNavigationItems}
       />
 
@@ -458,13 +472,17 @@ export default function KitchenDisplayPage() {
           <PlannedOrdersView variant="kitchen" onOpenSidebar={() => setIsSidebarOpen(true)} />
         ) : null}
 
-        {/* Keep these views mounted to avoid refetching */}
-        <div className={cn("flex-1 overflow-hidden p-3 sm:p-4", activeView !== "chat" && "hidden")}>
-          <WorkersChat />
-        </div>
-        <div className={cn("flex-1", activeView !== "schedule" && "hidden")}>
-          <ShiftScheduleView compact className="flex-1" />
-        </div>
+        {/* Lazy mount - only load when first visited, then keep mounted */}
+        {visitedViews.has("chat") && (
+          <div className={cn("flex-1 overflow-hidden p-3 sm:p-4", activeView !== "chat" && "hidden")}>
+            <WorkersChat />
+          </div>
+        )}
+        {visitedViews.has("schedule") && (
+          <div className={cn("flex-1", activeView !== "schedule" && "hidden")}>
+            <ShiftScheduleView compact className="flex-1" />
+          </div>
+        )}
 
         {activeView === "profile" ? (
           <div className="flex-1 overflow-y-auto p-3 sm:p-4">
@@ -486,7 +504,7 @@ export default function KitchenDisplayPage() {
                   avgTicketTime: 8,
                 }}
                 variant="full"
-                onViewSchedule={() => setActiveView('schedule')}
+                onViewSchedule={() => handleViewChange('schedule')}
               />
             </div>
           </div>

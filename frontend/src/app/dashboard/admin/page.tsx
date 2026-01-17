@@ -57,6 +57,20 @@ import {
 export default function AdminDashboardPage() {
   const [activeView, setActiveView] = React.useState<AdminView>('overview');
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
+
+  // Track visited views for lazy mounting (only load when first visited)
+  const [visitedViews, setVisitedViews] = React.useState<Set<AdminView>>(
+    () => new Set(['overview'])
+  );
+
+  // Update visited views when switching
+  const handleViewChange = React.useCallback((view: AdminView) => {
+    setActiveView(view);
+    setVisitedViews(prev => {
+      if (prev.has(view)) return prev;
+      return new Set([...prev, view]);
+    });
+  }, []);
   const [kpis, setKPIs] = React.useState<KPI[]>([]);
   const [alerts, setAlerts] = React.useState<Alert[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -167,7 +181,7 @@ export default function AdminDashboardPage() {
         open={sidebarOpen}
         onOpenChange={setSidebarOpen}
         activeView={activeView}
-        onViewChange={setActiveView}
+        onViewChange={handleViewChange}
       />
 
       {/* Main content */}
@@ -249,16 +263,22 @@ export default function AdminDashboardPage() {
           {activeView === 'workers' && (
             <WorkersView />
           )}
-          {/* Keep these views mounted to avoid refetching */}
-          <div className={cn("h-full", activeView !== 'dailies' && "hidden")}>
-            <DailiesView compact className="h-full" variant="admin" onOpenSidebar={() => setSidebarOpen(true)} />
-          </div>
-          <div className={cn("h-full", activeView !== 'chat' && "hidden")}>
-            <WorkersChat />
-          </div>
-          <div className={cn("h-full", activeView !== 'schedule' && "hidden")}>
-            <ShiftScheduleView compact className="h-full" />
-          </div>
+          {/* Lazy mount - only load when first visited, then keep mounted */}
+          {visitedViews.has('dailies') && (
+            <div className={cn("h-full", activeView !== 'dailies' && "hidden")}>
+              <DailiesView compact className="h-full" variant="admin" onOpenSidebar={() => setSidebarOpen(true)} />
+            </div>
+          )}
+          {visitedViews.has('chat') && (
+            <div className={cn("h-full", activeView !== 'chat' && "hidden")}>
+              <WorkersChat />
+            </div>
+          )}
+          {visitedViews.has('schedule') && (
+            <div className={cn("h-full", activeView !== 'schedule' && "hidden")}>
+              <ShiftScheduleView compact className="h-full" />
+            </div>
+          )}
           {activeView === 'profile' && (
             <div className="max-w-md mx-auto">
               <WorkerProfileCard

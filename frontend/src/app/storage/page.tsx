@@ -161,6 +161,20 @@ export default function StoragePage() {
   const [activeView, setActiveView] = React.useState<StorageView>("inventory");
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
+  // Track visited views for lazy mounting (only load when first visited)
+  const [visitedViews, setVisitedViews] = React.useState<Set<StorageView>>(
+    () => new Set(["inventory"])
+  );
+
+  // Update visited views when switching
+  const handleViewChange = React.useCallback((view: StorageView) => {
+    setActiveView(view);
+    setVisitedViews(prev => {
+      if (prev.has(view)) return prev;
+      return new Set([...prev, view]);
+    });
+  }, []);
+
   // Storage notifications (auto-checks and shows toasts for alerts)
   useStorageNotifications();
 
@@ -331,7 +345,7 @@ export default function StoragePage() {
         open={sidebarOpen}
         onOpenChange={setSidebarOpen}
         activeView={activeView}
-        onViewChange={setActiveView}
+        onViewChange={handleViewChange}
       />
 
       {/* Main content area */}
@@ -506,20 +520,26 @@ export default function StoragePage() {
           <BatchViewWrapper onExportReport={handleCloseShift} />
         )}
 
-        {/* Dailies View - keep mounted to avoid refetching */}
-        <div className={cn("h-full", activeView !== "dailies" && "hidden")}>
-          <DailiesView compact className="h-full" variant="storage" onOpenSidebar={() => setSidebarOpen(true)} />
-        </div>
+        {/* Dailies View - lazy mount, then keep mounted */}
+        {visitedViews.has("dailies") && (
+          <div className={cn("h-full", activeView !== "dailies" && "hidden")}>
+            <DailiesView compact className="h-full" variant="storage" onOpenSidebar={() => setSidebarOpen(true)} />
+          </div>
+        )}
 
-        {/* Chat View - keep mounted */}
-        <div className={cn("h-full", activeView !== "chat" && "hidden")}>
-          <WorkersChat />
-        </div>
+        {/* Chat View - lazy mount, then keep mounted */}
+        {visitedViews.has("chat") && (
+          <div className={cn("h-full", activeView !== "chat" && "hidden")}>
+            <WorkersChat />
+          </div>
+        )}
 
-        {/* Schedule View - keep mounted to avoid refetching */}
-        <div className={cn("h-full", activeView !== "schedule" && "hidden")}>
-          <ShiftScheduleView compact className="h-full" />
-        </div>
+        {/* Schedule View - lazy mount, then keep mounted */}
+        {visitedViews.has("schedule") && (
+          <div className={cn("h-full", activeView !== "schedule" && "hidden")}>
+            <ShiftScheduleView compact className="h-full" />
+          </div>
+        )}
 
         {/* Profile View */}
         {activeView === "profile" && (
