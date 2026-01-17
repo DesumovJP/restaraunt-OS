@@ -188,22 +188,34 @@ function StoragePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Get view from URL, default to 'inventory'
-  const activeView = (searchParams.get('view') as StorageView) || 'inventory';
+  // Local state for view, synced with URL
+  const urlView = searchParams.get('view') as StorageView | null;
+  const [activeView, setActiveView] = React.useState<StorageView>(urlView || 'inventory');
   const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
-  // Update URL when view changes (no local state needed)
+  // Sync local state when URL changes (e.g., browser back/forward)
+  React.useEffect(() => {
+    const newView = (searchParams.get('view') as StorageView) || 'inventory';
+    if (newView !== activeView) {
+      setActiveView(newView);
+    }
+  }, [searchParams, activeView]);
+
+  // Update both local state and URL when view changes
   const handleViewChange = React.useCallback((view: StorageView) => {
-    // Read current params directly from window to avoid stale closure issues
+    // Update local state immediately for instant UI response
+    setActiveView(view);
+
+    // Update URL
     const currentParams = new URLSearchParams(window.location.search);
     if (view === 'inventory') {
-      currentParams.delete('view'); // Default view doesn't need param
+      currentParams.delete('view');
     } else {
       currentParams.set('view', view);
     }
     const queryString = currentParams.toString();
     const newPath = queryString ? `/storage?${queryString}` : '/storage';
-    router.replace(newPath as any, { scroll: false });
+    router.push(newPath as any, { scroll: false });
   }, [router]);
 
   // Storage notifications (auto-checks and shows toasts for alerts)

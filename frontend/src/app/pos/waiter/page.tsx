@@ -144,22 +144,33 @@ function WaiterPOSContent() {
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
-  // Get view from URL, default to 'menu'
-  const activeView = (searchParams.get('view') as WaiterView) || 'menu';
+  // Local state for view, synced with URL
+  const urlView = searchParams.get('view') as WaiterView | null;
+  const [activeView, setActiveView] = React.useState<WaiterView>(urlView || 'menu');
 
-  // Update URL when view changes
+  // Sync local state when URL changes (e.g., browser back/forward)
+  React.useEffect(() => {
+    const newView = (searchParams.get('view') as WaiterView) || 'menu';
+    if (newView !== activeView) {
+      setActiveView(newView);
+    }
+  }, [searchParams, activeView]);
+
+  // Update both local state and URL when view changes
   const handleViewChange = React.useCallback((view: WaiterView) => {
-    // Read current params directly from window to avoid stale closure issues
+    // Update local state immediately for instant UI response
+    setActiveView(view);
+
+    // Update URL, preserving other params like mode, reservationId, etc.
     const currentParams = new URLSearchParams(window.location.search);
     if (view === 'menu') {
-      currentParams.delete('view'); // Default view doesn't need param
+      currentParams.delete('view');
     } else {
       currentParams.set('view', view);
     }
-    // Preserve other params like mode, reservationId, etc.
     const queryString = currentParams.toString();
     const newPath = queryString ? `/pos/waiter?${queryString}` : '/pos/waiter';
-    router.replace(newPath as any, { scroll: false });
+    router.push(newPath as any, { scroll: false });
   }, [router]);
 
   // Redirect if no table selected (skip in scheduled mode and non-menu views)
