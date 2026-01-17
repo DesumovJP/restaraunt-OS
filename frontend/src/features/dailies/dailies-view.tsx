@@ -32,6 +32,13 @@ import {
   Users,
   User,
   Menu,
+  ChefHat,
+  Sparkles,
+  Package,
+  Wrench,
+  GraduationCap,
+  UtensilsCrossed,
+  Pin,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -67,7 +74,32 @@ const PRIORITY_BG: Record<string, string> = {
   low: "bg-gradient-to-br from-slate-50 to-slate-100/50 border-slate-200 hover:border-slate-300",
 };
 
-// Task Card Component - Pinned note style
+// Category icons and colors mapping
+import type { TaskCategory } from "@/types/daily-tasks";
+
+const categoryIcons: Record<TaskCategory, React.ElementType> = {
+  prep: ChefHat,
+  cleaning: Sparkles,
+  inventory: Package,
+  maintenance: Wrench,
+  training: GraduationCap,
+  admin: ClipboardList,
+  service: UtensilsCrossed,
+  other: Pin,
+};
+
+const categoryColors: Record<TaskCategory, { bg: string; text: string; border: string }> = {
+  prep: { bg: "bg-orange-100", text: "text-orange-600", border: "border-orange-200" },
+  cleaning: { bg: "bg-cyan-100", text: "text-cyan-600", border: "border-cyan-200" },
+  inventory: { bg: "bg-amber-100", text: "text-amber-600", border: "border-amber-200" },
+  maintenance: { bg: "bg-slate-100", text: "text-slate-600", border: "border-slate-200" },
+  training: { bg: "bg-purple-100", text: "text-purple-600", border: "border-purple-200" },
+  admin: { bg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200" },
+  service: { bg: "bg-green-100", text: "text-green-600", border: "border-green-200" },
+  other: { bg: "bg-slate-100", text: "text-slate-500", border: "border-slate-200" },
+};
+
+// Task Card Component - Enhanced card design
 interface TaskCardBoardProps {
   task: DailyTask;
   onStart?: () => void;
@@ -83,121 +115,135 @@ function TaskCardBoard({ task, onStart, onComplete, onEdit, loading, showAssigne
   const isCompleted = task.status === "completed";
   const isPending = task.status === "pending";
 
-  const priorityColor = PRIORITY_COLORS[task.priority] || PRIORITY_COLORS.medium;
-  const cardBg = isCompleted
-    ? "bg-gradient-to-br from-emerald-50 to-emerald-100/30 border-emerald-200"
-    : isOverdue
-    ? "bg-gradient-to-br from-red-50 to-red-100/30 border-red-300 ring-1 ring-red-200"
-    : isInProgress
-    ? "bg-gradient-to-br from-blue-50 to-blue-100/30 border-blue-300 ring-2 ring-blue-200"
-    : PRIORITY_BG[task.priority] || PRIORITY_BG.medium;
+  const CategoryIcon = categoryIcons[task.category] || Pin;
+  const catColors = categoryColors[task.category] || categoryColors.other;
 
   return (
     <div
       className={cn(
-        "relative rounded-xl border-2 p-4 transition-all duration-200",
-        "hover:shadow-lg hover:-translate-y-0.5 cursor-pointer",
-        "animate-fade-in-up",
-        cardBg,
-        isCompleted && "opacity-70"
+        "group relative bg-white rounded-2xl border shadow-sm overflow-hidden",
+        "transition-all duration-300 cursor-pointer",
+        "hover:shadow-xl hover:-translate-y-1 hover:border-slate-300",
+        isOverdue && !isCompleted && "border-red-300 shadow-red-100",
+        isInProgress && "border-blue-300 shadow-blue-100 ring-2 ring-blue-100",
+        isCompleted && "opacity-60"
       )}
       onClick={onEdit}
     >
-      {/* Priority Pin */}
-      <div
-        className={cn(
-          "absolute -top-2 left-4 w-4 h-4 rounded-full shadow-md",
-          priorityColor
-        )}
-      />
+      {/* Top color bar based on priority */}
+      <div className={cn(
+        "h-1.5 w-full",
+        task.priority === "urgent" && "bg-gradient-to-r from-red-500 to-red-400",
+        task.priority === "high" && "bg-gradient-to-r from-amber-500 to-amber-400",
+        task.priority === "normal" && "bg-gradient-to-r from-blue-500 to-blue-400",
+        task.priority === "low" && "bg-gradient-to-r from-slate-400 to-slate-300",
+      )} />
 
-      {/* Overdue indicator */}
-      {isOverdue && !isCompleted && (
-        <div className="absolute -top-2 right-4 flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md">
-          <AlertTriangle className="w-3 h-3" />
-          Прострочено
+      {/* Card content */}
+      <div className="p-4">
+        {/* Header with category and status */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          {/* Category badge */}
+          <div className={cn(
+            "flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-medium",
+            catColors.bg, catColors.text
+          )}>
+            <CategoryIcon className="h-3.5 w-3.5" />
+          </div>
+
+          {/* Status badges */}
+          {isOverdue && !isCompleted && (
+            <div className="flex items-center gap-1 bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg animate-pulse">
+              <AlertTriangle className="w-3 h-3" />
+              Прострочено
+            </div>
+          )}
+          {isInProgress && (
+            <div className="flex items-center gap-1 bg-blue-500 text-white text-[10px] font-bold px-2 py-1 rounded-lg">
+              <Play className="w-3 h-3 fill-current" />
+              В роботі
+            </div>
+          )}
         </div>
-      )}
 
-      {/* In Progress indicator */}
-      {isInProgress && (
-        <div className="absolute -top-2 right-4 flex items-center gap-1 bg-blue-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-md animate-pulse">
-          <Play className="w-3 h-3 fill-current" />
-          В роботі
-        </div>
-      )}
-
-      {/* Content */}
-      <div className="pt-2">
+        {/* Title */}
         <h3 className={cn(
-          "font-semibold text-slate-900 leading-snug mb-2",
+          "font-semibold text-slate-900 text-base leading-snug mb-2 line-clamp-2",
           isCompleted && "line-through text-slate-500"
         )}>
           {task.title}
         </h3>
 
+        {/* Description */}
         {task.description && (
-          <p className="text-sm text-slate-600 line-clamp-2 mb-3">
+          <p className="text-sm text-slate-500 line-clamp-2 mb-3">
             {task.description}
           </p>
         )}
 
-        {/* Meta info */}
-        <div className="flex items-center gap-3 text-xs text-slate-500 mb-3">
+        {/* Meta info row */}
+        <div className="flex items-center flex-wrap gap-2 mb-4">
           {task.dueTime && (
-            <span className={cn(
-              "flex items-center gap-1",
-              isOverdue && !isCompleted && "text-red-600 font-medium"
+            <div className={cn(
+              "flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium",
+              isOverdue && !isCompleted
+                ? "bg-red-100 text-red-700"
+                : "bg-slate-100 text-slate-600"
             )}>
-              <Clock className="w-3.5 h-3.5" />
+              <Clock className="w-3 h-3" />
               {task.dueTime.slice(0, 5)}
-            </span>
+            </div>
           )}
           {task.estimatedMinutes && (
-            <span className="flex items-center gap-1">
-              <Timer className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-md text-xs font-medium text-slate-600">
+              <Timer className="w-3 h-3" />
               {formatTaskTime(task.estimatedMinutes)}
-            </span>
+            </div>
           )}
           {showAssignee && task.assignee && (
-            <span className="flex items-center gap-1">
-              <User className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-1 px-2 py-1 bg-slate-100 rounded-md text-xs font-medium text-slate-600">
+              <User className="w-3 h-3" />
               {task.assignee.firstName || task.assignee.username}
-            </span>
+            </div>
           )}
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons - full width */}
         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
           {loading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            <div className="flex items-center gap-2 text-slate-400">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm">Оновлення...</span>
+            </div>
           ) : isPending && onStart ? (
             <Button
               size="sm"
-              variant="outline"
-              className="h-8 gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 hover:border-blue-300"
+              className="flex-1 h-9 gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
               onClick={onStart}
             >
-              <Play className="h-3.5 w-3.5" />
-              Почати
+              <Play className="h-4 w-4" />
+              Почати виконання
             </Button>
           ) : isInProgress && onComplete ? (
             <Button
               size="sm"
-              className="h-8 gap-1.5 bg-emerald-600 hover:bg-emerald-700"
+              className="flex-1 h-9 gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
               onClick={onComplete}
             >
-              <Check className="h-3.5 w-3.5" />
-              Виконано
+              <Check className="h-4 w-4" />
+              Позначити виконаним
             </Button>
           ) : isCompleted ? (
-            <div className="flex items-center gap-1.5 text-emerald-600 text-xs font-medium">
-              <CheckCircle2 className="h-4 w-4" />
+            <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium">
+              <CheckCircle2 className="h-5 w-5" />
               Завершено
             </div>
           ) : null}
         </div>
       </div>
+
+      {/* Hover gradient effect */}
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
     </div>
   );
 }
