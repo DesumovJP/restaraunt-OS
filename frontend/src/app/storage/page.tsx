@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { QRScanner } from "@/features/inventory/qr-scanner";
 
 // Sidebar
@@ -13,6 +20,7 @@ import { StorageLeftSidebar, type StorageView } from "@/features/storage/storage
 import { WorkerProfileCard } from "@/features/profile/worker-profile-card";
 import { WorkersChat } from "@/features/admin/workers-chat";
 import { DailiesView } from "@/features/dailies";
+import { ShiftScheduleView } from "@/features/schedule";
 import { useAuthStore } from "@/stores/auth-store";
 
 // New optimized components
@@ -121,7 +129,7 @@ function BatchViewWrapper({ onExportReport }: BatchViewWrapperProps) {
   };
 
   return (
-    <div className="space-y-4 max-w-7xl">
+    <div className="space-y-4">
       <BatchView
         batches={batches}
         isLoading={isLoading}
@@ -225,6 +233,17 @@ export default function StoragePage() {
             return 2;
           };
           comparison = getStatusPriority(a) - getStatusPriority(b);
+          break;
+        }
+        case "freshness": {
+          // Sort by days until expiry (closest expiring first)
+          const getDaysUntilExpiry = (p: ExtendedProduct) => {
+            if (!p.expiryDate) return 999999; // No expiry = last
+            const now = new Date();
+            const expiry = new Date(p.expiryDate);
+            return Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          };
+          comparison = getDaysUntilExpiry(a) - getDaysUntilExpiry(b);
           break;
         }
       }
@@ -418,7 +437,7 @@ export default function StoragePage() {
               />
             </div>
 
-            {/* Results info */}
+            {/* Results info + Sorting */}
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>
                 {filteredProducts.length === products.length
@@ -439,14 +458,32 @@ export default function StoragePage() {
                     Скинути
                   </Button>
                 )}
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+                  <SelectTrigger className="w-[160px] h-8 text-xs rounded-xl">
+                    <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="name">За назвою</SelectItem>
+                    <SelectItem value="stock">За кількістю</SelectItem>
+                    <SelectItem value="freshness">За свіжістю</SelectItem>
+                    <SelectItem value="status">За статусом</SelectItem>
+                    <SelectItem value="updated">За оновленням</SelectItem>
+                    <SelectItem value="category">За категорією</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  onClick={() => setSortBy(sortBy)}
-                  className="gap-1"
+                  size="icon"
+                  onClick={() => useStorageUIStore.getState().toggleSortOrder()}
+                  className="h-8 w-8"
+                  title={sortOrder === "asc" ? "За зростанням" : "За спаданням"}
                 >
-                  <ArrowUpDown className="h-3.5 w-3.5" />
-                  Сортування
+                  {sortOrder === "asc" ? (
+                    <ArrowUpDown className="h-3.5 w-3.5 rotate-180" />
+                  ) : (
+                    <ArrowUpDown className="h-3.5 w-3.5" />
+                  )}
                 </Button>
               </div>
             </div>
@@ -492,17 +529,9 @@ export default function StoragePage() {
           <WorkersChat />
         )}
 
-        {/* Schedule View - redirect to schedule page */}
+        {/* Schedule View */}
         {activeView === "schedule" && (
-          <div className="flex flex-col items-center justify-center h-64 text-center">
-            <p className="text-muted-foreground mb-4">Графік змін доступний на окремій сторінці</p>
-            <Button
-              onClick={() => window.location.href = '/dashboard/admin/schedule'}
-              className="rounded-xl"
-            >
-              Перейти до графіку
-            </Button>
-          </div>
+          <ShiftScheduleView compact className="h-full" />
         )}
 
         {/* Profile View */}

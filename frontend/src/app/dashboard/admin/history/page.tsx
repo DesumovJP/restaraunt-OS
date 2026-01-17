@@ -110,10 +110,12 @@ export default function ActionHistoryPage() {
       <main className="flex-1 p-4">
         {error ? (
           <Card className="border-error/50">
-            <CardContent className="py-8 text-center">
-              <AlertCircle className="h-12 w-12 text-error mx-auto mb-4" />
-              <p className="text-error font-medium">Помилка завантаження</p>
-              <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mb-3">
+                <AlertCircle className="h-7 w-7 text-error" />
+              </div>
+              <p className="text-base font-medium text-error mb-1">Помилка завантаження</p>
+              <p className="text-sm text-muted-foreground">{error.message}</p>
               <Button
                 variant="outline"
                 className="mt-4"
@@ -136,10 +138,13 @@ export default function ActionHistoryPage() {
           </div>
         ) : historyItems.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                Записів не знайдено за вказаними фільтрами
+            <CardContent className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+                <FileText className="h-7 w-7 text-muted-foreground" />
+              </div>
+              <p className="text-base font-medium text-foreground mb-1">Записів не знайдено</p>
+              <p className="text-sm text-muted-foreground">
+                Спробуйте змінити параметри фільтрації
               </p>
             </CardContent>
           </Card>

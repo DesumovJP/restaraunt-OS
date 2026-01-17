@@ -121,15 +121,15 @@ export function TaskList({
 
     if (!hasAnyTasks) {
       return (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-            <ClipboardList className="h-8 w-8 text-muted-foreground" />
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+            <ClipboardList className="h-7 w-7 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-medium mb-2">{emptyMessage}</h3>
-          <p className="text-muted-foreground text-sm max-w-sm mb-6">{emptySubMessage}</p>
+          <h3 className="text-base font-medium mb-1">{emptyMessage}</h3>
+          <p className="text-muted-foreground text-sm max-w-xs mb-4">{emptySubMessage}</p>
           {onAddTask && (
-            <Button onClick={onAddTask} size="lg">
-              <Plus className="h-4 w-4 mr-2" />
+            <Button onClick={onAddTask} size="sm">
+              <Plus className="h-4 w-4 mr-1.5" />
               Створити завдання
             </Button>
           )}
@@ -217,15 +217,15 @@ export function TaskList({
   // Flat list
   if (tasks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-          <ClipboardList className="h-8 w-8 text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+          <ClipboardList className="h-7 w-7 text-muted-foreground" />
         </div>
-        <h3 className="text-lg font-medium mb-2">{emptyMessage}</h3>
-        <p className="text-muted-foreground text-sm max-w-sm mb-6">{emptySubMessage}</p>
+        <h3 className="text-base font-medium mb-1">{emptyMessage}</h3>
+        <p className="text-muted-foreground text-sm max-w-xs mb-4">{emptySubMessage}</p>
         {onAddTask && (
-          <Button onClick={onAddTask} size="lg">
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={onAddTask} size="sm">
+            <Plus className="h-4 w-4 mr-1.5" />
             Створити завдання
           </Button>
         )}

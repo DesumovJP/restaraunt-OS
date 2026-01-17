@@ -420,9 +420,12 @@ function ProductPreviewContent({
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-8 border-2 border-dashed rounded-xl bg-slate-50">
-                  <Package className="h-10 w-10 mx-auto text-slate-300 mb-2" />
-                  <p className="font-medium text-slate-600">Немає партій</p>
+                <div className="flex flex-col items-center justify-center py-8 text-center border-2 border-dashed rounded-xl bg-slate-50">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2">
+                    <Package className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground mb-0.5">Немає партій</p>
+                  <p className="text-xs text-muted-foreground">Товар ще не надходив на склад</p>
                 </div>
               )}
             </div>
@@ -520,10 +523,12 @@ function ProductPreviewContent({
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 border-2 border-dashed rounded-xl bg-slate-50">
-                <Package className="h-12 w-12 mx-auto text-slate-300 mb-3" />
-                <p className="text-lg font-medium text-slate-600">Немає партій</p>
-                <p className="text-sm text-slate-500 mt-1">Створіть нову поставку</p>
+              <div className="flex flex-col items-center justify-center py-12 text-center border-2 border-dashed rounded-xl bg-slate-50">
+                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+                  <Package className="h-7 w-7 text-muted-foreground" />
+                </div>
+                <p className="text-base font-medium text-foreground mb-1">Немає партій</p>
+                <p className="text-sm text-muted-foreground">Товар ще не надходив на склад</p>
               </div>
             )}
           </div>

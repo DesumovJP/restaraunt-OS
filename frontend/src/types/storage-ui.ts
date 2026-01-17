@@ -53,7 +53,7 @@ export interface StorageUIState {
   /** Whether the alert banner has been dismissed */
   alertsDismissed: boolean;
   /** Current sort field */
-  sortBy: "name" | "stock" | "updated" | "category" | "status";
+  sortBy: "name" | "stock" | "updated" | "category" | "status" | "freshness";
   /** Sort direction */
   sortOrder: "asc" | "desc";
   /** Selected product IDs (for bulk actions) */

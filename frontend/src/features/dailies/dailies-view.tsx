@@ -625,14 +625,14 @@ export function DailiesView({
 
             {/* Empty state for active */}
             {boardColumns.inProgress.length === 0 && boardColumns.pending.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center mb-4">
-                  <CheckCircle2 className="h-8 w-8 text-emerald-600" />
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+                  <CheckCircle2 className="h-7 w-7 text-emerald-600" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                <p className="text-base font-medium text-foreground mb-1">
                   Всі завдання виконано!
-                </h3>
-                <p className="text-slate-500 text-sm max-w-sm mb-4">
+                </p>
+                <p className="text-sm text-muted-foreground max-w-sm mb-4">
                   Чудова робота! Створіть нові завдання або перегляньте виконані.
                 </p>
                 <div className="flex gap-2">
@@ -712,14 +712,14 @@ export function DailiesView({
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                  <ClipboardList className="h-8 w-8 text-slate-400" />
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+                  <ClipboardList className="h-7 w-7 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                <p className="text-base font-medium text-foreground mb-1">
                   Ще немає виконаних завдань
-                </h3>
-                <p className="text-slate-500 text-sm max-w-sm">
+                </p>
+                <p className="text-sm text-muted-foreground max-w-sm">
                   Виконані завдання з&apos;являться тут
                 </p>
               </div>

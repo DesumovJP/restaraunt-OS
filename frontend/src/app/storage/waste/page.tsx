@@ -860,11 +860,12 @@ function TopIngredientRow({ item, index, totalCost }: TopIngredientRowProps) {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-        <Package className="h-6 w-6 text-slate-400" />
+    <div className="flex flex-col items-center justify-center py-10 text-center">
+      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+        <Package className="h-7 w-7 text-muted-foreground" />
       </div>
-      <p>{message}</p>
+      <p className="text-base font-medium text-foreground mb-1">Дані відсутні</p>
+      <p className="text-sm text-muted-foreground">{message}</p>
     </div>
   );
 }

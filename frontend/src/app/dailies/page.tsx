@@ -170,7 +170,7 @@ export default function DailiesPage() {
             <h1 className="text-xl font-semibold">Завдання</h1>
 
             {/* Date navigation */}
-            <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-1">
+            <div className="flex items-center gap-1 rounded-lg border bg-muted/50 p-0.5">
               <Button
                 variant="ghost"
                 size="icon"
@@ -181,10 +181,10 @@ export default function DailiesPage() {
               </Button>
 
               <button
-                className="flex items-center gap-2 px-2 py-1 text-sm font-medium hover:bg-background rounded"
+                className="flex items-center gap-1.5 px-2 py-1 text-sm font-medium hover:bg-background rounded"
                 onClick={() => setSelectedDate(today)}
               >
-                <Calendar className="h-4 w-4" />
+                <Calendar className="h-3.5 w-3.5" />
                 <span>{formatDisplayDate(selectedDate)}</span>
               </button>
 
@@ -212,12 +212,6 @@ export default function DailiesPage() {
                   loadingMyTasks || loadingTeamTasks ? "animate-spin" : ""
                 }`}
               />
-            </Button>
-
-            {/* New task */}
-            <Button onClick={() => setFormOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Нове завдання
             </Button>
 
             {/* User menu */}
@@ -264,67 +258,57 @@ export default function DailiesPage() {
         </div>
       </header>
 
-      {/* Stats bar */}
-      <div className="border-b bg-muted/30">
-        <div className="container py-3">
-          <div className="flex items-center gap-6 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Всього:</span>
-              <span className="font-medium">{stats.total}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Виконано:</span>
-              <span className="font-medium text-success">{stats.completed}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">В очікуванні:</span>
-              <span className="font-medium">{stats.pending}</span>
-            </div>
-            {stats.overdue > 0 && (
-              <div className="flex items-center gap-2">
-                <span className="text-muted-foreground">Прострочено:</span>
-                <span className="font-medium text-error">{stats.overdue}</span>
-              </div>
-            )}
-            {stats.completionRate > 0 && (
-              <div className="flex items-center gap-2 ml-auto">
-                <span className="text-muted-foreground">Виконання:</span>
-                <span className="font-medium">{stats.completionRate}%</span>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Content */}
-      <main className="container py-6">
+      <main className="container py-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="my" className="relative">
-              Мої завдання
-              {pendingCount > 0 && (
-                <Badge
-                  variant="secondary"
-                  className="ml-2 h-5 min-w-[20px] px-1.5"
-                >
-                  {pendingCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            {canViewTeam && (
-              <TabsTrigger value="team">
-                Команда
-                {teamTasks.length > 0 && (
+          {/* Toolbar: Tabs + Stats + Button - all in one row */}
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <TabsList className="h-9">
+              <TabsTrigger value="my" className="relative text-xs sm:text-sm px-3 h-7">
+                Активні
+                {pendingCount > 0 && (
                   <Badge
-                    variant="outline"
-                    className="ml-2 h-5 min-w-[20px] px-1.5"
+                    variant="secondary"
+                    className="ml-1.5 h-5 min-w-[18px] px-1 text-[10px]"
                   >
-                    {teamTasks.length}
+                    {pendingCount}
                   </Badge>
                 )}
               </TabsTrigger>
-            )}
-          </TabsList>
+              {canViewTeam && (
+                <TabsTrigger value="team" className="text-xs sm:text-sm px-3 h-7">
+                  Команда
+                  {teamTasks.length > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="ml-1.5 h-5 min-w-[18px] px-1 text-[10px]"
+                    >
+                      {teamTasks.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )}
+            </TabsList>
+
+            {/* Mini stats inline */}
+            <div className="hidden sm:flex items-center gap-4 text-xs text-muted-foreground">
+              <span>Виконано: <strong className="text-foreground">{stats.completed}</strong></span>
+              {stats.overdue > 0 && (
+                <span>Прострочено: <strong className="text-error">{stats.overdue}</strong></span>
+              )}
+              {stats.completionRate > 0 && (
+                <span>{stats.completionRate}%</span>
+              )}
+            </div>
+
+            <div className="flex-1" />
+
+            {/* New task button */}
+            <Button onClick={() => setFormOpen(true)} size="sm" className="h-8">
+              <Plus className="h-4 w-4 mr-1.5" />
+              <span className="hidden sm:inline">Нове</span>
+            </Button>
+          </div>
 
           <TabsContent value="my">
             {loadingMyTasks ? (

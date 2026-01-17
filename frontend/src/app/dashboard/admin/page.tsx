@@ -8,6 +8,7 @@ import { ActionLogView } from "@/features/kpi/action-log";
 import { WorkersChat } from "@/features/admin/workers-chat";
 import { WorkerProfileCard } from "@/features/profile";
 import { DailiesView } from "@/features/dailies";
+import { ShiftScheduleView } from "@/features/schedule";
 import { useAuthStore } from "@/stores/auth-store";
 import { AdminLeftSidebar, type AdminView } from "@/features/admin/admin-left-sidebar";
 import { Button } from "@/components/ui/button";
@@ -254,15 +255,7 @@ export default function AdminDashboardPage() {
             <WorkersChat />
           )}
           {activeView === 'schedule' && (
-            <div className="flex flex-col items-center justify-center h-64 text-center">
-              <p className="text-muted-foreground mb-4">Графік змін доступний на окремій сторінці</p>
-              <Button
-                onClick={() => window.location.href = '/dashboard/admin/schedule'}
-                className="rounded-xl"
-              >
-                Перейти до графіку
-              </Button>
-            </div>
+            <ShiftScheduleView compact className="h-full" />
           )}
           {activeView === 'profile' && (
             <div className="max-w-md mx-auto">
@@ -321,51 +314,203 @@ function OverviewView({
   const avgCheck = kpis.find(k => k.id === 'avg-check')?.value || 0;
   const unreadAlerts = alerts.filter(a => !a.read).length;
 
+  // Mock real-time data
+  const liveData = {
+    activeStaff: 8,
+    totalStaff: 12,
+    kitchenLoad: 73,
+    pendingOrders: 5,
+    activeTables: 14,
+    totalTables: 20,
+    todayReservations: 18,
+    upcomingReservations: 6,
+    avgWaitTime: 12,
+    avgCookTime: 18,
+  };
+
   return (
     <div className="space-y-4">
-      {/* Compact Metrics Bar */}
-      <section className="flex flex-wrap items-center gap-2 sm:gap-4 p-3 sm:p-4 bg-slate-50 rounded-xl border">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border">
-          <TrendingUp className="w-4 h-4 text-blue-500" />
-          <span className="text-sm text-muted-foreground">Виручка</span>
-          <span className="font-semibold tabular-nums">
-            {typeof todayRevenue === 'number' ? todayRevenue.toLocaleString('uk-UA') : todayRevenue} ₴
-          </span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border">
-          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-          <span className="text-sm text-muted-foreground">Замовлень</span>
-          <span className="font-semibold tabular-nums">
-            {typeof ordersCount === 'number' ? ordersCount.toLocaleString('uk-UA') : ordersCount}
-          </span>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-white rounded-lg border">
-          <BarChartIcon className="w-4 h-4 text-violet-500" />
-          <span className="text-sm text-muted-foreground">Сер. чек</span>
-          <span className="font-semibold tabular-nums">
-            {typeof avgCheck === 'number' ? avgCheck.toLocaleString('uk-UA') : avgCheck} ₴
-          </span>
-        </div>
-        {unreadAlerts > 0 && (
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 rounded-lg border border-amber-200">
-            <Clock className="w-4 h-4 text-amber-500" />
-            <span className="text-sm text-amber-700 font-medium">{unreadAlerts} сповіщень</span>
-          </div>
-        )}
+      {/* Main KPI Cards */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <TrendingUp className="w-5 h-5 opacity-80" />
+              <Badge className="bg-white/20 text-white border-0 text-xs">+13.6%</Badge>
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold tabular-nums">
+              {typeof todayRevenue === 'number' ? todayRevenue.toLocaleString('uk-UA') : todayRevenue} ₴
+            </p>
+            <p className="text-sm text-blue-100 mt-1">Виручка сьогодні</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <CheckCircle2 className="w-5 h-5 opacity-80" />
+              <Badge className="bg-white/20 text-white border-0 text-xs">+8</Badge>
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold tabular-nums">
+              {typeof ordersCount === 'number' ? ordersCount : ordersCount}
+            </p>
+            <p className="text-sm text-emerald-100 mt-1">Замовлень виконано</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-violet-500 to-violet-600 text-white border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <Utensils className="w-5 h-5 opacity-80" />
+              <span className="text-xs text-violet-200">{liveData.activeTables}/{liveData.totalTables}</span>
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold tabular-nums">{liveData.activeTables}</p>
+            <p className="text-sm text-violet-100 mt-1">Активних столів</p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-500 to-amber-600 text-white border-0">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <CalendarDays className="w-5 h-5 opacity-80" />
+              <span className="text-xs text-amber-200">{liveData.upcomingReservations} очікується</span>
+            </div>
+            <p className="text-2xl sm:text-3xl font-bold tabular-nums">{liveData.todayReservations}</p>
+            <p className="text-sm text-amber-100 mt-1">Бронювань сьогодні</p>
+          </CardContent>
+        </Card>
       </section>
 
-      {/* Alerts */}
-      <section aria-labelledby="alerts-heading">
-        <AlertsList
-          alerts={alerts}
-          onMarkRead={onMarkAlertRead}
-          onAlertClick={(alert) => {
-            if (alert.actionUrl) {
-              console.log("Navigate to:", alert.actionUrl);
-            }
-          }}
-        />
+      {/* Status Cards Row */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Kitchen Load */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">Завантаження кухні</span>
+              <Badge variant={liveData.kitchenLoad > 80 ? "destructive" : liveData.kitchenLoad > 60 ? "warning" : "secondary"}>
+                {liveData.kitchenLoad}%
+              </Badge>
+            </div>
+            <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  liveData.kitchenLoad > 80 ? "bg-red-500" : liveData.kitchenLoad > 60 ? "bg-amber-500" : "bg-emerald-500"
+                }`}
+                style={{ width: `${liveData.kitchenLoad}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1.5">{liveData.pendingOrders} замовлень в черзі</p>
+          </CardContent>
+        </Card>
+
+        {/* Active Staff */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">Персонал на зміні</span>
+              <span className="text-sm font-semibold">{liveData.activeStaff}/{liveData.totalStaff}</span>
+            </div>
+            <div className="flex -space-x-2">
+              {Array.from({ length: Math.min(liveData.activeStaff, 6) }).map((_, i) => (
+                <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 border-2 border-white flex items-center justify-center text-[10px] font-medium text-slate-600">
+                  {String.fromCharCode(65 + i)}
+                </div>
+              ))}
+              {liveData.activeStaff > 6 && (
+                <div className="w-7 h-7 rounded-full bg-slate-100 border-2 border-white flex items-center justify-center text-[10px] font-medium text-slate-500">
+                  +{liveData.activeStaff - 6}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Avg Wait Time */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-muted-foreground">Сер. час очікування</span>
+              <Timer className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <p className="text-xl font-bold tabular-nums">{liveData.avgWaitTime} хв</p>
+            <p className="text-xs text-emerald-600">↓ 2 хв від норми</p>
+          </CardContent>
+        </Card>
+
+        {/* Avg Cook Time */}
+        <Card>
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-muted-foreground">Сер. час готування</span>
+              <Utensils className="w-4 h-4 text-muted-foreground" />
+            </div>
+            <p className="text-xl font-bold tabular-nums">{liveData.avgCookTime} хв</p>
+            <p className="text-xs text-amber-600">↑ 3 хв від норми</p>
+          </CardContent>
+        </Card>
       </section>
+
+      {/* Alerts + Quick Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Alerts - takes 2 columns */}
+        <section className="lg:col-span-2" aria-labelledby="alerts-heading">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                Сповіщення
+                {unreadAlerts > 0 && (
+                  <Badge variant="secondary" className="ml-auto">{unreadAlerts} нових</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <AlertsList
+                alerts={alerts}
+                onMarkRead={onMarkAlertRead}
+                onAlertClick={(alert) => {
+                  if (alert.actionUrl) {
+                    console.log("Navigate to:", alert.actionUrl);
+                  }
+                }}
+              />
+            </CardContent>
+          </Card>
+        </section>
+
+        {/* Quick Stats */}
+        <section>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Award className="w-4 h-4 text-violet-500" />
+                Показники дня
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-sm text-muted-foreground">Середній чек</span>
+                <span className="font-semibold tabular-nums">
+                  {typeof avgCheck === 'number' ? avgCheck.toLocaleString('uk-UA') : avgCheck} ₴
+                </span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-sm text-muted-foreground">Повернення</span>
+                <span className="font-semibold text-emerald-600">2 (0.8%)</span>
+              </div>
+              <div className="flex items-center justify-between py-2 border-b">
+                <span className="text-sm text-muted-foreground">Скасування</span>
+                <span className="font-semibold text-amber-600">3 (2.4%)</span>
+              </div>
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-muted-foreground">Нові гості</span>
+                <span className="font-semibold">45 (15%)</span>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </div>
     </div>
   );
 }

@@ -88,19 +88,19 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center py-12 px-4 text-center flex-1 min-h-[200px]",
+        "flex flex-col items-center justify-center py-10 px-4 text-center",
         className
       )}
       role="status"
       aria-label={title || content.title}
     >
-      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-        <Icon className="w-8 h-8 text-muted-foreground" aria-hidden="true" />
+      <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+        <Icon className="w-7 h-7 text-muted-foreground" aria-hidden="true" />
       </div>
-      <h3 className="text-lg font-medium text-foreground mb-1">
+      <h3 className="text-base font-medium text-foreground mb-1">
         {title || content.title}
       </h3>
-      <p className="text-sm text-muted-foreground max-w-xs mb-4">
+      <p className="text-sm text-muted-foreground max-w-xs mb-3">
         {description || content.description}
       </p>
       {action}
